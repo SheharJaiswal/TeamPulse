@@ -1,3 +1,5 @@
+using System;
+
 namespace Identity.Application.Contracts;
 public sealed record RegisterRequest(string Email, string Password, string DisplayName, string OrganizationId, string TeamId);
 public sealed record LoginRequest(string Email, string Password);
