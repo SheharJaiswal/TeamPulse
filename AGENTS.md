@@ -15,7 +15,9 @@ Before every feature, read this file, `docs/specs/`, ownership docs and contract
 
 ## Backend conventions
 - ASP.NET Core .NET 8 baseline; Clean Architecture (API, Application, Domain, Infrastructure).
-- EF Core + Npgsql, PostgreSQL transactional storage.
+- EF Core 8 with Pomelo.EntityFrameworkCore.MySql and MySQL 8.4 for transactional service databases, consistent with ADR-0001.
+- Maintain database-per-service ownership: each service has its own logical database and production credentials; a shared local MySQL container is for development only.
+- DynamoDB is reserved for Insight aggregated/derived read models as documented in the architecture.
 - Thin controllers; business logic in Domain/Application; persistence in Infrastructure.
 - DTOs, validation, async I/O and CancellationToken. Do not expose EF entities.
 - PasswordHasher; never log secrets/tokens. Deployed secrets from Secrets Manager/environment.
