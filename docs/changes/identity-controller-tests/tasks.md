@@ -6,4 +6,4 @@
 - [x] Add tests for registration validation, duplicate normalized email and successful hashed registration.
 - [x] Add tests for generic login failures and successful normalized login.
 - [x] Update the Identity foundation checklist and project continuation checkpoint.
-- [ ] Execute restore/build/test when a .NET 8 SDK environment is available.
+- [x] Execute restore/build/test in .NET 8 CI; all controller, unit and integration tests passed.
