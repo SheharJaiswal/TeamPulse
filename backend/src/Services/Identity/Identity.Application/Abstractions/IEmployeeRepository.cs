@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Identity.Domain.Entities;
 namespace Identity.Application.Abstractions;
 public interface IEmployeeRepository
