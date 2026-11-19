@@ -1,3 +1,5 @@
+using System;
+
 namespace Identity.Domain.Entities;
 
 public sealed class Employee
