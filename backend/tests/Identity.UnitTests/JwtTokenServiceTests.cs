@@ -60,7 +60,7 @@ public sealed class JwtTokenServiceTests
         }));
         var token = service.CreateAccessToken(employee);
 
-        Assert.Throws<SecurityTokenException>(() =>
+        Assert.ThrowsAny<SecurityTokenException>(() =>
             new JwtSecurityTokenHandler().ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuer = true, ValidIssuer = Issuer,
