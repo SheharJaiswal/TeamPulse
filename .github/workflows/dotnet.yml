@@ -43,6 +43,9 @@ jobs:
       - name: Build
         run: dotnet build backend/TeamPulse.sln --configuration Release --no-restore
 
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+
       - name: Test (includes MySQL 8.4 Testcontainers integration tests)
         run: dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"
 
