@@ -14,18 +14,26 @@ public sealed class IdentityControllerTests
     private const string ValidPassword = "Strong-Test-Password-123!";
     private const string TestToken = "unit-test-access-token";
 
-    [Fact]
-    public async Task Register_WhenRequiredFieldIsMissing_ReturnsBadRequestWithoutMutation()
+    [Theory]
+    [InlineData("", ValidPassword, "Employee", "org-1", "team-1")]
+    [InlineData("employee@example.test", "", "Employee", "org-1", "team-1")]
+    [InlineData("employee@example.test", ValidPassword, "", "org-1", "team-1")]
+    [InlineData("employee@example.test", ValidPassword, "Employee", "", "team-1")]
+    [InlineData("employee@example.test", ValidPassword, "Employee", "org-1", "")]
+    [InlineData("   ", ValidPassword, "Employee", "org-1", "team-1")]
+    public async Task Register_WhenAnyRequiredFieldIsMissing_ReturnsBadRequestWithoutMutation(
+        string email, string password, string displayName, string organizationId, string teamId)
     {
         var repository = new FakeEmployeeRepository();
         var controller = CreateController(repository);
 
         var result = await controller.Register(
-            new RegisterRequest("employee@example.test", ValidPassword, "", "org-1", "team-1"),
+            new RegisterRequest(email, password, displayName, organizationId, teamId),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Empty(repository.Employees);
+        Assert.Equal(0, repository.AddCalls);
         Assert.Equal(0, repository.SaveChangesCalls);
     }
 
@@ -41,6 +49,7 @@ public sealed class IdentityControllerTests
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Empty(repository.Employees);
+        Assert.Equal(0, repository.AddCalls);
         Assert.Equal(0, repository.SaveChangesCalls);
     }
 
@@ -129,7 +138,7 @@ public sealed class IdentityControllerTests
         var repository = new FakeEmployeeRepository();
         var hasher = new PasswordHasher<Employee>();
         var employee = CreateEmployee("employee@example.test", "placeholder");
-        employee = employee withPasswordHash(hasher.HashPassword(employee, ValidPassword));
+        employee = employee.WithPasswordHash(hasher.HashPassword(employee, ValidPassword));
         repository.Seed(employee);
         var controller = CreateController(repository, hasher);
 
