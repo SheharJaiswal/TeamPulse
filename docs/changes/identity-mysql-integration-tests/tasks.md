@@ -9,4 +9,4 @@
 - [x] Fix the top-level Program partial declaration for WebApplicationFactory access.
 - [x] Add .NET 8 GitHub Actions restore/build/test workflow.
 - [x] Update README and Identity foundation tasks; project status is the final checkpoint for this run.
-- [ ] Execute tests on a Docker-capable .NET 8 runner; do not mark them passed until CI evidence exists.
+- [x] Execute tests on Docker-capable .NET 8 GitHub Actions runner; 21 passed, 0 failed, 0 skipped.
