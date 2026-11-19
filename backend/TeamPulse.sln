@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.Domain", "src/Serv
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.Infrastructure", "src/Services/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj", "{A4A4A4A4-4444-4444-8444-444444444444}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Identity.UnitTests", "tests/Identity.UnitTests/Identity.UnitTests.csproj", "{A5A5A5A5-5555-4555-8555-555555555555}"
+EndProject
 Global
  GlobalSection(SolutionConfigurationPlatforms) = preSolution
   Debug|Any CPU = Debug|Any CPU
@@ -20,7 +22,6 @@ Global
   {A1A1A1A1-1111-4111-8111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {A1A1A1A1-1111-4111-8111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
   {A1A1A1A1-1111-4111-8111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
-  {A2A2A2A2-2222-4222-8222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
   {A2A2A2A2-2222-4222-8222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
   {A2A2A2A2-2222-4222-8222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {A2A2A2A2-2222-4222-8222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,5 +34,9 @@ Global
   {A4A4A4A4-4444-4444-8444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {A4A4A4A4-4444-4444-8444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
   {A4A4A4A4-4444-4444-8444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
+  {A5A5A5A5-5555-4555-8555-555555555555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {A5A5A5A5-5555-4555-8555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {A5A5A5A5-5555-4555-8555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {A5A5A5A5-5555-4555-8555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
  EndGlobalSection
 EndGlobal
