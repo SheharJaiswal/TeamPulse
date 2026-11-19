@@ -4,7 +4,8 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 - Active branch: feature/backend-foundation.
 - Latest committed checkpoint before this increment: 708dda5fd48224730cff3436c3b3323510c17fcb.
-- Latest commit from this increment: 9698f33f45a9a9c896684abf761e88a0e5286a14.
+- Latest code increment commit: 9698f33f45a9a9c896684abf761e88a0e5286a14.
+- Latest checkpoint commit: ff0f0cb778238bb25a6295bd3decaac9fde4dcf3.
 - Current change: docs/changes/identity-unit-tests/.
 - Resume rule: every run must fetch the live branch HEAD, inspect recent commits and this file, then continue the first unfinished task. Do not repeat completed tasks or trust stale SHAs.
 
