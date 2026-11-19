@@ -11,5 +11,5 @@
 - [x] Add unit tests for password hashing and JWT signature/claims.
 - [x] Add controller unit tests for registration validation, duplicate normalized email, successful hashed registration, generic login failures and successful normalized login.
 - [x] Add MySQL-backed integration-test harness and cases for migration/restart, persistence, database unique-email constraint, bearer authentication and /me.
-- [ ] Run restore/build/test with .NET 8 SDK and MySQL.
-- [ ] Record test evidence and update acceptance checklist.
+- [x] Run restore/build/test with .NET 8 SDK and MySQL Testcontainers in GitHub Actions.
+- [x] Record CI evidence: 21 passed, 0 failed, 0 skipped; build had 0 warnings and 0 errors.
