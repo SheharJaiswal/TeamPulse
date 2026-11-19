@@ -38,6 +38,10 @@ The Identity API applies all pending, checked-in EF Core migrations automaticall
 
 Swagger is enabled in Development; health endpoint is `/health`. Local database credentials and JWT key are development placeholders. Production secrets must come from AWS Secrets Manager or an equivalent secret store. Public registration is only a local bootstrap mechanism and must be replaced with HR provisioning before production.
 
+### Automated tests
+
+Run the full test suite with `dotnet test backend/TeamPulse.sln`. Unit tests do not require external services. Identity API integration tests use Testcontainers to start a disposable MySQL 8.4 container, so Docker Desktop or another compatible Docker daemon must be running. The `.NET 8 CI` GitHub Actions workflow runs restore, build and tests on a Docker-capable GitHub-hosted runner.
+
 ### Migration policy
 
 Create and commit migrations when the model changes. Startup migration application is enabled for local development and a single app instance. For production with multiple replicas, run migrations as a coordinated deployment job before rolling out application instances.
