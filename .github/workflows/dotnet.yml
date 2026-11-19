@@ -1,0 +1,45 @@
+name: .NET 8 CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/backend-foundation
+  pull_request:
+    branches:
+      - main
+      - feature/backend-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Restore, build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore backend/TeamPulse.sln
+
+      - name: Build
+        run: dotnet build backend/TeamPulse.sln --configuration Release --no-restore
+
+      - name: Test (includes MySQL 8.4 Testcontainers integration tests)
+        run: dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teampulse-test-results
+          path: "**/*.trx"
+          if-no-files-found: ignore
