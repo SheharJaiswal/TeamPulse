@@ -20,21 +20,24 @@ The approved specifications are the source of truth. Before implementing any fea
 Do not create a separate Activity Tracking service. Lambda is compute, not a seventh microservice or independent business-data owner.
 
 ## Technology
-.NET 8 / ASP.NET Core, EF Core / Npgsql, PostgreSQL, JWT Bearer, Docker Compose. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS, DynamoDB and CloudWatch. .NET 8 is the initial compatible baseline; upgrade SDK, target frameworks and dependencies together after environment validation.
+
+.NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and Docker Compose. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL and DynamoDB. .NET 8 is the initial compatibility baseline.
 
 ## Local development
+
 Prerequisites: .NET 8 SDK and Docker Desktop.
 
 ```bash
-docker compose up -d postgres
+docker compose up -d mysql
 dotnet restore backend/TeamPulse.sln
 dotnet build backend/TeamPulse.sln
-```
-
-See `docs/changes/identity-service-foundation/tasks.md` for EF migration commands. Run Identity API with:
-
-```bash
 dotnet run --project backend/src/Services/Identity/Identity.API
 ```
 
+The Identity API applies all pending, checked-in EF Core migrations automatically during startup before accepting requests. For local development, the MySQL container creates the `teampulse_identity` database and `teampulse_app` user. The API uses `Server=localhost;Port=3306` when run on the host. If the API is containerized on the Compose network, use `Server=mysql;Port=3306`.
+
 Swagger is enabled in Development; health endpoint is `/health`. Local database credentials and JWT key are development placeholders. Production secrets must come from AWS Secrets Manager or an equivalent secret store. Public registration is only a local bootstrap mechanism and must be replaced with HR provisioning before production.
+
+### Migration policy
+
+Create and commit migrations when the model changes. Startup migration application is enabled for local development and a single app instance. For production with multiple replicas, run migrations as a coordinated deployment job before rolling out application instances.

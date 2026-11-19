@@ -1,20 +1,22 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: teampulse-postgres
+  mysql:
+    image: mysql:8.4
+    container_name: teampulse-mysql
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: local_postgres_password
-      POSTGRES_DB: postgres
+      MYSQL_ROOT_PASSWORD: local_mysql_root_password
+      MYSQL_DATABASE: teampulse_identity
+      MYSQL_USER: teampulse_app
+      MYSQL_PASSWORD: local_teampulse_password
     ports:
-      - "5433:5432"
+      - "3306:3306"
     volumes:
-      - teampulse-postgres-data:/var/lib/postgresql/data
-      - ./infrastructure/docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - teampulse-mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL","pg_isready -U postgres"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-plocal_mysql_root_password"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 20s
+
 volumes:
-  teampulse-postgres-data:
+  teampulse-mysql-data:
