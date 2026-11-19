@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Identity.Domain/Identity.Domain.csproj" />
     <ProjectReference Include="../Identity.Application/Identity.Application.csproj" />
