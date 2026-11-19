@@ -25,7 +25,7 @@ public sealed class JwtTokenServiceTests
         }));
 
         var tokenText = service.CreateAccessToken(employee);
-        var handler = new JwtSecurityTokenHandler();
+        var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
         var principal = handler.ValidateToken(tokenText, new TokenValidationParameters
         {
             ValidateIssuer = true, ValidIssuer = Issuer,
@@ -60,7 +60,7 @@ public sealed class JwtTokenServiceTests
         }));
         var token = service.CreateAccessToken(employee);
 
-        Assert.Throws<SecurityTokenInvalidSignatureException>(() =>
+        Assert.Throws<SecurityTokenException>(() =>
             new JwtSecurityTokenHandler().ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuer = true, ValidIssuer = Issuer,
