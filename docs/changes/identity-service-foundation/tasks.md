@@ -9,7 +9,7 @@
 - [x] Configure startup migration execution with Database.MigrateAsync().
 - [x] Add initial checked-in Identity schema migration.
 - [x] Add unit tests for password hashing and JWT signature/claims.
-- [ ] Add controller validation tests.
-- [ ] Add integration tests for persistence/auth.
+- [x] Add controller unit tests for registration validation, duplicate normalized email, successful hashed registration, generic login failures and successful normalized login.
+- [ ] Add MySQL-backed integration tests for persistence, unique email constraint, migrations, authentication middleware and /me.
 - [ ] Run restore/build/test with .NET 8 SDK and MySQL.
 - [ ] Record test evidence and update acceptance checklist.
