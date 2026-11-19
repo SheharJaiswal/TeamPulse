@@ -8,7 +8,8 @@
 - [x] Replace PostgreSQL with MySQL 8.4 and Pomelo EF Core provider.
 - [x] Configure startup migration execution with Database.MigrateAsync().
 - [x] Add initial checked-in Identity schema migration.
-- [ ] Add unit tests for validation/token claims.
+- [x] Add unit tests for password hashing and JWT signature/claims.
+- [ ] Add controller validation tests.
 - [ ] Add integration tests for persistence/auth.
 - [ ] Run restore/build/test with .NET 8 SDK and MySQL.
 - [ ] Record test evidence and update acceptance checklist.
