@@ -6,4 +6,4 @@
 - [x] Add password hashing tests.
 - [x] Add JWT signature, issuer, audience, lifetime and claims tests.
 - [x] Update Identity change checklist and project continuation checkpoint.
-- [ ] Execute restore/build/test in a .NET 8 environment and record exact results.
+- [x] Execute restore/build/test in .NET 8 CI; all 21 solution tests passed with zero build warnings and zero errors.
