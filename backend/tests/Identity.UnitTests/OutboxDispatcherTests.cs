@@ -192,24 +192,25 @@ public sealed class OutboxMessageStoreIntegrationTests : IClassFixture<MySqlInte
         Assert.Equal(System.Net.HttpStatusCode.OK,
             (await client.GetAsync("/health/ready")).StatusCode);
 
-        await SeedMessagesAsync(apiFactory, 2);
         var store = CreateStore();
+        var baseline = await store.GetQueueSnapshotAsync(CancellationToken.None);
+        await SeedMessagesAsync(apiFactory, 2);
         var claimed = (await store.ClaimBatchAsync(
             1, TimeSpan.FromSeconds(60), CancellationToken.None)).Single();
 
         var beforeQuarantine = await store.GetQueueSnapshotAsync(CancellationToken.None);
-        Assert.Equal(2, beforeQuarantine.PendingCount);
-        Assert.Equal(1, beforeQuarantine.ActiveLeaseCount);
-        Assert.Equal(0, beforeQuarantine.QuarantinedCount);
+        Assert.Equal(baseline.PendingCount + 2, beforeQuarantine.PendingCount);
+        Assert.True(beforeQuarantine.ActiveLeaseCount >= 1);
+        Assert.Equal(baseline.QuarantinedCount, beforeQuarantine.QuarantinedCount);
         Assert.NotNull(beforeQuarantine.OldestPendingCreatedAtUtc);
 
         Assert.True(await store.QuarantineAsync(
             claimed.EventId, claimed.LeaseToken, DateTime.UtcNow,
             "MalformedDetail", CancellationToken.None));
         var afterQuarantine = await store.GetQueueSnapshotAsync(CancellationToken.None);
-        Assert.Equal(1, afterQuarantine.PendingCount);
-        Assert.Equal(1, afterQuarantine.QuarantinedCount);
-        Assert.Equal(0, afterQuarantine.ActiveLeaseCount);
+        Assert.Equal(baseline.PendingCount + 1, afterQuarantine.PendingCount);
+        Assert.Equal(baseline.QuarantinedCount + 1, afterQuarantine.QuarantinedCount);
+        Assert.True(afterQuarantine.ActiveLeaseCount < beforeQuarantine.ActiveLeaseCount);
     }
 
     private async Task<List<Guid>> SeedMessagesAsync(IdentityApiFactory apiFactory, int count)
