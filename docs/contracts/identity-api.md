@@ -16,9 +16,9 @@ Request: email and password. Success: 200 token response. Failure: generic 401 I
 
 Bearer token required. Returns subject, email, displayName, organizationId, teamId and role from validated claims.
 
-## HR lifecycle commands — approved contract, implementation pending
+## HR lifecycle commands — implemented and verified
 
-Both endpoints require a bearer token whose validated `role` claim is `HrAdmin`. The actor employee ID is read from validated `sub`; caller-supplied actor IDs are ignored/not accepted. OrganizationAdmin and Employee roles cannot execute these commands.
+Both endpoints require a bearer token whose validated `role` claim is `HrAdmin`. The actor employee ID is read from validated `sub`; caller-supplied actor IDs are not accepted. OrganizationAdmin and Employee roles cannot execute these commands.
 
 ### POST /employees/{employeeId}/deactivate
 
@@ -26,8 +26,8 @@ Both endpoints require a bearer token whose validated `role` claim is `HrAdmin`.
 
 Headers:
 - `Authorization: Bearer <token>` (required)
-- `Idempotency-Key: <1–128 visible ASCII characters>` (required)
-- `X-Correlation-ID: <UUID>` (optional; Identity generates one when absent)
+- `Idempotency-Key: <1–128 visible ASCII characters>` (required; whitespace-only or multiple values are rejected)
+- `X-Correlation-ID: <UUID>` (optional; Identity generates one when absent; malformed or repeated values are rejected)
 
 Body:
 - `reasonCode`: required string, 1–100 characters. No controlled vocabulary is approved; stored as a trimmed opaque value.
@@ -43,9 +43,9 @@ Errors:
 - 409 idempotency key reused for a different command or stale concurrent transition.
 - 5xx persistence failure; no partial employee/audit/outbox write is committed.
 
-The employee state, immutable lifecycle audit row and schema-v1 outbox record are committed atomically. A same-state request is a no-op and creates no audit/event. A same-key/same-command retry returns the original result without duplicate rows.
+The employee state, immutable lifecycle audit row and schema-v1 outbox record are committed atomically. A same-state request is a no-op and creates no audit/event. A same-key/same-command retry returns the original result without duplicate rows. Stale commands are checked against the employee lifecycle version while holding a MySQL row lock.
 
-Events: `EmployeeDeactivated` and `EmployeeReactivated`, schema version 1. See [Domain Event Envelope](event-envelope.md) and [Employee Status Projection Contract](employee-status-projection.md).
+Events: `EmployeeDeactivated` and `EmployeeReactivated`, schema version 1. The outbox is durable storage only; it is not proof of EventBridge delivery. See [Domain Event Envelope](event-envelope.md) and [Employee Status Projection Contract](employee-status-projection.md).
 
 Organization Admins have no direct employee profile or lifecycle write endpoint. They may request HR changes, but request intake/approval is not yet specified. Employee provisioning/invitation and profile/role mutation are separate future contracts.
 
@@ -54,4 +54,5 @@ Organization Admins have no direct employee profile or lifecycle write endpoint.
 - GET /health/live: process liveness only; does not check MySQL and should be used for orchestrator liveness probes.
 - GET /health/ready: checks the Identity-owned MySQL database and returns HTTP 503 when it is unavailable.
 - GET /health: compatibility alias for /health/ready; retains the previous database-readiness behavior.
+
 Health responses expose only aggregate health status, not dependency exception details or connection information.
