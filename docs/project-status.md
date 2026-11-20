@@ -1,6 +1,17 @@
 # Project Status
 Updated: 2026-11-21
 
+## Latest continuation checkpoint — drain in-flight callback before broker-session reconnect (CI pending)
+
+- CI #111 for `8c975629dfb8dcba5f324c0bf90a7d532c0eb738` failed: restore, Release build, Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; the .NET suite had 164/165 tests pass (40/41 Challenge, 24 Habit, 100 Identity). `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck` timed out at the post-restart connected-state wait (test line 172). [CI run #111](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44822510001).
+- The session-scoped cancellation assertion was reached, but the consumer did not reconnect within the test's 10-second wait. The previous implementation canceled the active callback but did not explicitly await its `ReceivedAsync` handler unwinding before session channel/connection disposal and the next connection attempt.
+- Updated the consumer session to stop accepting callbacks when the session ends, cancel the in-flight callback, and await its completion for up to 10 seconds before marking disconnected and disposing the old session. A callback that ignores cancellation cannot block reconnect indefinitely; the old delivery remains unacknowledged for replay.
+- Updated the approved SDD design and tasks to capture the callback-drain ordering. Commit-before-ack/reconnect acceptance remains unchecked until the corrected RabbitMQ Testcontainers scenario passes in CI.
+- The previous cancellation-only fix is not considered verified; no acceptance checkbox was closed based on CI #111.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+- Scope remains the approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially, with privacy/legal sign-off still a production prerequisite. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup.
+- Changes are confined to `feature/backend-foundation`; `main` is untouched.
+
 ## Latest continuation checkpoint — broker-session cancellation fix for commit-before-ack replay (CI pending)
 
 - CI #110 for code commit `5dc66ddb65ce5b9479c85c4e93ff93c85d59c033` failed after restore, Release build, Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. The .NET suite had 164/165 tests pass (40/41 Challenge, 24 Habit, 100 Identity); the commit-before-ack broker-stop/restart scenario timed out waiting for the consumer to reconnect. [CI run #110](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44813451227).

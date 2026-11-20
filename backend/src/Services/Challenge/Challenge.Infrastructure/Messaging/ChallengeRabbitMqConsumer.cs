@@ -90,9 +90,41 @@ public sealed class ChallengeRabbitMqConsumer(
 
         await channel.BasicQosAsync(0, options.PrefetchCount, false, stoppingToken);
 
+        var callbackSync = new object();
+        TaskCompletionSource<bool>? inFlightCallback = null;
+        var sessionEnding = false;
+
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, delivery) =>
-            await HandleDeliveryAsync(channel, deadLetterChannel, delivery, sessionToken);
+        {
+            TaskCompletionSource<bool> callbackCompletion;
+            lock (callbackSync)
+            {
+                // Do not begin new work once this broker session is ending. The delivery
+                // remains unacknowledged and is recovered when the channel closes.
+                if (sessionEnding)
+                    return;
+
+                callbackCompletion = new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                inFlightCallback = callbackCompletion;
+            }
+
+            try
+            {
+                await HandleDeliveryAsync(channel, deadLetterChannel, delivery, sessionToken);
+            }
+            finally
+            {
+                lock (callbackSync)
+                {
+                    if (ReferenceEquals(inFlightCallback, callbackCompletion))
+                        inFlightCallback = null;
+                }
+
+                callbackCompletion.TrySetResult(true);
+            }
+        };
 
         await channel.BasicConsumeAsync(
             options.QueueName,
@@ -117,8 +149,33 @@ public sealed class ChallengeRabbitMqConsumer(
         }
         finally
         {
+            Task? callbackToDrain;
+            lock (callbackSync)
+            {
+                sessionEnding = true;
+                callbackToDrain = inFlightCallback?.Task;
+            }
+
+            // Cancel the processor first, then wait for the active ReceivedAsync handler to
+            // unwind before this session disposes its channels/connection or reconnects.
             sessionCancellation.Cancel();
-            status.MarkDisconnected();
+            try
+            {
+                if (callbackToDrain is not null)
+                    await callbackToDrain.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (TimeoutException)
+            {
+                // Keep reconnect bounded even if a processor ignores cancellation. The old
+                // channel is already unavailable; its delivery remains eligible for replay.
+                logger.LogWarning(
+                    "Challenge RabbitMQ delivery callback did not stop within the session drain timeout ({TimeoutSeconds}s).",
+                    10);
+            }
+            finally
+            {
+                status.MarkDisconnected();
+            }
         }
     }
 

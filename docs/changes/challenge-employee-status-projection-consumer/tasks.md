@@ -44,11 +44,11 @@
 - [ ] MySQL 8.4 Testcontainers: same event ID/same fingerprint and same event ID/different fingerprint.
 - [ ] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert.
 - [ ] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation.
-- [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay (CI #110 exposed a reconnect timeout while the first processor callback remained in flight; session-scoped cancellation and an explicit cancellation assertion are now committed, pending rerun).
+- [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay (CI #111 still timed out waiting for reconnect after callback cancellation; the consumer now tracks and drains the active callback before session disposal, pending rerun).
 - [ ] RabbitMQ Testcontainers: invalid event and integrity violation DLQ handling, including DLX failure and redelivery.
 - [ ] RabbitMQ Testcontainers: bounded exponential retry, exhaustion/non-transient classifications and failed-DLQ redelivery for retry exhaustion.
 - [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect; startup-reconnect test passed in CI #105.
-- [ ] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack (CI #110 failed at the post-restart connected-state wait; verify the session-cancellation fix in the next CI run).
+- [ ] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack (CI #111 failed at the post-restart connected-state wait; verify callback-drain ordering in the next CI run).
 - [ ] Host health integration tests prove DB readiness is independent of RabbitMQ and consumer health is separately observable.
 - [ ] Privacy/logging tests prove no event body, note, credentials or connection string is logged/persisted.
 - [x] CI #103 passed: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 10 Python tests and 144 .NET tests.
@@ -58,6 +58,7 @@
 - [x] CI #107 passed for `24c13c8c5fc72c4c041be1d862cf203662adddf9`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology, 11 Python topology tests and 155 .NET tests (31 Challenge, 24 Habit, 100 Identity), 0 failed/skipped. [CI run #107](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44795560333).
 - [x] CI #108 passed for `3702c9a04186d304ca8b6ae0e5244cdfe262a105`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology, 11 Python topology tests and 164 .NET tests (40 Challenge, 24 Habit, 100 Identity), 0 failed/skipped. [CI run #108](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44805490633).
 - [ ] CI #110 for `5dc66ddb65ce5b9479c85c4e93ff93c85d59c033` failed: 164/165 .NET tests passed (40/41 Challenge, 24 Habit, 100 Identity); the commit-before-ack broker-stop/restart test timed out waiting for the consumer to reconnect. Restore, Release build, Compose, RabbitMQ topology and all 11 Python topology tests passed. [CI run #110](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44813451227).
+- [ ] CI #111 for `8c975629dfb8dcba5f324c0bf90a7d532c0eb738` failed: 164/165 .NET tests passed (40/41 Challenge, 24 Habit, 100 Identity); the same commit-before-ack test timed out waiting for the consumer to reconnect after broker restart. Restore, Release build, Compose, RabbitMQ topology and all 11 Python topology tests passed. [CI run #111](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44822510001).
 - [x] README and communication documentation include Challenge local run/configuration guidance and transport contract.
 
 ## Deferred
