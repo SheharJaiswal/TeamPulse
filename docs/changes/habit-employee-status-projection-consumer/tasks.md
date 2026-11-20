@@ -15,17 +15,17 @@
 - [x] Implement EmployeeStatusProjection domain model and application processor/reader abstractions.
 - [x] Implement processed-event inbox and atomic conditional projection upsert.
 - [x] Add checked-in EF Core/Pomelo migration and model snapshot; apply migrations at Habit host startup.
-- [ ] Add RabbitMQ consumer with manual acknowledgements, one in-flight delivery per channel and reconnect behavior.
-- [ ] Add bounded retry handling and Habit-owned quorum queue/DLX/DLQ local topology.
+- [x] Add RabbitMQ.Client consumer with manual acknowledgements, prefetch 1, explicit reconnect loop and separate consumer connection health.
+- [x] Add bounded transient-error retries, poison/exhaustion dead-lettering and Habit-owned quorum queue/DLX/DLQ local topology.
 - [x] Add Habit database liveness/readiness endpoints; readiness checks only the Habit-owned database.
-- [ ] Add consumer-specific configuration validation and safe delivery logging with the RabbitMQ adapter.
+- [x] Add consumer-specific configuration validation and payload/connection-secret-safe structured delivery logging.
 
 ## Verification
 
 - [x] Add unit tests for envelope validation/transition mapping and MySQL integration tests for duplicate eventId, stale/equal and strict lifecycleVersion ordering.
 - [x] Run MySQL 8.4 Testcontainers migration/repeated startup, inbox rollback, duplicate, stale/equal and concurrent N/N+1 version tests (CI run #93).
-- [ ] Run RabbitMQ Testcontainers acknowledgement, redelivery, DLQ and reconnect tests.
-- [x] Validate Docker Compose configuration and the existing shared RabbitMQ exchange/five-queue topology; Habit-owned quorum queue/DLQ topology remains part of the consumer increment.
+- [ ] Run a broker-connection-loss redelivery test after an established session; current RabbitMQ Testcontainers coverage verifies ack-after-processor-completion, invalid-message DLQ routing, transient retry and retry exhaustion, plus startup reconnect.
+- [x] Validate Docker Compose configuration and shared RabbitMQ exchange/five service queues plus Habit quorum queue/DLX/DLQ definitions; actual Compose startup is covered by CI.
 - [x] Run full solution restore, Release build and test workflow (CI run #93: 112 passed, 0 failed, 0 skipped; 0 build warnings/errors).
 - [x] Review project references and EF model: Habit references no Identity project and has no cross-service foreign key.
 - [x] Update README and project checkpoint; no new business questions were introduced.
@@ -68,3 +68,13 @@
 - `python -m unittest discover -s infra/rabbitmq/tests -v`: 4 passed.
 - `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 112 passed (12 Habit, 100 Identity), 0 failed, 0 skipped. Habit MySQL 8.4 Testcontainers migration/repeat, inbox rollback, duplicate, stale and concurrent-version tests passed.
 - Remaining unchecked implementation and verification tasks are specifically the Habit RabbitMQ consumer, manual acknowledgement/reconnect, bounded retry and Habit-owned quorum DLQ topology/tests.
+
+
+## Increment checkpoint — Habit RabbitMQ consumer adapter
+
+- Added a Habit-owned RabbitMQ.Client 7.2.2 BackgroundService. It is disabled by default and uses the existing transport-independent application processor through a fresh DI scope for each attempt.
+- The consumer uses manual acknowledgements, prefetch 1, one active delivery per channel, strict UTF-8 decoding, bounded full-jitter retries for known transient network/MySQL failures, poison/exhaustion dead-lettering and an explicit bounded reconnect loop. Ack/nack failures close the channel so unacknowledged messages are eligible for broker redelivery.
+- Added a separate `/health/consumer` signal; database readiness remains independent of broker availability.
+- Updated only Habit's local queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; added a Habit-owned quorum DLQ and direct DLX. Other service queues remain unchanged.
+- Added RabbitMQ Testcontainers tests for ack-after-processor-completion, invalid-envelope DLQ routing, transient retry success, retry exhaustion and startup reconnect; added eight Python topology contract tests and extended CI to assert the Habit DLQ and DLX exist.
+- Broker-connection-loss redelivery after an established consumer session is not yet covered by a dedicated Testcontainers test and remains unchecked. Existing MySQL tests continue to verify the processor's atomic inbox/projection commit.

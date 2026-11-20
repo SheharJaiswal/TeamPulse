@@ -39,3 +39,13 @@
 - RabbitMQ consumers receive the envelope directly. EventBridge/SQS consumers extract the same envelope from the outer EventBridge event's `detail` field. This is a transport adapter difference only.
 - RabbitMQ broker availability is not part of Identity database readiness. If the broker is unavailable, the outbox worker releases leases for delayed retry; it does not mark messages published.
 - Local RabbitMQ credentials/topology are development placeholders. Production EventBridge provisioning is deferred until cloud infrastructure setup.
+
+## Habit local lifecycle consumer
+
+- Habit consumes the direct schema-v1 envelope from `teampulse.habit.events`; it does not expect an EventBridge outer wrapper on RabbitMQ.
+- The consumer is disabled by default and is enabled explicitly through `HabitConsumer__Enabled` and `HabitConsumer__Uri` for local development.
+- Manual acknowledgement follows the Habit MySQL inbox/projection transaction. Applied, Stale and Duplicate outcomes are acknowledged only after the processor returns from its committed store operation.
+- Prefetch is fixed at one until per-channel acknowledgement concurrency is explicitly reviewed. The consumer uses bounded full-jitter retries for known transient MySQL/network errors; malformed events and exhausted retries are rejected without requeue to the Habit quorum DLQ.
+- The Habit queue has a finite broker delivery limit and an at-least-once dead-letter route. The local topology is seeded by `infra/rabbitmq/definitions.json`; other service queues remain unchanged.
+- RabbitMQ connectivity is exposed separately at Habit `/health/consumer`. Habit database readiness does not depend on the broker.
+- The application projection processor remains transport-independent. A future SQS adapter can call the same processor when cloud infrastructure is provisioned; no AWS dependency is needed for local development.

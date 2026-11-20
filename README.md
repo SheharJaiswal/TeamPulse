@@ -100,3 +100,29 @@ Run the full test suite with `dotnet test backend/TeamPulse.sln`. Unit tests do 
 ### Migration policy
 
 Create and commit migrations when the model changes. Startup migration application is enabled for local development and a single app instance. For production with multiple replicas, run migrations as a coordinated deployment job before rolling out application instances.
+
+### Habit RabbitMQ employee-lifecycle consumer
+
+The Habit consumer is disabled by default. To run it locally, start the existing MySQL and RabbitMQ containers, then enable the Habit consumer explicitly. PowerShell:
+
+```powershell
+$env:HabitConsumer__Enabled = "true"
+$env:HabitConsumer__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
+$env:HabitConsumer__QueueName = "teampulse.habit.events"
+dotnet run --project backend/src/Services/Habit/Habit.API
+```
+
+Bash:
+
+```bash
+export HabitConsumer__Enabled=true
+export HabitConsumer__Uri="amqp://teampulse:local_rabbitmq_password@localhost:5672/"
+export HabitConsumer__QueueName=teampulse.habit.events
+dotnet run --project backend/src/Services/Habit/Habit.API
+```
+
+The Habit consumer uses manual acknowledgements and a prefetch of one. It acknowledges only after the projection processor has committed its MySQL inbox/projection transaction. Duplicate and stale events are successful outcomes; malformed events and exhausted processing retries are rejected to the Habit-owned quorum DLQ. Transient MySQL/network failures use bounded full-jitter retries. The host reconnects to RabbitMQ with a bounded delay if the broker is unavailable.
+
+The Habit source queue is a quorum queue with a finite delivery limit and at-least-once dead-lettering to `teampulse.habit.events.dlq`. The DLX and DLQ are part of the local Compose definitions. Existing RabbitMQ volumes created before this topology change may retain the previous classic queue declaration; for a disposable local development environment only, stop Compose and recreate the RabbitMQ volume before starting the updated broker. Do not delete a volume containing messages or data you need to retain.
+
+Habit database readiness remains independent of RabbitMQ. Use `/health/consumer` to inspect the separate consumer connection state; `/health/ready` continues to report only the Habit database. No AWS credentials or EventBridge resources are required for local event delivery.

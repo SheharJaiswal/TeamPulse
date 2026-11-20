@@ -50,7 +50,7 @@ jobs:
         run: |
           docker compose up -d --wait --wait-timeout 90 rabbitmq
           queues="$(docker compose exec -T rabbitmq rabbitmqctl list_queues name --no-table-headers)"
-          for queue in teampulse.habit.events teampulse.challenge.events teampulse.event-tracking.events teampulse.insight.events teampulse.notification.events; do
+          for queue in teampulse.habit.events teampulse.habit.events.dlq teampulse.challenge.events teampulse.event-tracking.events teampulse.insight.events teampulse.notification.events; do
             if ! grep -Fxq "$queue" <<< "$queues"; then
               echo "Expected local RabbitMQ queue not found: $queue"
               printf '%s\n' "$queues"
@@ -58,8 +58,8 @@ jobs:
             fi
           done
           exchanges="$(docker compose exec -T rabbitmq rabbitmqctl list_exchanges name type --no-table-headers)"
-          if ! grep -Fq "teampulse.domain.events" <<< "$exchanges"; then
-            echo "Expected local RabbitMQ topic exchange not found."
+          if ! grep -Fq "teampulse.domain.events" <<< "$exchanges" || ! grep -Fq "teampulse.domain.events.dlx" <<< "$exchanges"; then
+            echo "Expected local RabbitMQ domain or Habit dead-letter exchange not found."
             printf '%s\n' "$exchanges"
             exit 1
           fi
