@@ -130,7 +130,8 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         Assert.True(employee.IsActive);
         Assert.Equal(1, employee.LifecycleVersion);
         Assert.Equal(1, await database.EmployeeLifecycleAudits.CountAsync(x => x.EmployeeId == employeeId));
-        Assert.Equal(1, await database.OutboxMessages.CountAsync());
+        var eventId = Guid.Parse(firstJson.RootElement.GetProperty("eventId").GetString()!);
+        Assert.Equal(1, await database.OutboxMessages.CountAsync(x => x.EventId == eventId));
     }
 
     [Fact]
@@ -140,6 +141,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         using var client = factory.CreateClient();
         await EnsureDatabaseAsync(client);
         var employeeId = await SeedEmployeeAsync(factory);
+        var correlationId = Guid.NewGuid();
         var options = new DbContextOptionsBuilder<IdentityDbContext>()
             .UseMySql(_fixture.ConnectionString, ServerVersion.AutoDetect(_fixture.ConnectionString))
             .AddInterceptors(new FailAfterSaveInterceptor())
@@ -150,7 +152,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
             var service = new EmployeeLifecycleService(failingDatabase);
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.ExecuteAsync(
                 employeeId, Guid.NewGuid(), false, "rollback-key", "employment-ended",
-                null, Guid.NewGuid(), CancellationToken.None));
+                null, correlationId, CancellationToken.None));
         }
 
         await using var verifyScope = factory.Services.CreateAsyncScope();
@@ -159,7 +161,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         Assert.True(employee.IsActive);
         Assert.Equal(0, employee.LifecycleVersion);
         Assert.False(await verifyDatabase.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
-        Assert.Empty(await verifyDatabase.OutboxMessages.ToListAsync());
+        Assert.False(await verifyDatabase.OutboxMessages.AnyAsync(x => x.CorrelationId == correlationId));
     }
 
     [Fact]
@@ -211,26 +213,26 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     private static Task<HttpResponseMessage> SendDeactivateAsync(
         HttpClient client, Guid employeeId, string? key, string reason)
     {
-        SetIdempotencyKey(client, key);
-        return client.PostAsJsonAsync(
-            $"/api/identity/employees/{employeeId}/deactivate",
-            new { reasonCode = reason, note = "integration test" });
+        var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+        {
+            Content = JsonContent.Create(new { reasonCode = reason, note = "integration test" })
+        };
+        if (key is not null)
+            request.Headers.Add("Idempotency-Key", key);
+        return client.SendAsync(request);
     }
 
     private static Task<HttpResponseMessage> SendReactivateAsync(
         HttpClient client, Guid employeeId, string reason, string key)
     {
-        SetIdempotencyKey(client, key);
-        return client.PostAsJsonAsync(
-            $"/api/identity/employees/{employeeId}/reactivate",
-            new { reasonCode = reason });
-    }
-
-    private static void SetIdempotencyKey(HttpClient client, string? key)
-    {
-        client.DefaultRequestHeaders.Remove("Idempotency-Key");
-        if (key is not null)
-            client.DefaultRequestHeaders.Add("Idempotency-Key", key);
+        var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/identity/employees/{employeeId}/reactivate")
+        {
+            Content = JsonContent.Create(new { reasonCode = reason })
+        };
+        request.Headers.Add("Idempotency-Key", key);
+        return client.SendAsync(request);
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response) =>
