@@ -1,10 +1,12 @@
 # Project Status
 Updated: 2026-11-21
 
-## Latest continuation checkpoint — session-owned teardown after DLQ/connection failure (CI pending)
+## Latest continuation checkpoint — session-owned teardown after DLQ/connection failure (CI #114 pending)
 
 - CI #112 for `acd34c9fa35fa34c77be4bcdfd8aac150e2c98fd` failed. Restore and Release build passed; Release build had 0 warnings/errors. Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. The .NET suite had 162/165 tests pass (38/41 Challenge, 24 Habit, 100 Identity). Two Challenge tests for failed mandatory DLQ publication timed out waiting for consumer disconnection; the commit-before-ack replay test timed out waiting for reconnect after broker restart. [CI run #112](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44831788475).
 - The failing DLQ path awaited `channel.CloseAsync` from inside its own `ReceivedAsync` callback. This couples callback completion to channel shutdown. The focused correction hands the failure to the session owner instead: the callback returns without ack, the session cancels/drains the callback, and session-owned channel/connection disposal causes broker redelivery.
+- CI #113 for intermediate commit `18d1cdeb068c26baab1044cc0742c993a69a6224` was cancelled after the follow-up correction landed; its build had reported CS1002/CS1056 in the new test's escaped JSON string. The C# literal was corrected in `6cadec8c2f9bd44c5ec1553c286ee847b9845762`. [CI run #113](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44838462993).
+- CI #114 is running for corrected code commit `6cadec8c2f9bd44c5ec1553c286ee847b9845762`; no build/test result is claimed yet. [CI run #114](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44838518946).
 - Added explicit RabbitMQ connection/channel shutdown notifications to end a session promptly while retaining channel-state polling as a fallback. New callbacks are refused once the session-end signal is set.
 - Added a Testcontainers scenario that removes the DLQ binding, verifies the session ends on mandatory publish failure, restores the binding, and verifies the original message is redelivered and dead-lettered after reconnect.
 - The existing commit-before-ack broker-stop/restart test remains the acceptance test for established-session cancellation, replay as Duplicate and prefetch release. No CEPS-11 or CEPS-14 checkbox is closed; all changed behavior awaits CI.
