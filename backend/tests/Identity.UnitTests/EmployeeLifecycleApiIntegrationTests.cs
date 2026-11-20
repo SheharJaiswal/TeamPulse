@@ -67,8 +67,8 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
 
-        var first = SendDeactivateAsync(client, employeeId, "deactivate-replay-1", "same-key");
-        var second = SendDeactivateAsync(client, employeeId, "deactivate-replay-2", "same-key");
+        var first = SendDeactivateAsync(client, employeeId, "same-reason", "same-key");
+        var second = SendDeactivateAsync(client, employeeId, "same-reason", "same-key");
         var responses = await Task.WhenAll(first, second);
 
         Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
@@ -216,7 +216,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         var request = new HttpRequestMessage(
             HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
         {
-            Content = JsonContent.Create(new { reasonCode = reason, note = "integration test" })
+            Content = JsonContent.Create(new { reasonCode = reason, note = "integration test", actorEmployeeId = Guid.Empty })
         };
         if (key is not null)
             request.Headers.Add("Idempotency-Key", key);
