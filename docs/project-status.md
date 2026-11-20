@@ -4,13 +4,16 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD before this checkpoint update: `30cb9a57bfa78614199fec355c11e1e2fc2b2f96`.
-- `feature/backend-foundation` is ahead of `main` and 0 commits behind; `main` was not modified.
-- Latest verified code commit: `1f85ef9f3e65ef9047dfb6720bb61b88b9dba818` (GitHub Actions run #86).
-- Current SDD increment: `docs/changes/identity-eventbridge-infrastructure/`; the parameterized CloudFormation stack, exact event-type matching and Python contract tests are committed. cfn-lint and all seven contract tests passed in CloudFormation workflow run #2; .NET CI run #86 also passed. Live AWS deployment and production activation remain blocked.
-- Product policy baseline: ADR-0002; all nine initial product open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
-- Completed SDD increments include inactive-login guard, HR administrator bootstrap, HR employee lifecycle and the new Identity outbox/EventBridge dispatcher design.
-- Resume rule: fetch the live branch HEAD, inspect recent commits and repository tree, read this checkpoint and relevant specs/contracts, then continue the single next task. Do not recreate completed work.
+- Live branch HEAD at run start: `f490cbe53288e15d953d61acd8fbd408fbb9fb0f`; branch parent and recent commit history were fetched from GitHub. The prior checkpoint named `30cb9a57bfa78614199fec355c11e1e2fc2b2f96`, which is the parent of the current live HEAD, so the checkpoint was one documentation commit behind.
+- Reconciled live tree: Identity outbox dispatcher, EventBridge publisher, CloudFormation fan-out stack, five queue targets/DLQs, and seven infrastructure contract tests are present. No downstream consumer projects exist yet.
+- Owner decision: EventBridge provisioning, deployment and live-delivery testing are deferred until cloud infrastructure setup. Do not spend development runs on AWS deployment or credentials.
+- Current SDD: `docs/changes/identity-local-rabbitmq-transport/`. The RabbitMQ local transport specification is committed; implementation is the current in-progress task.
+- Production architecture is unchanged: EventBridge remains the production transport. RabbitMQ is only the local development/integration-test transport. The six-service architecture remains unchanged.
+- Completed baseline: Identity HR lifecycle/outbox, MySQL lease-safe dispatcher, EventBridge adapter, EventBridge CloudFormation fan-out and CI verification (92 .NET tests; 7 CloudFormation contract tests).
+- In progress: implement RabbitMQ.Client adapter, explicit transport selection, local Compose broker/topology and RabbitMQ Testcontainers coverage.
+- Blockers/deferred: AWS EventBridge provisioning and producer CloudWatch exporter/alarms are intentionally deferred until cloud setup; they do not block local development. No credentials are required for the RabbitMQ path.
+- Single next task: complete the approved local RabbitMQ transport implementation and its tests, then record CI results and commit SHA here.
+- Resume rule: fetch live branch HEAD and reconcile this checkpoint before every run; continue existing files/commits without recreating completed SDD or dispatcher work.
 
 ## Completed
 
