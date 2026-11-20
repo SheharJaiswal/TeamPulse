@@ -9,7 +9,7 @@
 |---|---|
 | Custom event bus | Name is a required deployment parameter; no physical bus name or account ARN is hard-coded. |
 | Identity IAM attachment | Attach an inline policy to an existing same-account workload role. Permit only `events:PutEvents` on the created bus ARN. Do not create or alter the role trust policy. |
-| Lifecycle rule | Match source `teampulse.identity`, detail types `EmployeeDeactivated` / `EmployeeReactivated`, `detail.eventType` matching those types, and numeric `detail.schemaVersion=1`. |
+| Lifecycle rule | Match source `teampulse.identity` and use EventBridge `$or` branches so outer `detail-type` and inner `detail.eventType` must be the same approved event type, with numeric `detail.schemaVersion=1`. |
 | Projection queues | Exactly five standard SQS queues, owned operationally by Habit, Challenge, Event Tracking, Insight and Notification. |
 | Target-delivery DLQs | One standard SQS DLQ per EventBridge target. These capture target delivery failures after bus acceptance only. |
 | Queue resource policies | Permit `events.amazonaws.com:sqs:SendMessage` only when `aws:SourceArn` is the exact lifecycle rule ARN and `aws:SourceAccount` is the current account. |
@@ -45,14 +45,14 @@ The template provisions AWS-managed delivery alarms for queue age, target DLQ de
 |---|---|---|
 | IEF-01 | Bus name, environment, existing role and queue-age SLO are parameterized. | cfn-lint and template review. |
 | IEF-02 | Identity permission is only `events:PutEvents` on the bus ARN. | cfn-lint and IAM policy inspection. |
-| IEF-03 | Rule matches only the approved Identity lifecycle event types and schema version 1. | Event-pattern review and non-production event test. |
+| IEF-03 | Rule matches only paired outer/inner approved Identity lifecycle event types and schema version 1. | Python template contract test, EventBridge event-pattern review and non-production event test. |
 | IEF-04 | Exactly five service-owned target queues and five distinct target-delivery DLQs exist. | cfn-lint and CloudFormation resource inspection. |
 | IEF-05 | Each queue/DLQ policy is limited to the rule ARN and source account. | Template/IAM policy inspection and non-production delivery test. |
 | IEF-06 | Target retry settings are bounded and parameterized; queues use SSE-SQS. | cfn-lint and stack resource inspection. |
 | IEF-07 | Target queue age, DLQ depth and DLQ-write failure alarms exist. | cfn-lint and CloudWatch alarm inspection. |
 | IEF-08 | Alarm actions are attached only when an existing SNS topic parameter is supplied. | cfn-lint and stack change-set review. |
 | IEF-09 | Consumer read permissions remain service-owned; no role trust or database ownership changes. | Template review. |
-| IEF-10 | Static template lint runs for infrastructure changes. | GitHub Actions CloudFormation lint workflow. |
+| IEF-10 | Static template lint and resource/security contract tests run for infrastructure changes. | GitHub Actions cfn-lint and Python unittest workflow. |
 | IEF-11 | Dispatcher remains disabled until non-production deployment and consumer readiness checks complete. | Deployment configuration/release checklist. |
 | IEF-12 | No producer outbox alarms are created against unexported .NET Meter instruments. | Telemetry/observability review. |
 

@@ -12,7 +12,7 @@ The stack accepts the name of an existing Identity workload role and attaches on
 
 ## Event routing
 
-The rule matches source `teampulse.identity`, outer detail types `EmployeeDeactivated` / `EmployeeReactivated`, matching inner `detail.eventType`, and numeric `detail.schemaVersion=1`.
+The rule matches source `teampulse.identity` and uses two `$or` branches so `detail-type=EmployeeDeactivated` is paired only with `detail.eventType=EmployeeDeactivated`, and the corresponding Reactivated fields are paired in the other branch. Both require numeric `detail.schemaVersion=1`.
 
 Each SQS target receives the default full EventBridge event JSON. The TeamPulse envelope is preserved in `detail`. No `Input`, `InputPath` or `InputTransformer` is used, so event ID, correlation ID, timestamp and payload remain available to consumers.
 
@@ -44,4 +44,4 @@ The Identity worker's current `System.Diagnostics.Metrics` instruments are not e
 
 ## Validation
 
-The repository workflow runs `cfn-lint` on the template. Static lint does not prove the account's existing role name/trust, permissions, region availability, CloudFormation change-set behavior or live target delivery. Those require an authorized non-production AWS deployment.
+The repository workflow runs `cfn-lint` and Python contract tests for resource counts, exact event-type pairing, least-privilege policies and alarm coverage. Static validation does not prove the account's existing role name/trust, permissions, region availability, CloudFormation change-set behavior or live target delivery. Those require an authorized non-production AWS deployment.

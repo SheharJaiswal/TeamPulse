@@ -36,9 +36,10 @@ Run locally when Python is available:
 ```bash
 python -m pip install cfn-lint
 cfn-lint --non-zero-exit-code warning infra/cloudformation/identity-eventbridge.yaml
+python -m unittest discover -s infra/cloudformation/tests -v
 ```
 
-This is static template validation. It does not replace AWS CloudFormation change-set review, deployment, IAM simulation or a non-production delivery test.
+The unit tests assert the five service queues/DLQs, exact lifecycle event-type pairing, scoped IAM/queue policies and alarm coverage. Static validation does not replace AWS CloudFormation change-set review, deployment, IAM simulation or a non-production delivery test.
 
 ## Deploy to a non-production account
 

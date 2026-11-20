@@ -17,8 +17,10 @@
 - [x] Add target queue age, DLQ depth and EventBridge DLQ-write failure alarms with optional SNS actions.
 - [x] Keep consumer receive permissions and consumer-processing DLQs outside the shared stack.
 - [x] Document deployment parameters, rollout gates, message body and observability limitations.
-- [x] Add a dedicated GitHub Actions cfn-lint workflow.
-- [ ] Confirm the CloudFormation lint workflow passes on the committed template.
+- [x] Add a dedicated GitHub Actions cfn-lint and Python contract-test workflow.
+- [x] Pair outer detail type and inner event type with EventBridge `$or` branches to reject mismatched lifecycle envelopes.
+- [x] Add Python contract tests for exact queue/DLQ counts, event pairing, IAM/queue policy scope, SSE-SQS and alarm coverage.
+- [ ] Confirm cfn-lint and Python contract tests pass in GitHub Actions.
 
 ## Live deployment — blocked
 

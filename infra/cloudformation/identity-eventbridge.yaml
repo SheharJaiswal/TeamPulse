@@ -462,15 +462,21 @@ Resources:
       EventPattern:
         source:
           - teampulse.identity
-        detail-type:
-          - EmployeeDeactivated
-          - EmployeeReactivated
-        detail:
-          eventType:
-            - EmployeeDeactivated
-            - EmployeeReactivated
-          schemaVersion:
-            - 1
+        $or:
+          - detail-type:
+              - EmployeeDeactivated
+            detail:
+              eventType:
+                - EmployeeDeactivated
+              schemaVersion:
+                - 1
+          - detail-type:
+              - EmployeeReactivated
+            detail:
+              eventType:
+                - EmployeeReactivated
+              schemaVersion:
+                - 1
       Targets:
         - Arn: !GetAtt HabitEmployeeStatusQueue.Arn
           Id: HabitEmployeeStatusProjection
