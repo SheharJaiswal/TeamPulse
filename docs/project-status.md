@@ -3,16 +3,16 @@ Updated: 2026-11-20
 
 ## Continuation checkpoint
 - Active branch: feature/backend-foundation.
-- Starting live HEAD for this increment: 0dcff844249bfe9fc3e602f400969e230b4df6ef.
-- SDD pre-implementation commit: 98a318888df0214dae7a9d7e762579950384b81e.
-- Initial health-probe implementation commit: 272869801926a1396b95f3b41994fd2adf1c9525 (CI run #30 failed at build; it is superseded by the corrective commit below).
-- Corrected implementation commit: 3782940507dee022a611cbe34f92d3a689400bfb.
-- CI run #31: [44675962776](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675962776), conclusion success.
-- Current SDD change: docs/changes/identity-health-probes/ (implemented and CI-verified).
-- Resume rule: fetch the live branch HEAD, recent commits and recursive tree first; reconcile this file with the live source before selecting work. Never repeat completed tasks.
+- Starting live HEAD for this increment: cd93bdc24b760907765a48132578540ad4bb565f.
+- Previous verified increment: Identity health probes, CI run #31 (44675962776), 38 passed.
+- Current policy decision: ADR-0002, docs/decisions/0002-product-policy-baseline.md; initial nine open questions are resolved with the project owner's instruction to apply recommended MVP answers.
+- Current implementation change: docs/changes/identity-inactive-login-guard/.
+- Latest implementation commit: 83259537f2e27caa1509de5c874a154d98bea038.
+- Latest documentation commit before this checkpoint: ccd608efcdf2fd620a17ec75ce255ea776b9d4fa.
+- Resume rule: fetch live branch HEAD, inspect recent commits/tree and read this checkpoint before choosing work. Continue the single next task; do not recreate completed policy or login-guard work.
 
 ## Completed
-- [x] Exactly six service boundaries and data ownership documented.
+- [x] Exactly six service boundaries and ownership documented; no cross-service database access.
 - [x] Identity Clean Architecture, registration/login/me, password hashing and JWT implementation.
 - [x] MySQL 8.4 / EF Core 8 / Pomelo persistence and checked-in startup EF migration.
 - [x] Identity unit, controller and MySQL Testcontainers integration test foundations.
@@ -20,64 +20,64 @@ Updated: 2026-11-20
 - [x] Removed obsolete PostgreSQL bootstrap artifact.
 - [x] IA-08: fail-fast JWT signing-key validation; no committed signing-key fallback.
 - [x] IA-10: bootstrap registration is Development-only, returning 404 without persistence in other environments.
-- [x] IA-11 / PH-01 through PH-07: successful legacy password verification upgrades the stored hash before token issuance; normal hashes are not rewritten; invalid credentials remain generic 401; persistence failure prevents token issuance.
-- [x] HP-01 through HP-07: separated process liveness and database readiness endpoints; preserved /health as a readiness compatibility alias; readiness probe is bounded to three seconds and health responses do not expose provider details.
-- [x] Added MySQL Testcontainers integration test proving /health/live stays HTTP 200 while MySQL is stopped after startup, whereas /health/ready and /health return HTTP 503; database is restarted in finally.
-- [x] Updated README, Identity API contract and SDD artifacts for health probe semantics.
-- [x] CI run #31 (44675962776): restore passed; Release build passed with 0 warnings and 0 errors; Docker Compose validation passed; 38 tests passed, 0 failed, 0 skipped (38-second test duration).
-- [x] Test result artifact: [teampulse-test-results, artifact 14601438633](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675962776/artifacts/14601438633).
+- [x] IA-11: legacy password hashes upgrade before token issuance; normal hashes are not rewritten; persistence failure prevents token issuance.
+- [x] HP-01 through HP-07: separate liveness/readiness endpoints; /health compatibility alias; bounded three-second DB probe; no sensitive health details.
+- [x] Health integration test proves liveness remains healthy while MySQL is stopped and readiness returns 503.
+- [x] CI run #31 (44675962776): restore, Release build (0 warnings/errors), Compose validation and 38 tests passed.
+- [x] ADR-0002 accepted: all nine initial product open questions resolved with recommended MVP defaults.
+- [x] Updated docs/open-questions.md, README.md and ADR-0002 with HR provisioning, Identity/HRIS ownership, normalized challenge scoring, cohort threshold 10, evidence policy, habit reuse, manager privacy scope, retention defaults and HR-controlled account lifecycle.
+- [x] IA-09 login guard implemented: password is verified for an existing employee, but inactive status returns the same generic 401 before password rehash, persistence or token issuance.
+- [x] Added unit test asserting generic 401, password verification performed, no rehash, no save and no token for inactive employee.
+- [x] Added MySQL Testcontainers integration test that marks a persisted employee inactive, attempts login, verifies generic 401 and confirms password hash remains unchanged.
+- [x] Updated Identity specification, API contract and Identity foundation checklist.
 
 ## In progress
-- [ ] No implementation task is currently in progress. Health probe separation is complete and verified.
+- [ ] Verify the GitHub Actions run triggered by the latest code commit 83259537f2e27caa1509de5c874a154d98bea038; correct any compile/test failures and record final evidence.
 
-## Blockers
-- Employee account lifecycle policy remains unresolved in docs/open-questions.md question 9. This blocks implementing account activation/deactivation commands, authorities and audit/reason requirements. It does not block a defensive login check against an already-inactive Employee.IsActive record.
-- This automation container has no .NET SDK or Docker CLI; local restore/build/test/Compose execution is unavailable. The Docker-capable GitHub Actions runner is the verification environment.
-- No blocker remains for the health probe increment.
+## Blockers / decisions
+- No unresolved product questions remain for MVP design.
+- Retention defaults (90-day evidence, 12-month identifiable activity/participation, 24-month security/admin audit, up to 5-year anonymized aggregates) require jurisdiction-specific privacy/legal sign-off before production.
+- HRIS integration, HR provisioning/lifecycle commands, lifecycle audit persistence, transactional outbox and downstream employee-status projections remain future implementation work, not completed capabilities.
+- The current increment intentionally does not add activation/deactivation APIs or lifecycle audit schema.
+- This automation environment has no .NET SDK or Docker CLI; local restore/build/test/Compose execution is unavailable. GitHub Actions is the Docker-capable verification environment.
 
 ## Verification evidence
-Local capability check:
-- command -v dotnet: no executable found.
-- dotnet --info: command not found.
-- command -v docker: no executable found.
-- docker --version: command not found.
-- command -v git: /usr/bin/git.
-No local build/test result is claimed.
+Previously verified baseline:
+- CI run #31: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675962776
+- dotnet restore backend/TeamPulse.sln: passed.
+- dotnet build backend/TeamPulse.sln --configuration Release --no-restore: passed; 0 warnings, 0 errors.
+- docker compose config --quiet: passed.
+- dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx": 38 passed, 0 failed, 0 skipped.
 
-First CI attempt:
-- Run #30: [44675833320](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675833320), conclusion failure at Release build.
-- Errors: AddDbContextCheck in this .NET 8 package version has no timeout named argument; HealthCheckOptions is in Microsoft.AspNetCore.Diagnostics.HealthChecks.
-- Corrected in commit 3782940507dee022a611cbe34f92d3a689400bfb using a scoped IdentityDatabaseHealthCheck and HealthCheckRegistration timeout.
+Current increment:
+- CI is triggered by code changes on feature/backend-foundation; docs-only pushes are ignored by workflow paths-ignore.
+- Code commits include 2e0b875b09a7e08f05c187418bc163004669c9a1 (final controller flow), 1031fa830ce26496b2b4d8f98c0ad5f87c306eb3 (unit test) and 83259537f2e27caa1509de5c874a154d98bea038 (MySQL integration test).
+- No successful CI result has yet been confirmed for these commits. Do not claim current build/tests passed.
+- Local command capability remains unavailable: dotnet and docker executables are not installed.
 
-Successful CI:
-- Run #31: [44675962776](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675962776), commit 3782940507dee022a611cbe34f92d3a689400bfb, conclusion success.
-- `dotnet restore backend/TeamPulse.sln`: passed.
-- `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: passed; 0 warnings, 0 errors.
-- `docker compose config --quiet`: passed.
-- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: passed 38, failed 0, skipped 0; test duration 38 seconds.
-- Uploaded test result artifact ID: 14601438633.
-
-## Changed files in the health probe increment
-- backend/src/Services/Identity/Identity.API/Program.cs
-- backend/src/Services/Identity/Identity.API/HealthChecks/IdentityDatabaseHealthCheck.cs
-- backend/tests/Identity.UnitTests/MySqlIntegrationFixture.cs
-- backend/tests/Identity.UnitTests/IdentityHealthProbeIntegrationTests.cs
+## Changed files in this increment
+- docs/decisions/0002-product-policy-baseline.md
+- docs/open-questions.md
 - README.md
+- docs/changes/identity-inactive-login-guard/{proposal,spec,design,tasks}.md
+- backend/src/Services/Identity/Identity.API/Controllers/IdentityController.cs
+- backend/tests/Identity.UnitTests/IdentityControllerTests.cs
+- backend/tests/Identity.UnitTests/IdentityApiIntegrationTests.cs
+- docs/specs/identity-service.md
 - docs/contracts/identity-api.md
-- docs/changes/identity-health-probes/{proposal,spec,design,tasks}.md
+- docs/changes/identity-service-foundation/tasks.md
 - docs/project-status.md
 
 ## Last run record
-- Fetched the live feature/backend-foundation branch HEAD; starting SHA was 0dcff844249bfe9fc3e602f400969e230b4df6ef. Read the live branch commit history (15 recent commits) and recursive Git tree (116 entries; not truncated).
-- Read AGENTS.md, README.md, docs/project-status.md, docs/open-questions.md, service ownership, communication conventions, Identity spec and contract, ADR-0001, relevant SDD artifacts, Program.cs, API controller, repository, Employee entity, MySQL fixture, migration tests, controller tests, test project and CI workflow.
-- Reconciled the checkpoint: password-hash upgrade was complete; IA-09 lifecycle mutation policy remained unresolved. Chose an independent operational-readiness improvement rather than inventing lifecycle rules.
-- Created docs/changes/identity-health-probes/{proposal,spec,design,tasks}.md before implementation.
-- First implementation commit 272869801926a1396b95f3b41994fd2adf1c9525 triggered CI run #30 and failed with three compile errors. The exact errors were read from job logs and corrected; the failed commit was not marked complete.
-- Corrective commit 3782940507dee022a611cbe34f92d3a689400bfb fixed the HealthCheckOptions namespace and replaced the unsupported AddDbContextCheck timeout argument with a dedicated scoped health check registered with a three-second HealthCheckRegistration timeout.
-- Before the corrective branch update, fetched the branch and confirmed it still matched the expected previous HEAD 272869801926a1396b95f3b41994fd2adf1c9525. Updated using an expected-SHA guard with force=false.
-- CI run #31 completed successfully: restore, Release build (0 warnings/errors), Compose validation and 38 tests passed. Test logs confirm 38 passed, 0 failed, 0 skipped.
-- MySQL provider, schema, checked-in migration and startup Database.MigrateAsync() behavior were unchanged.
-- Corrected implementation commit: 3782940507dee022a611cbe34f92d3a689400bfb.
+- Confirmed branch feature/backend-foundation exists and reconciled the live checkpoint. The live branch matched commit cd93bdc24b760907765a48132578540ad4bb565f at the start (4 commits ahead of the earlier checkpoint base, 0 behind).
+- Read AGENTS.md, README.md, docs/project-status.md, docs/open-questions.md, service ownership, communication conventions, Identity spec/contract, ADR-0001, health probe SDD, Identity controller, Employee entity, repository, unit tests, MySQL Testcontainers fixture/integration tests, Program.cs and CI workflow.
+- Created ADR-0002 and SDD proposal/spec/design/tasks before implementation.
+- Resolved initial questions 1-9 with recommended MVP decisions and recorded retention legal review as a production gate.
+- Implemented the inactive login check. Password verification still runs for an existing inactive account; after a successful or rehash-needed verification the status check returns generic 401 before any hash upgrade, DB write or token generation. This avoids a fast inactive-account path while keeping account status private.
+- Added unit and MySQL integration coverage; test sets IsActive false directly in the test database without introducing a production lifecycle API.
+- Updated Identity spec, contract, README and task checklists.
+- Confirmed branch remained at ccd608efcdf2fd620a17ec75ce255ea776b9d4fa before the checkpoint update (compare status identical, ahead 0 / behind 0).
+- Implementation is committed; current CI verification is pending.
 
 ## Single next task
-Add a fail-closed login guard for employees whose existing `IsActive` flag is false: return the same generic 401 as other invalid credentials, do not rehash the password and do not issue a token. Add unit and MySQL integration tests. Do not add activation/deactivation APIs, choose lifecycle authorities, or invent audit/reason rules; those remain blocked by open question 9.
+Verify the GitHub Actions workflow triggered by the latest code commit 83259537f2e27caa1509de5c874a154d98bea038. If it fails, inspect job logs, fix the exact failure on feature/backend-foundation and rerun. If it succeeds, record exact restore/build/Compose/test results and select HR provisioning/lifecycle workflow as the next SDD increment.
