@@ -44,7 +44,7 @@
 - [ ] MySQL 8.4 Testcontainers: same event ID/same fingerprint and same event ID/different fingerprint.
 - [ ] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert.
 - [ ] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation.
-- [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay (the broker-stop/restart scenario is authored; CI #109 verification is pending).
+- [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay (the broker-stop/restart scenario is committed in `5dc66ddb65ce5b9479c85c4e93ff93c85d59c033`; CI #110 verification is pending).
 - [ ] RabbitMQ Testcontainers: invalid event and integrity violation DLQ handling, including DLX failure and redelivery.
 - [ ] RabbitMQ Testcontainers: bounded exponential retry, exhaustion/non-transient classifications and failed-DLQ redelivery for retry exhaustion.
 - [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect; startup-reconnect test passed in CI #105.
