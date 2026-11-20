@@ -3,8 +3,9 @@ Updated: 2026-11-20
 
 ## Continuation checkpoint
 - Active branch: feature/backend-foundation.
-- Previous checkpoint: 8277b642608651f517f1ff7479fa7aa842c60a6d.
-- Current live HEAD before this checkpoint update: c71fe14349537eebc288330eefbd7e7fdbf13663.
+- Previous checkpoint: c71fe14349537eebc288330eefbd7e7fdbf13663.
+- Current live HEAD before this checkpoint update: baedca830c9aef433f1f845bb2c58afbc19447d.
+- Previous checkpoint documentation commit: baedca830c9aef433f1f845bb2c58afbc19447d.
 - Latest code commit covered by CI: 71e2208442ec0224726185f8cae1a15da9767135.
 - Latest completed documentation increment: c71fe14349537eebc288330eefbd7e7fdbf13663.
 - Product policy baseline: ADR-0002; all nine initial open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
@@ -48,8 +49,7 @@ Updated: 2026-11-20
 - Employee invitation/provisioning is deferred pending invitation delivery, token expiry, initial credential activation and password setup decisions. The bootstrap utility creates only the first HrAdmin.
 - Organization Admins have no direct employee profile/lifecycle write access. Their HR request-intake workflow is not yet defined. HR role catalogue/elevated-role assignment and HRIS service authentication are also open.
 - EventBridge bus name, dispatcher lease/retry/DLQ and delivery monitoring are not configured; the current SDD increment intentionally stops at transactional outbox persistence. Receiving-service projections and global revocation remain future work.
-- Retention defaults (90-day evidence, 12-month identifiable activity/participation, 24-month security/admin audit, up to 5-year anonymized aggregates) still require jurisdiction-specific privacy/legal sign-off before production.
-- This automation environment has no .NET SDK or Docker CLI; local restore/build/test/Compose execution is unavailable. GitHub Actions is the Docker-capable verification environment.
+- Environment checks this run: `dotnet --info` unavailable (command not found, exit 127); `docker --version` unavailable (command not found, exit 127); `git --version` passed (`git version 2.47.3`). Consequently, local restore/build/test/Compose commands could not be executed. GitHub Actions is the Docker-capable verification environment.
 
 ## Verification evidence
 
@@ -109,7 +109,8 @@ Updated: 2026-11-20
 - Documented field ownership: HR owns canonical employee identity fields; Organization Admins cannot directly write employee profile or lifecycle state and may only request HR changes through a workflow that remains undefined.
 - Added event schema v1 and a monotonic lifecycle-version projection contract to protect consumers against duplicate/out-of-order delivery.
 - Explicitly deferred employee invitation/provisioning, role catalogue/elevation, HRIS authentication, Organization Admin request intake, EventBridge dispatch and downstream consumer implementation because their required product/deployment decisions or service code are not yet available.
-- SDD files committed as c71fe14349537eebc288330eefbd7e7fdbf13663. This was a documentation-only increment; no CI run was triggered and no new checks are claimed.
+- SDD files committed as c71fe14349537eebc288330eefbd7e7fdbf13663. The subsequent checkpoint documentation commit was baedca830c9aef433f1f845bb2c58afbc19447d8. This was a documentation-only increment; no CI run was triggered and no new CI checks are claimed.
+- Exact local environment checks: `dotnet --info` failed because dotnet is not installed (exit 127); `docker --version` failed because Docker is not installed (exit 127); `git --version` returned 2.47.3. No build/test/Compose pass is claimed.
 
 ## Single next task
 Implement the approved HR-only lifecycle command slice on feature/backend-foundation. Add role-protected deactivate/reactivate endpoints, validated actor attribution, idempotency and concurrency guards, lifecycle version, immutable audit and transactional outbox records in one EF Core transaction, plus a checked-in migration. Add unit, API authorization and MySQL Testcontainers tests; run GitHub Actions and record exact results. Do not implement employee invitations, role/profile mutation, Organization Admin request intake, HRIS or EventBridge dispatch in this slice. Keep main untouched.
