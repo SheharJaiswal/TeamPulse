@@ -4,10 +4,10 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD before this checkpoint update: `63f20ffb65e05977ddfa5e901a4cd4188789ee53`.
+- Live branch HEAD before this checkpoint update: `28693d45d2d556e1f3c20d1064b9257795b20f3a`.
 - `feature/backend-foundation` is ahead of `main` and 0 commits behind; `main` was not modified.
 - Latest verified code commit: `38c90810ff1fece5382c69d81fa025478d0a8ce6` (GitHub Actions run #84).
-- Current SDD increment: `docs/changes/identity-outbox-eventbridge-dispatcher/`; core implementation and the remaining acceptance-test hardening are committed and CI-verified. Production activation remains blocked on deployment infrastructure.
+- Current SDD increment: `docs/changes/identity-eventbridge-infrastructure/`; the parameterized CloudFormation stack and dedicated cfn-lint workflow are committed. Static lint is pending; live AWS deployment and production activation remain blocked.
 - Product policy baseline: ADR-0002; all nine initial product open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
 - Completed SDD increments include inactive-login guard, HR administrator bootstrap, HR employee lifecycle and the new Identity outbox/EventBridge dispatcher design.
 - Resume rule: fetch the live branch HEAD, inspect recent commits and repository tree, read this checkpoint and relevant specs/contracts, then continue the single next task. Do not recreate completed work.
@@ -52,17 +52,21 @@ Updated: 2026-11-20
 - [x] Hardened EventBridge response handling: an omitted aggregate `FailedEntryCount` does not override valid per-entry results; a present count that contradicts entry results makes the whole batch retryable rather than acknowledging ambiguous events.
 - [x] Added acceptance tests for disabled/enabled configuration, missing bus/region, invalid option ranges, retry/backoff boundaries, systemic/permanent error classification, payload-free worker logs, persisted retry due times and crash-after-acceptance replay preserving the original eventId.
 - [x] Added domain, EventBridge publisher and MySQL Testcontainers coverage for envelope mapping, partial failures, concurrent claims, lease expiry, stale-owner fencing, acknowledgement, quarantine and queue metrics.
+- [x] Added parameterized Identity EventBridge CloudFormation stack with existing-role PutEvents policy, schema-v1 lifecycle routing, five service-owned SQS queues, per-target DLQs, scoped queue policies and AWS-managed delivery alarms.
+- [x] Added dedicated cfn-lint GitHub Actions workflow, infrastructure deployment guide and SQS/EventBridge message-body contract.
 
 ## In progress
 
-- No application-code task is currently in progress. The dispatcher implementation and acceptance-test hardening are complete and verified by CI run #84.
-- The next development increment is the parameterized AWS deployment SDD/template recorded under **Single next task**; the dispatcher remains disabled until that infrastructure is reviewed and verified.
+- The Identity EventBridge fan-out CloudFormation template, deployment README and dedicated cfn-lint workflow are committed. The workflow result is pending at this checkpoint; do not claim the template is validated until it passes.
+- No AWS stack has been deployed. The dispatcher remains disabled. The five queue consumers and their service-owned receive permissions are not implemented.
+- Producer-side outbox alarms remain incomplete: the worker's .NET Meter instruments have no CloudWatch/OpenTelemetry exporter.
 
 ## Blockers and decisions
 
-- **Deployment enablement blocker:** The repository has no deployment/IaC tree (the inspected root contains .github, backend, docs and docker-compose.yml; `deploy/` and `infra/` do not exist). No EventBridge bus, Identity workload IAM role, EventBridge rules/targets, SQS queues/DLQs or CloudWatch alarms are defined. The dispatcher is implemented and tested with a mocked EventBridge client while disabled, but `OutboxDispatcher__Enabled` must remain false in deployed environments until those resources are provisioned and reviewed.
-- Bus name is intentionally deployment-supplied through `EventBridge__BusName`; region uses `AWS_REGION`; the fixed source is `teampulse.identity`. No account-specific ARN or credential is to be invented or committed.
-- Required before live EventBridge verification: a non-production AWS account/region and either authorized provisioning access or the provisioned bus, Identity workload role, rules/targets, SQS DLQs and alarms. No account-specific ARN or credentials are stored in the repository.
+- **AWS deployment blocker:** The CloudFormation template now defines the bus, scoped Identity role policy, lifecycle rule, five SQS targets, target-delivery DLQs, queue policies and AWS-managed delivery alarms, but no stack has been deployed. A non-production AWS account/region, authorized provisioning role, existing Identity workload role name and approved queue-age threshold are required. Supply an existing SNS topic ARN if alarm notifications are required. Keep `OutboxDispatcher__Enabled=false` until the stack is reviewed and verified.
+- Bus name is a required deployment parameter and is passed to the API as `EventBridge__BusName`; region uses `AWS_REGION`; the fixed source is `teampulse.identity`. No account-specific ARN or credential is committed. The stack attaches policy to an existing same-account role and does not create or alter its trust relationship.
+- **Producer telemetry blocker:** The worker's `System.Diagnostics.Metrics` instruments are not exported to CloudWatch. The template therefore does not claim to alarm on oldest pending outbox age, quarantined rows or systemic publisher failures. Approve and implement a telemetry exporter, namespace/dimensions and thresholds before adding those alarms.
+- **Consumer readiness blocker:** Habit, Challenge, Event Tracking, Insight and Notification status projections and their queue receive policies are not implemented. The shared stack intentionally grants no consumer read access. Do not enable production dispatch until all five consumers are ready.
 - The bootstrap utility has not been executed against a production database; no claim is made that a production HR administrator account exists.
 - Employee invitation/provisioning and credential activation remain deferred pending invitation delivery, token expiry and password setup decisions.
 - Organization Admins have no direct employee profile/lifecycle write access. Their HR request-intake workflow is not defined. HR role catalogue/elevated-role assignment and HRIS service authentication are also deferred.
@@ -126,6 +130,19 @@ Updated: 2026-11-20
 - docs/open-questions.md
 - docs/project-status.md
 
+### This run — parameterized Identity EventBridge infrastructure
+
+- Reconciled live `feature/backend-foundation` HEAD `28693d45d2d556e1f3c20d1064b9257795b20f3a`, recent commits and recursive repository tree. The prior single next task was the AWS fan-out infrastructure SDD/template; no `infra/` or `deploy/` tree existed.
+- Read AGENTS.md, README.md, project status, open questions, service ownership, ADR-0001/0002, communication conventions, Identity event envelope, employee-status projection contract, event catalog, dispatcher proposal/spec/design/tasks, Identity worker configuration and existing CI workflow.
+- Created the infrastructure SDD package at `docs/changes/identity-eventbridge-infrastructure/`.
+- Added `infra/cloudformation/identity-eventbridge.yaml`: required custom bus and existing Identity role parameters; `events:PutEvents` restricted to the bus; one schema-v1 lifecycle rule; five service-owned standard SQS targets; five EventBridge target-delivery DLQs; exact source-ARN/account queue policies; configurable retry/retention; queue-age/DLQ-depth/EventBridge DLQ-write alarms; optional SNS alarm actions.
+- Queue read permissions and consumer-processing DLQs remain service-owned. The template does not create the Identity compute role/trust policy or any consumer. The worker remains disabled.
+- Added a dedicated cfn-lint workflow, deployment README, event/communication contract updates, dispatcher task updates and open-question #18 for missing producer-side CloudWatch telemetry export.
+- AWS documentation review confirmed custom EventBridge bus rule metrics use EventBusName and RuleName dimensions, and EventBridge targets support per-target SQS DLQs. References: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-monitoring.html and https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-events-rule.html.
+- Local .NET/Docker validation is not relevant to this IaC-only increment and no AWS credentials were available. The cfn-lint workflow is the static template validation gate; live CloudFormation deployment is not attempted.
+- Changed files: `.github/workflows/cloudformation.yml`, `infra/cloudformation/identity-eventbridge.yaml`, `infra/cloudformation/README.md`, `docs/changes/identity-eventbridge-infrastructure/{proposal,spec,design,tasks}.md`, `README.md`, `docs/architecture/communication.md`, `docs/contracts/event-envelope.md`, `docs/changes/identity-outbox-eventbridge-dispatcher/{spec,tasks}.md`, `docs/open-questions.md`, `docs/project-status.md`.
+- Static lint result is pending; no live AWS deployment or enablement is claimed.
+
 ## Single next task
 
-Create the SDD package and parameterized AWS CloudFormation deployment increment for the Identity EventBridge producer: custom bus, least-privilege Identity workload-role attachment, lifecycle-event rule, five service-owned SQS target queues with target-delivery DLQs/queue policies, and operational alarms. Keep the dispatcher disabled; do not deploy or enable it until non-production AWS access and resource review are available.
+Create the SDD for exporting Identity outbox Meter instruments to CloudWatch and provisioning producer-side alarms for oldest pending age, quarantined rows and systemic publisher failures. First approve the exporter/telemetry ownership, metric namespace/dimensions, least-privilege permissions and alert thresholds; keep the dispatcher disabled.

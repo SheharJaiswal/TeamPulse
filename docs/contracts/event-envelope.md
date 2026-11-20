@@ -37,3 +37,8 @@ The publisher processes each `PutEvents` response entry independently. Only an e
 A crash after bus acceptance but before the MySQL acknowledgement can result in the same `eventId` being published again. This is expected at-least-once behavior; consumers must deduplicate by `eventId` and apply lifecycle events only when their `lifecycleVersion` is newer than the local projection.
 
 Producer-side EventBridge publish failures are retried or quarantined in the Identity outbox. SQS DLQs are configured on EventBridge rule targets for failures after bus acceptance. Do not treat an EventBridge target DLQ as a substitute for the producer's outbox retry/quarantine state.
+
+
+## SQS projection target body
+
+The Identity lifecycle EventBridge rule does not configure `Input`, `InputPath` or `InputTransformer`. Each SQS target receives the standard outer EventBridge event JSON. The TeamPulse schema-v1 envelope described above is the outer event's `detail` object. Consumers must parse `detail`, validate the event envelope, deduplicate by its `eventId` and apply only strictly newer `payload.lifecycleVersion` values. The SQS body wrapper does not introduce a new TeamPulse event ID or schema version.

@@ -25,7 +25,7 @@
 - [x] Run restore, Release build, Compose validation and full tests in CI: run #84 passed 92 tests, 0 failed/skipped, 0 warnings/errors; MySQL 8.4 Testcontainers included.
 - [x] Update the project checkpoint with run #84 evidence, remaining infrastructure blockers and the next deployment SDD task.
 
-## Deployment enablement — blocked on infrastructure
+## Deployment enablement — CloudFormation template committed; live deployment blocked
 
 - [ ] Provision a regional EventBridge custom bus and record its name/ARN in deployment configuration.
 - [ ] Attach an Identity workload role with `events:PutEvents` scoped to that bus ARN.

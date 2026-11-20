@@ -126,4 +126,4 @@ Log event ID, event type, correlation ID, attempt count, bus name, AWS request I
 
 ## Deferred work
 
-EventBridge bus/rules, workload IAM, SQS target queues and DLQs, CloudWatch alarms, consumer projections, global revocation, operator redrive tooling and live AWS deployment verification remain separate infrastructure or service increments.
+The bus, workload-role permission, lifecycle rule, five SQS targets, target-delivery DLQs, queue policies and AWS-managed delivery alarms are now defined by the separate CloudFormation SDD at `docs/changes/identity-eventbridge-infrastructure/`. Live AWS deployment, producer-side outbox metric export/alarms, consumer projections, global revocation and operator redrive tooling remain separate infrastructure or service increments.

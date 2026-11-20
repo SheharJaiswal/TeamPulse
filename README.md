@@ -27,6 +27,10 @@ The accepted MVP product defaults are recorded in [ADR-0002](docs/decisions/0002
 
 .NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and Docker Compose. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL and DynamoDB. .NET 8 is the initial compatibility baseline.
 
+## AWS infrastructure
+
+The Identity employee-lifecycle EventBridge fan-out template and deployment gates are documented in [infra/cloudformation/README.md](infra/cloudformation/README.md). The stack provisions the bus, scoped Identity publisher permission, five service-owned SQS targets, target-delivery DLQs and AWS-managed delivery alarms. It does not deploy consumers or enable the dispatcher.
+
 ## Local development
 
 Prerequisites: .NET 8 SDK and Docker Desktop.

@@ -1,0 +1,820 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  TeamPulse Identity employee-lifecycle event fan-out. Creates a custom EventBridge
+  bus, least-privilege PutEvents attachment for an existing Identity workload role,
+  five service-owned SQS projection queues, per-target delivery DLQs and alarms.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Identity event producer
+        Parameters:
+          - EnvironmentName
+          - EventBusName
+          - IdentityWorkloadRoleName
+          - ResourceNamePrefix
+      - Label:
+          default: Delivery and operations
+        Parameters:
+          - TargetRetryMaximumAgeSeconds
+          - TargetRetryMaximumAttempts
+          - TargetQueueRetentionSeconds
+          - DeadLetterRetentionSeconds
+          - TargetQueueAgeThresholdSeconds
+          - AlarmNotificationTopicArn
+    ParameterLabels:
+      EventBusName:
+        default: Custom EventBridge bus name
+      IdentityWorkloadRoleName:
+        default: Existing Identity workload IAM role name
+      TargetQueueAgeThresholdSeconds:
+        default: Approved SQS oldest-message age threshold (seconds)
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    MinLength: 1
+    MaxLength: 12
+    AllowedPattern: '^[a-z][a-z0-9-]*$'
+    Description: Short deployment environment identifier used in resource names and tags.
+  EventBusName:
+    Type: String
+    MinLength: 1
+    MaxLength: 256
+    AllowedPattern: '^[A-Za-z0-9._/-]+$'
+    Description: Required custom EventBridge bus name; no account-specific name is hard-coded.
+  IdentityWorkloadRoleName:
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]+$'
+    Description: Existing same-account Identity ECS task or instance role name. Its trust policy is managed by the compute deployment.
+  ResourceNamePrefix:
+    Type: String
+    Default: teampulse
+    MinLength: 1
+    MaxLength: 20
+    AllowedPattern: '^[A-Za-z0-9_-]+$'
+    Description: Prefix for rule and SQS resource names.
+  TargetRetryMaximumAgeSeconds:
+    Type: Number
+    Default: 86400
+    MinValue: 60
+    MaxValue: 86400
+    Description: EventBridge maximum target-event age before sending to its target DLQ.
+  TargetRetryMaximumAttempts:
+    Type: Number
+    Default: 185
+    MinValue: 0
+    MaxValue: 185
+    Description: EventBridge maximum target delivery attempts before sending to its target DLQ.
+  TargetQueueRetentionSeconds:
+    Type: Number
+    Default: 345600
+    MinValue: 60
+    MaxValue: 1209600
+    Description: SQS retention for service projection queues (default four days).
+  DeadLetterRetentionSeconds:
+    Type: Number
+    Default: 1209600
+    MinValue: 60
+    MaxValue: 1209600
+    Description: SQS retention for EventBridge target-delivery DLQs (default fourteen days).
+  TargetQueueAgeThresholdSeconds:
+    Type: Number
+    MinValue: 60
+    MaxValue: 86400
+    Description: Required operator-approved oldest-message alarm threshold; no SLO is invented by this template.
+  AlarmNotificationTopicArn:
+    Type: String
+    Default: ''
+    Description: Optional existing same-account, same-region SNS topic ARN for alarm and OK notifications. Omit for alarms without actions.
+
+Conditions:
+  HasAlarmNotificationTopic: !Not [!Equals [!Ref AlarmNotificationTopicArn, '']]
+
+Resources:
+  IdentityLifecycleEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Ref EventBusName
+      Description: !Sub 'TeamPulse domain events (${EnvironmentName})'
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Owner
+          Value: Identity
+
+  HabitEmployeeStatusQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-habit-employee-status'
+      MessageRetentionPeriod: !Ref TargetQueueRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Habit
+        - Key: Purpose
+          Value: EmployeeStatusProjection
+
+  HabitEventBridgeTargetDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-habit-eventbridge-target-dlq'
+      MessageRetentionPeriod: !Ref DeadLetterRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Habit
+        - Key: Purpose
+          Value: EventBridgeTargetDeliveryDlq
+
+  ChallengeEmployeeStatusQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-challenge-employee-status'
+      MessageRetentionPeriod: !Ref TargetQueueRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Challenge
+        - Key: Purpose
+          Value: EmployeeStatusProjection
+
+  ChallengeEventBridgeTargetDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-challenge-eventbridge-target-dlq'
+      MessageRetentionPeriod: !Ref DeadLetterRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Challenge
+        - Key: Purpose
+          Value: EventBridgeTargetDeliveryDlq
+
+  EventTrackingEmployeeStatusQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-event-tracking-employee-status'
+      MessageRetentionPeriod: !Ref TargetQueueRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: EventTracking
+        - Key: Purpose
+          Value: EmployeeStatusProjection
+
+  EventTrackingEventBridgeTargetDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-event-tracking-eventbridge-target-dlq'
+      MessageRetentionPeriod: !Ref DeadLetterRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: EventTracking
+        - Key: Purpose
+          Value: EventBridgeTargetDeliveryDlq
+
+  InsightEmployeeStatusQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-insight-employee-status'
+      MessageRetentionPeriod: !Ref TargetQueueRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Insight
+        - Key: Purpose
+          Value: EmployeeStatusProjection
+
+  InsightEventBridgeTargetDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-insight-eventbridge-target-dlq'
+      MessageRetentionPeriod: !Ref DeadLetterRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Insight
+        - Key: Purpose
+          Value: EventBridgeTargetDeliveryDlq
+
+  NotificationEmployeeStatusQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-notification-employee-status'
+      MessageRetentionPeriod: !Ref TargetQueueRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Notification
+        - Key: Purpose
+          Value: EmployeeStatusProjection
+
+  NotificationEventBridgeTargetDlq:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      QueueName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-notification-eventbridge-target-dlq'
+      MessageRetentionPeriod: !Ref DeadLetterRetentionSeconds
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ServiceOwner
+          Value: Notification
+        - Key: Purpose
+          Value: EventBridgeTargetDeliveryDlq
+  HabitQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref HabitEmployeeStatusQueue
+        - !Ref HabitEventBridgeTargetDlq
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToHabitProjectionQueue
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt HabitEmployeeStatusQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+          - Sid: AllowEventBridgeToHabitTargetDlq
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt HabitEventBridgeTargetDlq.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  ChallengeQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ChallengeEmployeeStatusQueue
+        - !Ref ChallengeEventBridgeTargetDlq
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToChallengeProjectionQueue
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt ChallengeEmployeeStatusQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+          - Sid: AllowEventBridgeToChallengeTargetDlq
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt ChallengeEventBridgeTargetDlq.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  EventTrackingQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EventTrackingEmployeeStatusQueue
+        - !Ref EventTrackingEventBridgeTargetDlq
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToEventTrackingProjectionQueue
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt EventTrackingEmployeeStatusQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+          - Sid: AllowEventBridgeToEventTrackingTargetDlq
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt EventTrackingEventBridgeTargetDlq.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  InsightQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref InsightEmployeeStatusQueue
+        - !Ref InsightEventBridgeTargetDlq
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToInsightProjectionQueue
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt InsightEmployeeStatusQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+          - Sid: AllowEventBridgeToInsightTargetDlq
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt InsightEventBridgeTargetDlq.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  NotificationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref NotificationEmployeeStatusQueue
+        - !Ref NotificationEventBridgeTargetDlq
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToNotificationProjectionQueue
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt NotificationEmployeeStatusQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+          - Sid: AllowEventBridgeToNotificationTargetDlq
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt NotificationEventBridgeTargetDlq.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/${EventBusName}/${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+  EmployeeLifecycleProjectionRule:
+    Type: AWS::Events::Rule
+    DependsOn:
+      - HabitQueuePolicy
+      - ChallengeQueuePolicy
+      - EventTrackingQueuePolicy
+      - InsightQueuePolicy
+      - NotificationQueuePolicy
+    Properties:
+      Name: !Sub '${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+      Description: Routes Identity employee activation/deactivation events to the five service-owned status projections.
+      EventBusName: !Ref IdentityLifecycleEventBus
+      State: ENABLED
+      EventPattern:
+        source:
+          - teampulse.identity
+        detail-type:
+          - EmployeeDeactivated
+          - EmployeeReactivated
+        detail:
+          eventType:
+            - EmployeeDeactivated
+            - EmployeeReactivated
+          schemaVersion:
+            - 1
+      Targets:
+        - Arn: !GetAtt HabitEmployeeStatusQueue.Arn
+          Id: HabitEmployeeStatusProjection
+          DeadLetterConfig:
+            Arn: !GetAtt HabitEventBridgeTargetDlq.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref TargetRetryMaximumAgeSeconds
+            MaximumRetryAttempts: !Ref TargetRetryMaximumAttempts
+        - Arn: !GetAtt ChallengeEmployeeStatusQueue.Arn
+          Id: ChallengeEmployeeStatusProjection
+          DeadLetterConfig:
+            Arn: !GetAtt ChallengeEventBridgeTargetDlq.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref TargetRetryMaximumAgeSeconds
+            MaximumRetryAttempts: !Ref TargetRetryMaximumAttempts
+        - Arn: !GetAtt EventTrackingEmployeeStatusQueue.Arn
+          Id: EventTrackingEmployeeStatusProjection
+          DeadLetterConfig:
+            Arn: !GetAtt EventTrackingEventBridgeTargetDlq.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref TargetRetryMaximumAgeSeconds
+            MaximumRetryAttempts: !Ref TargetRetryMaximumAttempts
+        - Arn: !GetAtt InsightEmployeeStatusQueue.Arn
+          Id: InsightEmployeeStatusProjection
+          DeadLetterConfig:
+            Arn: !GetAtt InsightEventBridgeTargetDlq.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref TargetRetryMaximumAgeSeconds
+            MaximumRetryAttempts: !Ref TargetRetryMaximumAttempts
+        - Arn: !GetAtt NotificationEmployeeStatusQueue.Arn
+          Id: NotificationEmployeeStatusProjection
+          DeadLetterConfig:
+            Arn: !GetAtt NotificationEventBridgeTargetDlq.Arn
+          RetryPolicy:
+            MaximumEventAgeInSeconds: !Ref TargetRetryMaximumAgeSeconds
+            MaximumRetryAttempts: !Ref TargetRetryMaximumAttempts
+      Tags:
+        - Key: Project
+          Value: TeamPulse
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  IdentityPutEventsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub 'TeamPulseIdentityPutEvents-${EnvironmentName}'
+      Roles:
+        - !Ref IdentityWorkloadRoleName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PutLifecycleEventsToTeamPulseBus
+            Effect: Allow
+            Action:
+              - events:PutEvents
+            Resource: !GetAtt IdentityLifecycleEventBus.Arn
+
+  EventBridgeDlqWriteFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-eventbridge-dlq-write-failures'
+      AlarmDescription: Alarm when EventBridge cannot write failed target deliveries to the configured SQS DLQ.
+      Namespace: AWS/Events
+      MetricName: InvocationsFailedToBeSentToDlq
+      Dimensions:
+        - Name: EventBusName
+          Value: !Ref IdentityLifecycleEventBus
+        - Name: RuleName
+          Value: !Sub '${ResourceNamePrefix}-${EnvironmentName}-employee-lifecycle'
+      Statistic: Sum
+      Unit: Count
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  HabitDlqDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-habit-eventbridge-dlq-depth'
+      AlarmDescription: Alarm when EventBridge target-delivery failures are waiting in the Habit DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt HabitEventBridgeTargetDlq.QueueName
+      Statistic: Maximum
+      Unit: Count
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  HabitQueueAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-habit-employee-status-queue-age'
+      AlarmDescription: Alarm when the oldest Habit employee-status message exceeds the operator-approved age threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt HabitEmployeeStatusQueue.QueueName
+      Statistic: Maximum
+      Unit: Seconds
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetQueueAgeThresholdSeconds
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  ChallengeDlqDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-challenge-eventbridge-dlq-depth'
+      AlarmDescription: Alarm when EventBridge target-delivery failures are waiting in the Challenge DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ChallengeEventBridgeTargetDlq.QueueName
+      Statistic: Maximum
+      Unit: Count
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  ChallengeQueueAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-challenge-employee-status-queue-age'
+      AlarmDescription: Alarm when the oldest Challenge employee-status message exceeds the operator-approved age threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ChallengeEmployeeStatusQueue.QueueName
+      Statistic: Maximum
+      Unit: Seconds
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetQueueAgeThresholdSeconds
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  EventTrackingDlqDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-event-tracking-eventbridge-dlq-depth'
+      AlarmDescription: Alarm when EventBridge target-delivery failures are waiting in the EventTracking DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventTrackingEventBridgeTargetDlq.QueueName
+      Statistic: Maximum
+      Unit: Count
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  EventTrackingQueueAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-event-tracking-employee-status-queue-age'
+      AlarmDescription: Alarm when the oldest EventTracking employee-status message exceeds the operator-approved age threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt EventTrackingEmployeeStatusQueue.QueueName
+      Statistic: Maximum
+      Unit: Seconds
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetQueueAgeThresholdSeconds
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  InsightDlqDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-insight-eventbridge-dlq-depth'
+      AlarmDescription: Alarm when EventBridge target-delivery failures are waiting in the Insight DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt InsightEventBridgeTargetDlq.QueueName
+      Statistic: Maximum
+      Unit: Count
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  InsightQueueAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-insight-employee-status-queue-age'
+      AlarmDescription: Alarm when the oldest Insight employee-status message exceeds the operator-approved age threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt InsightEmployeeStatusQueue.QueueName
+      Statistic: Maximum
+      Unit: Seconds
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetQueueAgeThresholdSeconds
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  NotificationDlqDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-notification-eventbridge-dlq-depth'
+      AlarmDescription: Alarm when EventBridge target-delivery failures are waiting in the Notification DLQ.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt NotificationEventBridgeTargetDlq.QueueName
+      Statistic: Maximum
+      Unit: Count
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+
+  NotificationQueueAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ResourceNamePrefix}-${EnvironmentName}-notification-employee-status-queue-age'
+      AlarmDescription: Alarm when the oldest Notification employee-status message exceeds the operator-approved age threshold.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt NotificationEmployeeStatusQueue.QueueName
+      Statistic: Maximum
+      Unit: Seconds
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: !Ref TargetQueueAgeThresholdSeconds
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+      OKActions: !If [HasAlarmNotificationTopic, [!Ref AlarmNotificationTopicArn], !Ref AWS::NoValue]
+Outputs:
+  EventBusName:
+    Description: Configure EventBridge__BusName with this value.
+    Value: !Ref IdentityLifecycleEventBus
+  EventBusArn:
+    Description: Exact resource ARN granted to the Identity workload role.
+    Value: !GetAtt IdentityLifecycleEventBus.Arn
+  EmployeeLifecycleRuleArn:
+    Description: Rule ARN used by the SQS resource policies.
+    Value: !GetAtt EmployeeLifecycleProjectionRule.Arn
+  IdentityPutEventsPolicyName:
+    Description: Inline policy attached to the existing Identity workload role.
+    Value: !Sub 'TeamPulseIdentityPutEvents-${EnvironmentName}'
+  HabitEmployeeStatusQueueUrl:
+    Description: SQS URL owned by the Habit service consumer.
+    Value: !Ref HabitEmployeeStatusQueue
+  HabitEmployeeStatusQueueArn:
+    Description: SQS ARN owned by the Habit service consumer.
+    Value: !GetAtt HabitEmployeeStatusQueue.Arn
+  HabitEventBridgeTargetDlqArn:
+    Description: EventBridge target-delivery DLQ ARN for the Habit projection.
+    Value: !GetAtt HabitEventBridgeTargetDlq.Arn
+  ChallengeEmployeeStatusQueueUrl:
+    Description: SQS URL owned by the Challenge service consumer.
+    Value: !Ref ChallengeEmployeeStatusQueue
+  ChallengeEmployeeStatusQueueArn:
+    Description: SQS ARN owned by the Challenge service consumer.
+    Value: !GetAtt ChallengeEmployeeStatusQueue.Arn
+  ChallengeEventBridgeTargetDlqArn:
+    Description: EventBridge target-delivery DLQ ARN for the Challenge projection.
+    Value: !GetAtt ChallengeEventBridgeTargetDlq.Arn
+  EventTrackingEmployeeStatusQueueUrl:
+    Description: SQS URL owned by the EventTracking service consumer.
+    Value: !Ref EventTrackingEmployeeStatusQueue
+  EventTrackingEmployeeStatusQueueArn:
+    Description: SQS ARN owned by the EventTracking service consumer.
+    Value: !GetAtt EventTrackingEmployeeStatusQueue.Arn
+  EventTrackingEventBridgeTargetDlqArn:
+    Description: EventBridge target-delivery DLQ ARN for the EventTracking projection.
+    Value: !GetAtt EventTrackingEventBridgeTargetDlq.Arn
+  InsightEmployeeStatusQueueUrl:
+    Description: SQS URL owned by the Insight service consumer.
+    Value: !Ref InsightEmployeeStatusQueue
+  InsightEmployeeStatusQueueArn:
+    Description: SQS ARN owned by the Insight service consumer.
+    Value: !GetAtt InsightEmployeeStatusQueue.Arn
+  InsightEventBridgeTargetDlqArn:
+    Description: EventBridge target-delivery DLQ ARN for the Insight projection.
+    Value: !GetAtt InsightEventBridgeTargetDlq.Arn
+  NotificationEmployeeStatusQueueUrl:
+    Description: SQS URL owned by the Notification service consumer.
+    Value: !Ref NotificationEmployeeStatusQueue
+  NotificationEmployeeStatusQueueArn:
+    Description: SQS ARN owned by the Notification service consumer.
+    Value: !GetAtt NotificationEmployeeStatusQueue.Arn
+  NotificationEventBridgeTargetDlqArn:
+    Description: EventBridge target-delivery DLQ ARN for the Notification projection.
+    Value: !GetAtt NotificationEventBridgeTargetDlq.Arn
