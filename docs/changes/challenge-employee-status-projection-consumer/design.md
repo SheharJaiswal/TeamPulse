@@ -97,6 +97,7 @@ Database uniqueness and the conditional upsert enforce correctness across multip
 - Do not retry arbitrary programming/configuration errors. Publish non-transient processing exceptions to the same DLQ with classification `NonTransientProcessingFailure`; both terminal paths use mandatory routing and publisher confirms before acknowledging the source delivery. If publish/route/confirm fails, close the source channel without acknowledgement.
 - The retry-delay policy accepts an explicit jitter sample so its exponential ceiling, cap and full-jitter range can be tested deterministically; production supplies a fresh random sample for each retry.
 - On ack/nack/channel failure, close/discard the channel so unacknowledged deliveries can be redelivered.
+- Each RabbitMQ session links callback processing to a session-scoped cancellation token. When the connection/channel session ends, cancel in-flight callbacks before reconnecting; if a callback is canceled after its inbox/projection transaction committed, leave the source delivery unacknowledged so replay is resolved as Duplicate.
 - Reconnect with bounded delay and cancellation-aware shutdown.
 - Log only approved operational metadata and failure classifications; never log raw body, note, credentials or connection strings.
 

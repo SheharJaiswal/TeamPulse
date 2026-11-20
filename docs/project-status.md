@@ -1,6 +1,18 @@
 # Project Status
 Updated: 2026-11-21
 
+## Latest continuation checkpoint — broker-session cancellation fix for commit-before-ack replay (CI pending)
+
+- CI #110 for code commit `5dc66ddb65ce5b9479c85c4e93ff93c85d59c033` failed after restore, Release build, Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. The .NET suite had 164/165 tests pass (40/41 Challenge, 24 Habit, 100 Identity); the commit-before-ack broker-stop/restart scenario timed out waiting for the consumer to reconnect. [CI run #110](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44813451227).
+- The failing scenario exposed that the in-flight processor callback used only the host stopping token. When an established broker session ended, the connection loop marked the consumer disconnected but did not cancel that callback's wait. This could hold old-session teardown and delay the hosted service's reconnect.
+- Updated the consumer to link callback processing to a session-scoped cancellation token and cancel it when the connection/channel session ends. Session cancellation leaves the delivery unacknowledged; it is not misclassified as a terminal processing failure or sent to the DLQ.
+- Updated the Testcontainers scenario to assert that broker-session cancellation releases the first callback after its simulated inbox/projection commit, then verifies the broker redelivers the event as Duplicate and the sentinel is processed after acknowledgement.
+- Updated the approved SDD design/tasks with the session-cancellation rule and CI #110 failure evidence. The fix is committed on `feature/backend-foundation`; the rerun is pending.
+- CI #108 remains verified: 164 .NET tests (40 Challenge, 24 Habit, 100 Identity), 0 failed/skipped; Release build 0 warnings/errors; Compose, RabbitMQ topology and 11 Python tests passed. [CI run #108](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44805490633).
+- Local .NET SDK and Docker CLI remain unavailable in this execution environment; no local build/test is claimed.
+- Scope remains the owner-approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially, with privacy/legal sign-off still a production prerequisite. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup.
+- Branch `feature/backend-foundation` only; `main` untouched.
+
 ## Latest continuation checkpoint — commit-before-ack replay scenario added (CI pending)
 
 - Verified CI #108 for `3702c9a04186d304ca8b6ae0e5244cdfe262a105`: Release build passed with 0 warnings/errors; Docker Compose validation and RabbitMQ startup/topology passed; all 11 Python topology tests passed; all 164 .NET tests passed (40 Challenge, 24 Habit, 100 Identity), with 0 failures and 0 skipped. [CI run #108](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44805490633).

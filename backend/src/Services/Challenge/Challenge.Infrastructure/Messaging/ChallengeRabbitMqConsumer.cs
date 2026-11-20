@@ -83,11 +83,16 @@ public sealed class ChallengeRabbitMqConsumer(
                 publisherConfirmationTrackingEnabled: true),
             stoppingToken);
 
+        // A broker-session loss must cancel in-flight callbacks as well as end the
+        // connection loop. This releases the old session so the hosted service can reconnect.
+        using var sessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        var sessionToken = sessionCancellation.Token;
+
         await channel.BasicQosAsync(0, options.PrefetchCount, false, stoppingToken);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, delivery) =>
-            await HandleDeliveryAsync(channel, deadLetterChannel, delivery, stoppingToken);
+            await HandleDeliveryAsync(channel, deadLetterChannel, delivery, sessionToken);
 
         await channel.BasicConsumeAsync(
             options.QueueName,
@@ -112,6 +117,7 @@ public sealed class ChallengeRabbitMqConsumer(
         }
         finally
         {
+            sessionCancellation.Cancel();
             status.MarkDisconnected();
         }
     }
@@ -120,7 +126,7 @@ public sealed class ChallengeRabbitMqConsumer(
         IChannel channel,
         IChannel deadLetterChannel,
         BasicDeliverEventArgs delivery,
-        CancellationToken stoppingToken)
+        CancellationToken sessionToken)
     {
         try
         {
@@ -132,7 +138,7 @@ public sealed class ChallengeRabbitMqConsumer(
             catch (DecoderFallbackException)
             {
                 await PublishDeadLetterAndAcknowledgeAsync(
-                    deadLetterChannel, channel, delivery, "InvalidEvent", stoppingToken);
+                    deadLetterChannel, channel, delivery, "InvalidEvent", sessionToken);
                 logger.LogWarning(
                     "Challenge dead-lettered lifecycle message {MessageId} with classification {FailureClassification}.",
                     delivery.BasicProperties.MessageId,
@@ -141,13 +147,13 @@ public sealed class ChallengeRabbitMqConsumer(
             }
 
             var processingResult = await ProcessWithRetriesAsync(
-                message, delivery.BasicProperties.MessageId, stoppingToken);
+                message, delivery.BasicProperties.MessageId, sessionToken);
 
             var failureClassification = processingResult.FailureClassification;
             if (failureClassification is not null)
             {
                 await PublishDeadLetterAndAcknowledgeAsync(
-                    deadLetterChannel, channel, delivery, failureClassification, stoppingToken);
+                    deadLetterChannel, channel, delivery, failureClassification, sessionToken);
                 logger.LogWarning(
                     "Challenge dead-lettered lifecycle message {MessageId} with classification {FailureClassification}.",
                     delivery.BasicProperties.MessageId,
@@ -171,7 +177,7 @@ public sealed class ChallengeRabbitMqConsumer(
             if (failureClassification is not null)
             {
                 await PublishDeadLetterAndAcknowledgeAsync(
-                    deadLetterChannel, channel, delivery, failureClassification, stoppingToken);
+                    deadLetterChannel, channel, delivery, failureClassification, sessionToken);
                 logger.LogWarning(
                     "Challenge dead-lettered lifecycle message {MessageId} with classification {FailureClassification}.",
                     delivery.BasicProperties.MessageId,
@@ -180,9 +186,9 @@ public sealed class ChallengeRabbitMqConsumer(
             }
 
             // Applied, Stale and Duplicate are all committed processing outcomes.
-            await channel.BasicAckAsync(delivery.DeliveryTag, false, stoppingToken);
+            await channel.BasicAckAsync(delivery.DeliveryTag, false, sessionToken);
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (sessionToken.IsCancellationRequested)
         {
             // Leave the delivery unacknowledged. Closing the channel returns it to the broker.
         }
@@ -241,7 +247,7 @@ public sealed class ChallengeRabbitMqConsumer(
     private async Task<ProcessingResult> ProcessWithRetriesAsync(
         string message,
         string? messageId,
-        CancellationToken stoppingToken)
+        CancellationToken sessionToken)
     {
         for (var attempt = 1; attempt <= options.MaxProcessingAttempts; attempt++)
         {
@@ -250,10 +256,10 @@ public sealed class ChallengeRabbitMqConsumer(
                 await using var scope = scopeFactory.CreateAsyncScope();
                 var processor = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionProcessor>();
                 return new ProcessingResult(
-                    await processor.ProcessAsync(message, stoppingToken),
+                    await processor.ProcessAsync(message, sessionToken),
                     null);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (sessionToken.IsCancellationRequested)
             {
                 throw;
             }
@@ -273,7 +279,7 @@ public sealed class ChallengeRabbitMqConsumer(
                 if (attempt == options.MaxProcessingAttempts)
                     return new ProcessingResult(null, "TransientRetryExhausted");
 
-                await Task.Delay(GetRetryDelay(attempt), stoppingToken);
+                await Task.Delay(GetRetryDelay(attempt), sessionToken);
             }
         }
 

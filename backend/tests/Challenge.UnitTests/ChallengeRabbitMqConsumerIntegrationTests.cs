@@ -160,10 +160,11 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         await processor.FirstCommitCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         // The processor has recorded its inbox/projection commit but deliberately has not
-        // returned, so the consumer cannot yet acknowledge the source delivery.
+        // returned, so the consumer cannot yet acknowledge the source delivery. Broker-session
+        // cancellation must release the in-flight callback without acknowledging that commit.
         await _container.StopAsync();
         await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
-        processor.AllowFirstAttemptToReturn.TrySetResult(true);
+        await processor.SessionCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Restart the same durable broker. The unacknowledged delivery must be redelivered.
         await _container.StartAsync();
@@ -392,7 +393,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
 
         public TaskCompletionSource<bool> FirstCommitCompleted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource<bool> AllowFirstAttemptToReturn { get; } =
+        public TaskCompletionSource<bool> SessionCancellationObserved { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> DuplicateReplayObserved { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -412,7 +413,16 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
                     // Model the durable inbox/projection transaction committing before the
                     // consumer callback is allowed to return to its BasicAck call.
                     FirstCommitCompleted.TrySetResult(true);
-                    await AllowFirstAttemptToReturn.Task.WaitAsync(cancellationToken);
+                    try
+                    {
+                        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        SessionCancellationObserved.TrySetResult(true);
+                        throw;
+                    }
+
                     return ProjectionProcessingOutcome.Applied;
                 }
 
