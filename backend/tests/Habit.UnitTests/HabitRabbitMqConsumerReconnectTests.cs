@@ -28,7 +28,7 @@ public sealed class HabitRabbitMqConsumerReconnectTests
             .WithImage("rabbitmq:4.1-management")
             .WithUsername("teampulse")
             .WithPassword("local_rabbitmq_password")
-            .WithPortBinding(5672, port)
+            .WithPortBinding(port, 5672)
             .Build();
 
         var options = HabitRabbitMqConsumerOptionsTests.ValidOptions();
