@@ -1,9 +1,12 @@
 using System;
+using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Identity.Application.Abstractions;
 using Identity.API.Security;
 using Identity.Infrastructure.Persistence;
@@ -51,7 +54,12 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHealthChecks().AddDbContextCheck<IdentityDbContext>();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddDbContextCheck<IdentityDbContext>(
+        "identity-database",
+        tags: new[] { "ready" },
+        timeout: TimeSpan.FromSeconds(3));
 
 var app = builder.Build();
 
@@ -73,7 +81,21 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/health");
+
+// Liveness must not depend on external services. Readiness verifies the owned database.
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live")
+});
+
+var readinessOptions = new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+};
+app.MapHealthChecks("/health/ready", readinessOptions);
+
+// Preserve the original endpoint and its database-readiness semantics for existing probes.
+app.MapHealthChecks("/health", readinessOptions);
 app.Run();
 
 public partial class Program { }

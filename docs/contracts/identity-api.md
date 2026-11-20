@@ -12,5 +12,11 @@ Request: email and password. Success: 200 token response. Failure: generic 401 `
 ## GET /me
 Bearer token required. Returns subject, email, displayName, organizationId, teamId and role from validated claims.
 
+## Health endpoints
+- `GET /health/live`: process liveness only; does not check MySQL and should be used for orchestrator liveness probes.
+- `GET /health/ready`: checks the Identity-owned MySQL database and returns HTTP 503 when it is unavailable.
+- `GET /health`: compatibility alias for `/health/ready`; retains the previous database-readiness behavior.
+Health responses expose only aggregate health status, not dependency exception details or connection information.
+
 ## GET /health
-Health check.
+Compatibility alias for database readiness.

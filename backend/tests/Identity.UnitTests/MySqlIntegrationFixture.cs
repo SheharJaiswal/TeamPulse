@@ -15,6 +15,10 @@ public sealed class MySqlIntegrationFixture : IAsyncLifetime
 
     public Task InitializeAsync() => _database.StartAsync();
 
+    public Task StopAsync() => _database.StopAsync();
+
+    public Task StartAsync() => _database.StartAsync();
+
     public async Task DisposeAsync()
     {
         await _database.DisposeAsync();
