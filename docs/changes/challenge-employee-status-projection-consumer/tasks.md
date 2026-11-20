@@ -1,47 +1,63 @@
 # Tasks: Challenge Employee Status Projection Consumer
 
 ## SDD and contract review
-- [x] Fetch live feature/backend-foundation HEAD and inspect recent commits/tree.
+
+- [x] Fetch the live `feature/backend-foundation` HEAD and reconcile the existing Challenge implementation and CI evidence.
 - [x] Read AGENTS.md, README.md, project status, open questions, service ownership, communication conventions, ADR-0001/0002 and shared event/projection contracts.
-- [x] Confirm Challenge has no existing service project or tests; inspect Habit processor, MySQL store, RabbitMQ consumer and topology tests as references.
-- [x] Define projection-only scope without inventing Challenge programme/participation rules.
-- [x] Record inactive employee historical-read versus mutation policy as an open question for later Challenge API work.
-- [x] Map CEPS-01 through CEPS-15 to implementation and verification.
+- [x] Correct the proposal/design context: Challenge projects, persistence, consumer, topology and tests already exist on the live branch.
+- [x] Preserve projection-only scope; do not invent Challenge programme/participation rules.
+- [x] Keep inactive-employee historical-read versus mutation policy as open question 19.
+- [x] Map acceptance criteria to implementation and verification.
+- [x] Incorporate the 14 owner-selected decisions recorded in the SDD review (minimal projection; initial permanent inbox retention; tolerant additive JSON; exact source; invalid-event DLQ; separate health; strict version ordering; DB atomicity; conflicting duplicate integrity detection; SHA-256; fingerprint field exclusions; RFC 8785 JCS; shared DLQ classifications; bounded exponential full-jitter retry).
+- [ ] Owner explicitly approves this revised proposal/spec/design/tasks package before further Challenge feature implementation.
 
-## Approval gate — blocked
-- [ ] Owner reviews and explicitly approves or requests changes to this SDD package. The proposal requires approval before implementation; no approval record is present in the repository or prior continuation context.
-- Existing Challenge implementation was found on the live branch. Treat it as existing repository state, not evidence that the SDD was approved. Do not add further Challenge feature scope until approval is recorded.
+## Existing implementation already present on the live branch
 
-## Implementation already present on the live branch — approval gate pending
-- [x] Add Challenge.API, Challenge.Application, Challenge.Domain and Challenge.Infrastructure with inward-only references.
-- [x] Add Challenge.UnitTests and register all projects in backend/TeamPulse.sln.
-- [x] Add Challenge-owned MySQL database initialization/grant and connection configuration.
-- [x] Implement minimal employee status projection, inbox entity and transport-independent application processor.
-- [x] Implement atomic inbox + conditional lifecycle-version upsert in Challenge-owned MySQL.
-- [x] Add checked-in EF Core/Pomelo migration and model snapshot; apply migrations at host startup.
-- [x] Add database liveness/readiness and separate consumer-health endpoints.
-- [x] Implement Challenge RabbitMQ consumer with manual ack after processor completion, prefetch 1, bounded retry and reconnect.
-- [x] Add Challenge-owned quorum queue, DLX and DLQ without changing Habit or other service queues.
-- [x] Keep consumer disabled by default and validate configuration when enabled.
+- [x] Challenge.API, Challenge.Application, Challenge.Domain and Challenge.Infrastructure with inward-only references.
+- [x] Challenge.UnitTests registered in backend/TeamPulse.sln.
+- [x] Challenge-owned MySQL database initialization/grant and connection configuration.
+- [x] Minimal employee status projection, inbox entity and transport-independent application processor.
+- [x] Atomic inbox + conditional lifecycle-version upsert in Challenge-owned MySQL.
+- [x] Checked-in EF Core/Pomelo migration and model snapshot; startup migration.
+- [x] Separate liveness/readiness and consumer-health endpoints.
+- [x] Challenge RabbitMQ consumer with manual ack after processor completion, prefetch 1, bounded transient retry and reconnect.
+- [x] Challenge-owned quorum queue, DLX and DLQ without changing Habit or other service queues.
+- [x] Consumer disabled by default and configuration validated when enabled.
+- [x] Startup-reconnect test and local README/communication documentation; CI #105 passed.
 
-## Verification — in progress
-- [x] Unit-test envelope validation, event mapping, invalid input and note non-persistence.
-- [x] MySQL 8.4 Testcontainers: duplicate eventId, stale/equal/newer versions, concurrent N/N+1 and rollback.
+## Reconcile implementation against revised SDD — pending owner approval
+
+- [ ] Validate actorEmployeeId UUID, exact case-sensitive `hr-admin-api` source, tolerant unknown properties and all required schema-v1 fields.
+- [ ] Add normalized RFC 8785 JCS + SHA-256 fingerprint and algorithm identifier to inbox persistence.
+- [ ] Compare fingerprints on duplicate event IDs; distinguish matching Duplicate from conflicting DuplicateEventIntegrityViolation without mutating the original inbox/projection.
+- [ ] Ensure fingerprint excludes optional note and unknown additive properties and includes the complete recognized normalized envelope fields.
+- [ ] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling.
+- [ ] Verify bounded exponential full-jitter transient retry, configurable limits and DLQ on exhaustion.
+- [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note.
+- [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract.
+
+## Verification gaps
+
 - [ ] MySQL 8.4 Testcontainers: clean and repeated host-startup migration, exact schema/model assertions and projection reader.
-- [x] RabbitMQ Testcontainers: processor-completion acknowledgement boundary, poison-message DLQ, transient retry success and retry exhaustion.
+- [ ] MySQL 8.4 Testcontainers: same event ID/same fingerprint and same event ID/different fingerprint.
+- [ ] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert.
+- [ ] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation.
 - [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay.
-- [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect. Startup-reconnect test passed in CI run #105.
-- [ ] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack/idempotent replay.
-- [ ] Verify database readiness is independent of RabbitMQ and consumer health is separately observable through host integration tests.
-- [x] Review project references, database ownership, minimal projection/inbox fields and absence of Challenge business-state mutation.
-- [x] Extend RabbitMQ topology contract tests for Challenge quorum queue, delivery limit and dedicated DLQ binding.
-- [x] Baseline CI run #103 passed for commit `121bba186bb46df139f7e49def8082ab9d541afa`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 144 .NET tests (20 Challenge, 24 Habit, 100 Identity).
-- [x] CI run #104 passed for `65d4a3bd82294f484dd136f4788975f26da85651`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 146 .NET tests (22 Challenge, 24 Habit, 100 Identity).
-- [x] CI run #105 passed for `787bf97b1fcd4083eb6c59bc0595363145e3c83e`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 11 Python topology tests and 147 .NET tests (23 Challenge, 24 Habit, 100 Identity).
-- [x] Update README and communication documentation with Challenge local run/configuration guidance and the consumer transport contract.
+- [ ] RabbitMQ Testcontainers: invalid event and integrity violation DLQ handling, including DLX failure and redelivery.
+- [ ] RabbitMQ Testcontainers: bounded exponential retry and exhaustion.
+- [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect; startup-reconnect test passed in CI #105.
+- [ ] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack.
+- [ ] Host health integration tests prove DB readiness is independent of RabbitMQ and consumer health is separately observable.
+- [ ] Privacy/logging tests prove no event body, note, credentials or connection string is logged/persisted.
+- [x] CI #103 passed: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 10 Python tests and 144 .NET tests.
+- [x] CI #104 passed: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 10 Python tests and 146 .NET tests.
+- [x] CI #105 passed for `787bf97b1fcd4083eb6c59bc0595363145e3c83e`: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 11 Python tests and 147 .NET tests (23 Challenge, 24 Habit, 100 Identity).
+- [x] README and communication documentation include Challenge local run/configuration guidance and transport contract.
 
 ## Deferred
+
 - [ ] Implement Challenge programme/task/eligibility/participation APIs only under a separate approved SDD.
-- [ ] Resolve inactive employee access to historical participation versus new mutations before employee-facing Challenge APIs.
+- [ ] Resolve inactive employee access to historical participation versus new mutations before employee-facing Challenge APIs (open question 19).
 - [ ] Add SQS/EventBridge adapter and deploy AWS resources only after owner cloud setup.
 - [ ] Do not claim global immediate JWT revocation.
+- [ ] Do not implement inbox expiry/cleanup until retention/privacy/legal policy is approved.

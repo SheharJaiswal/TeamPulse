@@ -1,6 +1,21 @@
 # Project Status
 Updated: 2026-11-20
 
+## Latest continuation checkpoint — Challenge SDD revised, awaiting approval
+
+- Active branch: `feature/backend-foundation`. Start-of-execution HEAD: `be8bcccd5d0d1ea0ad37800fe58a5f922c4f6855`. All changes remain on this branch; `main` is untouched.
+- Reconciled live Challenge SDD, shared contracts, service ownership, AGENTS.md, open questions and prior CI checkpoint. The live branch already contains the Challenge projects, minimal projection/inbox, MySQL/Pomelo migration and startup migration, transport-independent processor, RabbitMQ consumer, health endpoints, Challenge-owned quorum queue/DLX/DLQ, tests and local setup docs. Existing implementation is not evidence of SDD approval.
+- Updated the Challenge proposal/spec/design/tasks to incorporate the 14 owner-selected SDD decisions: minimal projection; permanent initial inbox metadata retention with no cleanup; tolerant unknown JSON properties plus strict recognized-field validation; exact `hr-admin-api` source; invalid/integrity DLQ handling; separate liveness/MySQL readiness/consumer health; strictly newer lifecycle version; database-enforced atomicity; conflicting duplicate event-ID detection; SHA-256 fingerprint over recognized fields excluding note/unknown properties; RFC 8785 JCS; shared DLQ with distinct classifications; bounded exponential full-jitter retry.
+- The revised package remains **awaiting explicit owner approval**. No additional Challenge feature implementation is authorized by this documentation revision. The existing code must be reconciled against the revised fingerprint, validation, DLQ and retry requirements after approval.
+- Existing CI evidence remains CI #105: Release build 0 warnings/errors; Compose validation; RabbitMQ startup/topology; 11 Python topology tests; 147 .NET tests (23 Challenge, 24 Habit, 100 Identity), 0 failed/skipped. [CI run #105](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44757611091). These tests verify the existing implementation at the time of that run, not the newly revised requirements.
+- Remaining acceptance gaps: RFC 8785 fingerprint implementation and duplicate conflict comparison; strict source/actor validation and additive-property tests; confirmed DLQ behavior for integrity violations; bounded exponential full-jitter retry verification; clean/repeated host migration and schema assertions; health integration tests; duplicate redelivery after commit-before-ack; established-session broker-loss/reconnect; privacy/logging assertions.
+- Open question 19 continues to block employee-facing Challenge authorization policy for inactive employees. EventBridge/SQS and CloudWatch remain deferred until owner cloud setup. Privacy/legal retention sign-off remains a production prerequisite; initial permanent inbox retention means no cleanup job is added now, not that legal retention approval is complete.
+- Local verification limitation: no local .NET SDK or Docker CLI is available in this execution environment. No local build, test, MySQL or RabbitMQ success is claimed.
+- Changed files in this documentation revision: `docs/changes/challenge-employee-status-projection-consumer/proposal.md`, `spec.md`, `design.md`, `tasks.md` and `docs/project-status.md`.
+- Single next task: obtain explicit owner approval of the revised Challenge SDD package. After approval, reconcile the existing implementation against the revised contract and close the listed acceptance gaps before starting another service projection.
+- Automation `6aff6d1c108c8191b181b1108e6f32fd` remains paused; do not resume hourly implementation until the revised SDD approval gate is resolved.
+
+
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.

@@ -1,25 +1,33 @@
 # Design: Challenge Employee Status Projection Consumer
 
-## Existing context
-The live branch contains Identity's transactional outbox publisher, local RabbitMQ topic exchange, five service queues and a completed Habit projection consumer. Challenge has no service project yet. Its local queue teampulse.challenge.events is durable and bound to identity.employee.lifecycle, but has no Challenge-specific quorum/DLX policy.
+## Existing context and implementation reconciliation
 
-Reuse proven patterns and fixtures where appropriate, but own Challenge types, DbContext, migration, configuration, consumer, queue and DLQ. Do not reference Habit or Identity assemblies.
+Identity owns employee lifecycle state and publishes the shared schema-v1 envelope through its transactional outbox. The local RabbitMQ topic exchange and service queues already exist; Habit's employee-status projection consumer is complete.
+
+The live `feature/backend-foundation` branch already contains the Challenge API/Application/Domain/Infrastructure projects, Challenge-owned MySQL projection and inbox, checked-in EF migration and startup migration, transport-independent processor, RabbitMQ consumer, health endpoints, Challenge-owned quorum queue/DLX/DLQ, tests and local setup documentation. The SDD revision must not recreate this work. Existing implementation and CI evidence are not approval of this revised design.
+
+The design below records the target behavior. The task checklist identifies which acceptance tests are already verified and which remain outstanding or require new implementation.
 
 ## Proposed flow
+
 ```text
 Identity MySQL outbox
   -> Identity RabbitMqPublisher
   -> teampulse.domain.events
   -> teampulse.challenge.events (Challenge-owned quorum queue)
   -> Challenge.API BackgroundService
-  -> Challenge.Application IEmployeeStatusProjectionProcessor
+  -> Challenge.Application envelope validator / fingerprint / processor
   -> Challenge.Infrastructure transactional store
   -> Challenge MySQL: employee_status_projections + processed_domain_events
+       |-> Applied / Stale / Duplicate -> ack after commit / safe comparison
+       |-> Invalid / integrity violation -> Challenge lifecycle DLQ
+       |-> transient failure -> bounded exponential full-jitter retry -> DLQ on exhaustion
 ```
 
 ## Project layout
+
 - Challenge.API: host, configuration validation, startup migration, liveness/readiness and consumer-health endpoints.
-- Challenge.Application: envelope contracts, validator/processor, processor/store/reader abstractions and processing outcomes.
+- Challenge.Application: envelope contracts, validator, normalized fingerprint builder, processor/store/reader abstractions and processing outcomes.
 - Challenge.Domain: minimal EmployeeStatusProjection and ProcessedDomainEvent entities.
 - Challenge.Infrastructure: EF Core/Pomelo DbContext, checked-in migration, transactional store and RabbitMQ adapter.
 - Challenge.UnitTests: domain/application unit tests, MySQL and RabbitMQ Testcontainers integration tests.
@@ -27,67 +35,81 @@ Identity MySQL outbox
 Dependencies point inward. Domain references no outer project; Application references Domain; Infrastructure references Application/Domain; API composes the host. Do not add project references to Identity or Habit.
 
 ## Challenge-owned persistence
-Database: teampulse_challenge.
 
-employee_status_projections:
-- employee_id: char(36), primary key.
-- is_active: boolean, not null.
-- lifecycle_version: bigint, not null.
-- updated_at_utc: datetime(6), not null.
+Database: `teampulse_challenge`.
 
-processed_domain_events:
-- event_id: char(36), primary key.
-- event_type: varchar(100), not null.
-- schema_version: int, not null.
-- employee_id: char(36), not null.
-- lifecycle_version: bigint, not null.
-- processed_at_utc: datetime(6), not null.
+`employee_status_projections`:
 
-No FK to Identity/Habit. No copied employee profile or challenge participation data. eventId uniqueness is mandatory.
+- `employee_id`: char(36), primary key.
+- `is_active`: boolean, not null.
+- `lifecycle_version`: bigint, not null.
+- `updated_at_utc`: datetime(6), not null.
+
+`processed_domain_events`:
+
+- `event_id`: char(36), primary key.
+- `event_type`: varchar(100), not null.
+- `schema_version`: int, not null.
+- `employee_id`: char(36), not null.
+- `lifecycle_version`: bigint, not null.
+- `processed_at_utc`: datetime(6), not null.
+- `fingerprint_algorithm`: varchar(40), not null; initially `rfc8785-sha256-v1`.
+- `content_fingerprint`: char(64), not null; lowercase SHA-256 hex.
+
+No FK to Identity/Habit. No copied employee profile, raw payload, note or Challenge participation data. Event ID uniqueness is mandatory. Inbox rows have no automatic expiry or cleanup in the initial design.
+
+## Validation and normalized fingerprint
+
+The application processor first validates the recognized schema-v1 envelope and maps it to a typed representation. Unknown additive JSON properties are ignored; required recognized fields are strict. Require valid envelope UUIDs and UTC timestamp, supported event type/schema, payload employee and actor UUIDs, exact case-sensitive source `hr-admin-api`, consistent status transition, positive lifecycle version and non-empty bounded reason code. Accept optional note only as contract permits; never persist or log it.
+
+Build the fingerprint input from the recognized envelope/payload fields: eventId, eventType, schemaVersion, occurredAtUtc, correlationId, employeeId, actorEmployeeId, source, previousStatus, newStatus, lifecycleVersion and reasonCode. Exclude note and unknown properties. Normalize UUIDs to lowercase D form, `occurredAtUtc` to `yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'`, enum/source values to exact contract representation, and encode lifecycleVersion as an invariant base-10 string to preserve the full signed 64-bit value.
+
+Serialize this normalized object with RFC 8785 JSON Canonicalization Scheme, then calculate SHA-256. Store only the algorithm identifier and lowercase hexadecimal digest. Do not use ordinary serializer property ordering as a substitute for JCS.
 
 ## Application processor and atomic store
-The processor validates the complete envelope and maps it to a minimal typed lifecycle command. Inject TimeProvider for deterministic updatedAtUtc tests. It has no RabbitMQ or AWS references.
 
-Within a MySQL ReadCommitted transaction:
-1. Insert inbox row for eventId.
-2. If and only if the inbox primary-key unique constraint conflicts, return Duplicate without further mutation. Other constraint/database errors propagate.
-3. Execute a parameterized atomic conditional upsert on employee_id. Insert if absent; on conflict update is_active, lifecycle_version and updated_at_utc only when incoming lifecycle_version is greater than stored.
-4. Commit inbox and projection decision together.
-5. Return Applied or Stale.
+The processor validates and fingerprints before calling persistence. It has no RabbitMQ or AWS references. Inject TimeProvider for deterministic `updatedAtUtc` tests.
 
-A new eventId with equal/lower version is recorded and returns Stale. On any failure, rollback removes the inbox marker too. Do not implement an unprotected read-then-write race. Invalid envelopes must not invoke the store.
+For a new event ID, within a MySQL ReadCommitted transaction:
 
-## RabbitMQ adapter
+1. Insert the inbox metadata and fingerprint.
+2. Execute a parameterized atomic conditional upsert on `employee_id`: insert if absent; on conflict update status/version/time only when incoming lifecycleVersion is strictly greater than stored.
+3. Commit inbox and projection decision together.
+4. Return Applied or Stale.
+
+A valid new event ID with equal/lower version is recorded and returns Stale. Any persistence failure rolls back the inbox marker and projection decision. Do not implement an unprotected read-then-write race.
+
+For an event-ID unique-key conflict, roll back the losing insert transaction and read the committed inbox fingerprint in a fresh read. Matching algorithm/fingerprint returns Duplicate. A mismatch returns DuplicateEventIntegrityViolation. Never overwrite the original inbox row or apply the conflicting payload. This comparison is required even when concurrent deliveries race on the unique key.
+
+Database uniqueness and the conditional upsert enforce correctness across multiple Challenge instances; do not rely on in-memory per-employee locks.
+
+## RabbitMQ adapter and failure policy
+
 - Use RabbitMQ.Client 7.x asynchronous connection/channel APIs.
-- Consume the complete direct envelope body from teampulse.challenge.events.
+- Consume the complete direct envelope body from `teampulse.challenge.events`.
 - Use manual ack, prefetch 1 and one in-flight callback per channel.
-- Ack only after Applied, Stale or Duplicate returns from the processor after committed persistence.
-- Reject Invalid without requeue to the Challenge DLQ.
-- Retry only known transient MySQL/network exceptions with bounded attempts and full-jitter delay. Walk known provider wrapper/inner exceptions; unknown programming/configuration failures must not retry indefinitely.
-- On ack/nack/channel failure, close/discard channel so unacknowledged deliveries can be redelivered.
+- Ack Applied, Stale and matching Duplicate only after the transaction commits or the stored fingerprint comparison completes.
+- Route malformed/unsupported events and conflicting event IDs to the existing Challenge lifecycle DLQ with distinct classifications. The original delivery is acknowledged only after successful dead-letter handling; if DLX handling fails, it remains eligible for redelivery.
+- Keep the Challenge source queue and DLQ durable quorum queues with at-least-once dead-lettering and reject-publish overflow behavior. Do not change Habit or other service topology.
+- Retry only known transient MySQL/network failures using bounded exponential backoff with full jitter and configurable attempt/base/max-delay values. Exhausted transient failures go to the same DLQ with a distinct classification.
+- Do not retry arbitrary programming/configuration errors indefinitely. Use a bounded terminal failure path and safe diagnostics.
+- On ack/nack/channel failure, close/discard the channel so unacknowledged deliveries can be redelivered.
 - Reconnect with bounded delay and cancellation-aware shutdown.
-- Log only approved operational metadata; never log raw body, note, credentials or connection string.
-
-## Challenge-owned local topology
-Update only Challenge entries in infra/rabbitmq/definitions.json:
-- Change teampulse.challenge.events to durable quorum.
-- Add finite broker delivery limit and Challenge-specific DLX routing key challenge.employee.lifecycle.dead.
-- Add durable direct DLX binding to teampulse.challenge.events.dlq, a durable quorum DLQ.
-- Enable at-least-once dead-lettering and reject-publish overflow for the source quorum queue.
-- Preserve topic exchange and identity routing binding.
-- Do not modify Habit queue/DLX/DLQ or other service queues.
-
-Queue declaration arguments in Testcontainers must match JSON topology. Shared definitions are a local development seed; production queue policy and permissions remain Challenge deployment ownership.
+- Log only approved operational metadata and failure classifications; never log raw body, note, credentials or connection strings.
 
 ## Startup and health
-Use a Challenge-only connection string. Local MySQL initialization creates/grants teampulse_challenge to the development application user; production uses separate credentials. Run Database.MigrateAsync before hosted services. Consumer is disabled by default and options validate when enabled.
 
-Expose /health/live, /health/ready (Challenge MySQL only) and /health/consumer (separate RabbitMQ state).
+Use a Challenge-only connection string. Local MySQL initialization creates/grants `teampulse_challenge` to the development application user; production uses separate credentials. Run Database.MigrateAsync before hosted services. Consumer is disabled by default and options validate when enabled.
+
+- `/health/live`: process liveness only.
+- `/health/ready`: Challenge MySQL only; broker outage does not fail API readiness.
+- `/health/consumer`: separate RabbitMQ connection/consumer state, including disconnected, reconnecting and healthy.
 
 ## Testing
-- Unit: envelope validation, transition mapping, invalid event does not call store, note is not copied, injected clock.
-- MySQL 8.4 Testcontainers: clean/repeated migration, duplicate eventId, stale/equal/newer version, concurrent N/N+1, rollback, exact model schema and reader.
-- RabbitMQ Testcontainers: ack-after-commit, duplicate redelivery after commit-before-ack, poison DLQ, bounded transient retry/exhaustion, broker startup unavailable/reconnect, established-session loss/redelivery.
+
+- Unit: envelope validation, unknown additive properties, exact producer, actor UUID, transition mapping, note exclusion, JCS canonicalization vectors, stable fingerprint and changed-field mismatch, injected clock and retry-delay bounds.
+- MySQL 8.4 Testcontainers: clean/repeated migration, exact model schema, duplicate same/different fingerprint, stale/equal/newer versions, concurrent N/N+1, rollback and reader.
+- RabbitMQ Testcontainers: ack-after-commit, duplicate redelivery after commit-before-ack, invalid-event DLQ, conflicting duplicate DLQ, DLX failure/redelivery, bounded transient retry/exhaustion, broker startup unavailable/reconnect and established-session loss/redelivery.
 - Host tests: DB readiness independent of broker; consumer health separate; migration before consumer starts.
-- Contract/topology tests: Challenge quorum queue, delivery limit, DLX/DLQ binding and no changes to Habit topology.
+- Contract/topology tests: Challenge quorum queue, finite delivery limit, at-least-once DLX/DLQ binding and no changes to Habit topology.
 - CI: existing solution restore/build/test workflow and Python RabbitMQ topology tests.
