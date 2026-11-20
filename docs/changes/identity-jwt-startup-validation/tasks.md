@@ -8,7 +8,7 @@
 - [x] Remove the committed local signing-key placeholder from appsettings.
 - [x] Update README with local environment-variable setup and production secret guidance.
 - [x] Add real-entry-point startup tests for missing and weak keys plus UTF-8 byte-boundary unit tests.
-- [x] Diagnose CI run #25 failure: the configuration-source clearing approach did not override appsettings as intended, so tests used the committed placeholder and attempted MySQL startup.
-- [x] Replace the test-host configuration setup with the proven UseSetting/in-memory override pattern and remove the appsettings fallback.
-- [ ] Run .NET 8 restore/build/test and Docker Compose validation in GitHub Actions.
-- [ ] Record final CI evidence and update docs/project-status.md with the next single task.
+- [x] Diagnose CI run #25 failure and replace the ineffective configuration-source clearing approach.
+- [x] Update the project checkpoint with the failed run evidence, corrective commit and next task.
+- [ ] Run .NET 8 restore/build/test and Docker Compose validation in GitHub Actions (corrective run #26 pending).
+- [ ] Record final CI evidence and update Identity acceptance checklists after the run completes.
