@@ -19,3 +19,17 @@ The initial nine product questions are resolved using the project owner's instru
 - Retention/deletion jobs and privacy/legal sign-off.
 - Insight cohort suppression and anti-differencing controls.
 - Challenge scoring/versioned rules and evidence verification.
+
+
+## Additional implementation decisions identified by the HR lifecycle SDD
+
+These are not unresolved MVP product-baseline questions; they are implementation policies that must be decided before the corresponding deferred capability is built.
+
+10. **Employee invitation and credential activation — OPEN / BLOCKS PROVISIONING ENDPOINTS:** Decide invitation delivery provider, token entropy/storage/expiry, resend and cancellation behavior, initial password setup, account activation and replay handling. The one-time HrAdmin bootstrap is not a general employee invitation mechanism.
+11. **Role catalogue and elevated-role assignment — OPEN / BLOCKS ROLE MUTATION:** Define supported role values, who may grant/revoke OrganizationAdmin and HrAdmin, approval/step-up controls and how role changes affect already-issued JWTs. Until approved, no profile/role mutation endpoint is exposed.
+12. **Organization Admin request intake — OPEN / BLOCKS REQUEST WORKFLOW:** Define request fields, permitted request types, approval/denial workflow, notification, status visibility and audit. Organization Admins have no direct employee field or lifecycle write access meanwhile.
+13. **HRIS authentication and reconciliation — OPEN / BLOCKS HRIS FEED:** Define service authentication, source identifiers, mapping to TeamPulse organization/team IDs, conflict precedence, replay/idempotency and termination/reactivation ordering.
+14. **Lifecycle reason-code catalogue — OPEN / NON-BLOCKING FOR INITIAL API:** Decide whether reason codes require a controlled vocabulary, localization or policy-specific validation. The initial lifecycle API stores a required bounded opaque reason code without inventing allowed values.
+15. **EventBridge deployment and outbox dispatcher — OPEN / BLOCKS EVENT DELIVERY:** Confirm event bus name, source/detail-type conventions, IAM deployment role, outbox lease/claim strategy, retry/backoff, DLQ, poison-message handling and alerting. The lifecycle transaction may persist an outbox record, but no delivery is claimed until a dispatcher is deployed and verified.
+16. **Downstream projection rollout and token revocation — OPEN / BLOCKS GLOBAL REVOCATION CLAIM:** Implement and operate version-aware status projections in Habit, Challenge, Event Tracking, Insight and Notification. Decide whether any stronger-than-token-expiry revocation mechanism is required. ADR-0002 remains authoritative: do not claim immediate global revocation before consumers are deployed.
+17. **Retention/legal sign-off — OPEN / PRODUCTION BLOCKER:** Obtain jurisdiction-specific privacy/legal approval for the ADR-0002 retention defaults and employee offboarding/deletion policy.
