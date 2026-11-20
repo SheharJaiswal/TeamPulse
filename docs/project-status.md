@@ -249,3 +249,17 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - `python -m unittest discover -s infra/rabbitmq/tests -v`: 8 passed.
 - `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 123 passed (23 Habit, 100 Identity), 0 failed, 0 skipped. Habit MySQL 8.4 and RabbitMQ Testcontainers tests passed.
 - The wrapped-transient test throws an EF-style `InvalidOperationException` with a `TimeoutException` inner exception and verifies the retry path.
+
+
+## Current continuation checkpoint — established-session Habit broker-loss redelivery
+
+- Start-of-run live branch HEAD: `d5acf601f1ad9d2dafbd8e059a5171be8dea8a20`. Fetched the branch ref, recent commits, recursive repository tree and reconciled this checkpoint before selecting work.
+- Read `AGENTS.md`, `README.md`, `docs/project-status.md`, `docs/open-questions.md`, the approved Habit consumer SDD, service ownership, communication conventions, employee-status projection contract, Habit consumer implementation, RabbitMQ topology, existing unit/MySQL/RabbitMQ tests and CI workflow.
+- Confirmed the single unfinished Habit acceptance item was HESP-11's established-session broker-loss scenario. Existing coverage already verified startup reconnect, ack-after-processor-completion, poison-message DLQ routing, transient retry and retry exhaustion; those tests were not recreated.
+- Added `backend/tests/Habit.UnitTests/HabitRabbitMqBrokerLossIntegrationTests.cs`. The test starts the real Habit API against the existing MySQL 8.4 Testcontainers fixture (thereby applying the checked-in migration), publishes one valid lifecycle event to a durable quorum queue, and uses a test decorator that waits until the real application processor has committed its inbox/projection transaction before pausing acknowledgement.
+- The test stops RabbitMQ after the commit but before ack, waits for the consumer session to observe disconnection, allows the first ack attempt to fail, restarts the same broker container, and verifies the established consumer reconnects and processes the same message again. The real processor must return `Duplicate` for the same `eventId`; the test verifies one inbox row and the unchanged inactive/version-1 projection.
+- Updated `docs/changes/habit-employee-status-projection-consumer/tasks.md` to map this scenario to HESP-11. No production code or business contract was changed.
+- In progress: GitHub Actions verification of the new broker-loss Testcontainers scenario and the full solution.
+- Blockers: none for local RabbitMQ/MySQL development. AWS EventBridge/SQS and CloudWatch remain deferred until the owner configures cloud infrastructure; they are not prerequisites for this work.
+- Next task while verification is pending: complete the CI run for this exact commit, fix only any failure revealed by that run, and record the final result. Once verified, the next development task is the Challenge employee-status projection SDD.
+- Local execution limitation remains: this environment has no `.NET` SDK or Docker CLI; do not claim local build/test/Compose results. Use the Docker-capable GitHub Actions workflow as the verification source.

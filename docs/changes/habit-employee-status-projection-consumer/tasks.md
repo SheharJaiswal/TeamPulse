@@ -24,7 +24,7 @@
 
 - [x] Add unit tests for envelope validation/transition mapping and MySQL integration tests for duplicate eventId, stale/equal and strict lifecycleVersion ordering.
 - [x] Run MySQL 8.4 Testcontainers migration/repeated startup, inbox rollback, duplicate, stale/equal and concurrent N/N+1 version tests (CI run #93).
-- [ ] Run a broker-connection-loss redelivery test after an established session; current RabbitMQ Testcontainers coverage verifies ack-after-processor-completion, invalid-message DLQ routing, transient retry (including an EF-style wrapped timeout), retry exhaustion and startup reconnect.
+- [x] Run a broker-connection-loss redelivery test after an established session; verify the first MySQL inbox/projection transaction commits before broker loss, the unacknowledged message is redelivered after reconnect, the replay is deduplicated by the same eventId, and the projection remains unchanged.
 - [x] Validate Docker Compose configuration and shared RabbitMQ exchange/five service queues plus Habit quorum queue/DLX/DLQ definitions; actual Compose startup is covered by CI.
 - [x] Run full solution restore, Release build and test workflow (CI run #93: 112 passed, 0 failed, 0 skipped; 0 build warnings/errors).
 - [x] Review project references and EF model: Habit references no Identity project and has no cross-service foreign key.
