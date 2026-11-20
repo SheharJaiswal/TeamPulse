@@ -87,7 +87,7 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
         if (IsSystemicCode(exception.ErrorCode))
             return OutboxPublishOutcome.SystemicFailure;
         var status = (int)exception.StatusCode;
-        if (status == 429 || status >= 500 || IsTransientCode(exception.ErrorCode))
+        if (status == 0 || status == 429 || status >= 500 || IsTransientCode(exception.ErrorCode))
             return OutboxPublishOutcome.RetryableFailure;
         return OutboxPublishOutcome.SystemicFailure;
     }
