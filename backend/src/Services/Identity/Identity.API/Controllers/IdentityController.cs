@@ -59,7 +59,9 @@ public sealed class IdentityController(
         if(string.IsNullOrWhiteSpace(request.Email)||string.IsNullOrEmpty(request.Password))
             return BadRequest(new{message="Email and password are required."});
         var employee=await employees.GetByNormalizedEmailAsync(request.Email.Trim().ToUpperInvariant(),ct);
-        if(employee is null)return Unauthorized(new{message="Invalid email or password."});
+        if (employee is null || !employee.IsActive)
+            return Unauthorized(new { message = "Invalid email or password." });
+
         var result = passwordHasher.VerifyHashedPassword(employee, employee.PasswordHash, request.Password);
         if (result == PasswordVerificationResult.Failed)
             return Unauthorized(new { message = "Invalid email or password." });
