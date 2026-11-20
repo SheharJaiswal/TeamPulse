@@ -3,11 +3,10 @@ Updated: 2026-11-20
 
 ## Continuation checkpoint
 - Active branch: feature/backend-foundation.
-- Live branch HEAD at start of this run: 40e6a37b92b1def5cce6ddf988f576a0a363e194.
-- Recent history was reconciled from the live Git ref and commit list; prior conversation-only SHAs not present on the branch were not treated as repository state.
-- Previous verified implementation: IA-08 JWT startup validation; CI run #27 (44655706057) succeeded with 28 tests, 0 failures, 0 skipped.
-- Current change: docs/changes/identity-registration-environment-guard/.
-- Implementation and SDD artifacts are committed in this increment; push-triggered CI result is pending.
+- Starting HEAD for this increment: 40e6a37b92b1def5cce6ddf988f576a0a363e194.
+- Implementation commit: 68a68211f21dc5e0883e7bd6fc664001c9953bc7.
+- Latest CI run: [44663321579](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44663321579), triggered for implementation commit 68a68211f21dc5e0883e7bd6fc664001c9953bc7.
+- Current SDD change: docs/changes/identity-registration-environment-guard/.
 - Resume rule: fetch live branch HEAD, recent commits and tree first; inspect this checkpoint and relevant specs/contracts; continue the single next task without repeating completed work.
 
 ## Completed
@@ -22,18 +21,22 @@ Updated: 2026-11-20
 - [x] This increment: enforce Development-only bootstrap registration; add unit and MySQL-backed integration coverage; update Identity specification, API contract, README and SDD tasks.
 
 ## In progress
-- [ ] Run the .NET 8 CI workflow for the registration environment guard and record its exact result.
+- [ ] CI run #28 (44663321579): test step is running; final result and test count are not yet available.
 
 ## Blockers
 - IA-09 remains blocked by unresolved employee lifecycle requirements in docs/open-questions.md question 9. Do not implement inactive-account enforcement until those rules are approved.
-- This execution environment has no .NET SDK or Docker CLI; executable validation must run on the Docker-capable GitHub Actions runner.
-- No known requirement blocker remains for the current registration guard; CI is pending.
+- This execution environment has no .NET SDK or Docker CLI; command -v dotnet and command -v docker returned no executable. The GitHub-hosted runner is used for executable validation.
+- No known requirement blocker remains for the registration environment guard.
 
 ## Verification
-- Previous verified baseline: GitHub Actions run #27, 44655706057, success; restore, Release build (0 warnings/errors), Docker Compose validation and 28 tests passed.
-- Current increment: no build/test result is claimed yet. The push-triggered workflow must validate restore, Release build, docker compose config --quiet, and the full test suite including MySQL 8.4 Testcontainers cases.
+For commit 68a68211f21dc5e0883e7bd6fc664001c9953bc7, GitHub Actions run #28 (44663321579):
+- `dotnet restore backend/TeamPulse.sln`: completed successfully.
+- `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: completed successfully.
+- `docker compose config --quiet`: completed successfully.
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: running; no pass/fail count claimed yet.
+Previous verified baseline: run #27 (44655706057), restore/build/Compose passed and 28 tests passed, 0 failed, 0 skipped.
 
-## Changed files in current increment
+## Changed files in this increment
 - backend/src/Services/Identity/Identity.API/Controllers/IdentityController.cs
 - backend/tests/Identity.UnitTests/IdentityControllerTests.cs
 - backend/tests/Identity.UnitTests/IdentityApiFactory.cs
@@ -44,14 +47,18 @@ Updated: 2026-11-20
 - docs/changes/identity-registration-environment-guard/{proposal,spec,design,tasks}.md
 - docs/changes/identity-service-foundation/tasks.md
 - README.md
+- docs/project-status.md
 
 ## Last run record
-- Starting HEAD: 40e6a37b92b1def5cce6ddf988f576a0a363e194.
-- Inspected the live branch ref, last 10 commits, recursive Git tree and CI history. Latest CI before this increment: run #27 succeeded on implementation commit a83fb6464f51b1989a9a53d36e0308ff0cbb33fe.
+- Starting branch HEAD: 40e6a37b92b1def5cce6ddf988f576a0a363e194.
+- Inspected live branch ref, last 10 commits, recursive Git tree and CI history.
 - Read AGENTS.md, README.md, this checkpoint, docs/open-questions.md, Identity specification and API contract, service ownership, communication conventions, ADR-0001, Identity change tasks, controller, Program, controller tests, integration tests, factories and workflow.
-- Confirmed the exact next task in the prior checkpoint: enforce Development-only bootstrap registration.
-- Current change uses IHostEnvironment.IsDevelopment() and returns 404 before validation or persistence in non-Development environments.
-- CI evidence for this increment: pending.
+- Confirmed the previous single next task: enforce Development-only bootstrap registration.
+- Added IHostEnvironment.IsDevelopment() guard returning 404 before validation or persistence in non-Development environments.
+- Unit tests cover Production, Staging and Testing with zero repository mutations.
+- MySQL-backed integration tests cover Production and Testing and assert no employee row is created. Existing Development registration integration tests remain enabled.
+- Committed implementation and SDD as 68a68211f21dc5e0883e7bd6fc664001c9953bc7 after verifying branch HEAD was unchanged from 40e6a37b92b1def5cce6ddf988f576a0a363e194.
+- CI run #28: restore, Release build and Compose validation passed; full test step remained in progress at checkpoint update.
 
 ## Single next task
-Verify the registration environment guard with the triggered GitHub Actions workflow. If it passes, update this checkpoint with the exact run URL, test counts and final commit SHA. If it fails, diagnose workflow logs and fix only the failing issue before marking this change complete. IA-09 must remain blocked until employee lifecycle rules are approved; do not invent that policy.
+Fetch the final result of CI run #28 (44663321579). If tests pass, update this checkpoint and close the SDD task with the exact test count and final checkpoint commit. If tests fail, inspect job logs, fix only the failing issue, rerun CI and preserve the implementation history. Do not implement IA-09 until the employee lifecycle requirements are approved.
