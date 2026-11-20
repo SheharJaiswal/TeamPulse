@@ -1,7 +1,7 @@
 # Design: Deny Authentication for Inactive Employees
 
 ## Login flow
-After normalized-email lookup, check IsActive before password verification. If inactive, return the existing generic unauthorized response. This avoids password-hasher work, password rehash, persistence writes and token issuance for inactive records.
+After normalized-email lookup, verify the submitted password against the stored hash. If verification fails, return the generic unauthorized response. If verification succeeds or requests rehash but the employee is inactive, return the same generic unauthorized response before any rehash, persistence write or token issuance. Performing password verification for an existing inactive record avoids a distinct fast path for that status.
 
 ## Test strategy
 - Unit test with an inactive Employee and a spy password hasher/token service. Assert generic 401, zero password verification/hash calls, zero persistence calls and zero token calls.
