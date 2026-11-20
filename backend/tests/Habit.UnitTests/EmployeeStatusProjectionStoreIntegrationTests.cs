@@ -1,10 +1,12 @@
 using System;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Habit.Application.Contracts;
 using Habit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -34,6 +36,10 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(HabitMySqlFixt
         Assert.False(projection.IsActive);
         Assert.Equal(1, projection.LifecycleVersion);
         Assert.Equal(1, await database.ProcessedDomainEvents.CountAsync(x => x.EmployeeId == employeeId));
+
+        var readProjection = await store.GetByEmployeeIdAsync(employeeId, CancellationToken.None);
+        Assert.NotNull(readProjection);
+        Assert.Equal(1, readProjection!.LifecycleVersion);
     }
 
     [Fact]
@@ -83,16 +89,63 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(HabitMySqlFixt
         Assert.Equal(2, await database.ProcessedDomainEvents.CountAsync(x => x.EmployeeId == employeeId));
     }
 
-    private async Task<ServiceProvider> CreateProviderAsync()
+
+    [Fact]
+    public async Task ProcessAsync_WhenProjectionWriteFails_RollsBackInboxMarker()
+    {
+        var eventId = Guid.NewGuid();
+        var employeeId = Guid.NewGuid();
+        var lifecycleEvent = CreateEvent(eventId, employeeId, 1, false);
+
+        using (var failingProvider = await CreateProviderAsync(new FailProjectionInsertInterceptor()))
+        {
+            var factory = failingProvider.GetRequiredService<IDbContextFactory<HabitDbContext>>();
+            var store = new EmployeeStatusProjectionStore(factory);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.ProcessAsync(lifecycleEvent, DateTime.UtcNow, CancellationToken.None));
+        }
+
+        using (var verificationProvider = await CreateProviderAsync())
+        {
+            var factory = verificationProvider.GetRequiredService<IDbContextFactory<HabitDbContext>>();
+            await using var database = await factory.CreateDbContextAsync();
+
+            Assert.False(await database.ProcessedDomainEvents.AnyAsync(x => x.EventId == eventId));
+            Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == employeeId));
+        }
+    }
+
+    private async Task<ServiceProvider> CreateProviderAsync(params IInterceptor[] interceptors)
     {
         var services = new ServiceCollection();
         services.AddDbContextFactory<HabitDbContext>(options =>
-            options.UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString)));
+        {
+            options.UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString));
+            if (interceptors.Length > 0)
+                options.AddInterceptors(interceptors);
+        });
         var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<IDbContextFactory<HabitDbContext>>();
         await using var database = await factory.CreateDbContextAsync();
         await database.Database.MigrateAsync();
         return provider;
+    }
+
+    private sealed class FailProjectionInsertInterceptor : DbCommandInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains(
+                "INSERT INTO employee_status_projections", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Injected projection write failure.");
+
+            return ValueTask.FromResult(result);
+        }
     }
 
     private static EmployeeLifecycleEvent CreateEvent(
