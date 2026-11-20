@@ -9,6 +9,7 @@
 - [x] Update README with local environment-variable setup and production secret guidance.
 - [x] Add real-entry-point startup tests for missing and weak keys plus UTF-8 byte-boundary unit tests.
 - [x] Diagnose CI run #25 failure and replace the ineffective configuration-source clearing approach.
-- [x] Update the project checkpoint with the failed run evidence, corrective commit and next task.
-- [ ] Run .NET 8 restore/build/test and Docker Compose validation in GitHub Actions (corrective run #26 pending).
+- [x] Diagnose CI run #26 build failure: the new API file lacked an explicit System import and nullable context.
+- [x] Add the required System import and enable nullable annotations for the validator file.
+- [ ] Run .NET 8 restore/build/test and Docker Compose validation in GitHub Actions.
 - [ ] Record final CI evidence and update Identity acceptance checklists after the run completes.
