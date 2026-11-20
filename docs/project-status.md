@@ -21,10 +21,10 @@ Updated: 2026-11-21
 - Added fingerprint algorithm/digest to inbox via additive EF migration. Existing rows are marked `legacy-unfingerprinted` with zero digest; they cannot be misclassified as verified matches.
 - Duplicate event ID now rolls back losing insert and compares the committed fingerprint through a fresh DbContext. Matching algorithm+digest returns Duplicate; differing recognized content returns DuplicateEventIntegrityViolation without overwriting inbox or applying the conflicting projection.
 - Added processor tests for source/actor validation, note/unknown-property exclusion, recognized-field change and int64 boundary; added MySQL integration tests for same-fingerprint duplicate and conflicting event-ID no-mutation.
-- CI not yet run for this commit. No local .NET SDK or Docker CLI available; prior CI #105 predates this increment.
-- Remaining gaps include consumer routing of Invalid and DuplicateEventIntegrityViolation to classified shared DLQ with confirmed publish-before-ack; bounded retry exhaustion classification; host health/migration and privacy/logging assertions.
+- CI #106 passed for this commit: Release build 0 warnings/errors; Compose validation; RabbitMQ startup/topology; 11 Python topology tests; 151 .NET tests (27 Challenge, 24 Habit, 100 Identity), 0 failed/skipped. [CI run #106](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44792610342).
+- Remaining gaps include verification of the new classified DLQ/publish-confirm handoff in CI #107; bounded retry exhaustion classification; host health/migration and privacy/logging assertions.
 - Changed files: Challenge event contract/outcome/fingerprint/processor, inbox entity/DbContext/store, additive migration/snapshot, processor and MySQL integration tests, SDD tasks, project status.
-- Single next task: GitHub Actions verification; fix any build/test failures before implementing DLQ classifications.
+- Single next task: verify CI #107 for classified invalid/integrity DLQ handling; fix only verified failures before implementing retry-exhaustion classification.
 - Branch `feature/backend-foundation`; `main` untouched. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup. Open question 19 and privacy/legal retention approval remain prerequisites for later product/production scope.
 
 

@@ -91,7 +91,7 @@ Database uniqueness and the conditional upsert enforce correctness across multip
 - Consume the complete direct envelope body from `teampulse.challenge.events`.
 - Use manual ack, prefetch 1 and one in-flight callback per channel.
 - Ack Applied, Stale and matching Duplicate only after the transaction commits or the stored fingerprint comparison completes.
-- Route malformed/unsupported events and conflicting event IDs to the existing Challenge lifecycle DLQ with distinct classifications. The original delivery is acknowledged only after successful dead-letter handling; if DLX handling fails, it remains eligible for redelivery.
+- Route malformed/unsupported events, invalid producers and conflicting event IDs to the existing Challenge lifecycle DLQ with distinct `x-teampulse-failure-classification` metadata. Publish persistently through a dedicated RabbitMQ.Client channel with publisher confirmations and mandatory routing; acknowledge the source only after positive confirmation. If publish, routing or confirmation fails, close the source channel without acknowledgement so the original remains eligible for redelivery.
 - Keep the Challenge source queue and DLQ durable quorum queues with at-least-once dead-lettering and reject-publish overflow behavior. Do not change Habit or other service topology.
 - Retry only known transient MySQL/network failures using bounded exponential backoff with full jitter and configurable attempt/base/max-delay values. Exhausted transient failures go to the same DLQ with a distinct classification.
 - Do not retry arbitrary programming/configuration errors indefinitely. Use a bounded terminal failure path and safe diagnostics.
