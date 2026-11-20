@@ -4,16 +4,17 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD at run start: `f490cbe53288e15d953d61acd8fbd408fbb9fb0f`; branch parent and recent commit history were fetched from GitHub. The prior checkpoint named `30cb9a57bfa78614199fec355c11e1e2fc2b2f96`, which is the parent of the current live HEAD, so the checkpoint was one documentation commit behind.
-- Reconciled live tree: Identity outbox dispatcher, EventBridge publisher, CloudFormation fan-out stack, five queue targets/DLQs, and seven infrastructure contract tests are present. No downstream consumer projects exist yet.
-- Owner decision: EventBridge provisioning, deployment and live-delivery testing are deferred until cloud infrastructure setup. Do not spend development runs on AWS deployment or credentials.
-- Current SDD: `docs/changes/identity-local-rabbitmq-transport/`. The RabbitMQ local transport specification is committed; implementation is the current in-progress task.
-- Production architecture is unchanged: EventBridge remains the production transport. RabbitMQ is only the local development/integration-test transport. The six-service architecture remains unchanged.
-- Completed baseline: Identity HR lifecycle/outbox, MySQL lease-safe dispatcher, EventBridge adapter, EventBridge CloudFormation fan-out and CI verification (92 .NET tests; 7 CloudFormation contract tests).
-- In progress: implement RabbitMQ.Client adapter, explicit transport selection, local Compose broker/topology and RabbitMQ Testcontainers coverage.
-- Blockers/deferred: AWS EventBridge provisioning and producer CloudWatch exporter/alarms are intentionally deferred until cloud setup; they do not block local development. No credentials are required for the RabbitMQ path.
-- Single next task: complete the approved local RabbitMQ transport implementation and its tests, then record CI results and commit SHA here.
-- Resume rule: fetch live branch HEAD and reconcile this checkpoint before every run; continue existing files/commits without recreating completed SDD or dispatcher work.
+- Live branch HEAD reconciled at run start: `f490cbe53288e15d953d61acd8fbd408fbb9fb0f`. Recent history and the working tree were inspected. The previous checkpoint was one documentation commit behind the live branch.
+- This run's final verified implementation/CI commit: `b26eb0710c1708fb0bbb027fb349636daa4c3a35` (GitHub Actions .NET CI run #93). The documentation checkpoint commit will be a docs-only child of this verified commit.
+- SDD: `docs/changes/identity-local-rabbitmq-transport/` is implemented and CI-verified. SDD commit: `91def68254b2cbf1937267e3d706f659921e8d6a`.
+- Implementation: `RabbitMQ.Client` 7.2.2 adapter, explicit `RabbitMq` / `EventBridge` provider selection, durable topic exchange, publisher confirms, mandatory routing, persistent envelope messages and systemic retry outcomes are committed.
+- Local runtime: Docker Compose starts RabbitMQ 4.1 management with the imported exchange and five durable receiving-service queues. The API dispatcher remains disabled by default; local runs explicitly set `OutboxDispatcher__Enabled=true` and `OutboxDispatcher__Transport=RabbitMq`.
+- Production architecture is unchanged: EventBridge remains the intended production transport. The owner will provision it during cloud infrastructure setup. Do not attempt AWS deployment, ask for AWS credentials or build CloudWatch exporters until that setup.
+- Completed baseline: Identity HR lifecycle and transactional MySQL outbox; lease-safe dispatcher; EventBridge production adapter and CloudFormation fan-out template; local RabbitMQ adapter/topology; unit, MySQL and RabbitMQ Testcontainers coverage.
+- In progress: no active implementation task in the local transport change. Five downstream consumer projects/projections are not implemented yet.
+- Blockers/deferred: EventBridge provisioning and producer CloudWatch exporter/alarms are intentionally deferred with cloud infrastructure and do not block local development. Privacy/legal retention sign-off remains a production prerequisite. Employee invitation, HRIS, role mutation and Organization Admin request intake remain separately unresolved.
+- Single next task: create the SDD for the first downstream consumer, Habit's version-aware Employee Status Projection consumer, limited to the existing `docs/contracts/employee-status-projection.md` contract and the Habit-owned persistence boundary. Do not invent Habit business behavior or global token-revocation guarantees.
+- Resume rule: fetch the live branch HEAD and reconcile this checkpoint before every run; continue from the exact committed files and tests without repeating the completed RabbitMQ or dispatcher work.
 
 ## Completed
 
@@ -60,28 +61,54 @@ Updated: 2026-11-20
 - [x] Added seven Python CloudFormation contract tests for exact queue/DLQ counts, paired event-type filtering, scoped publisher/queue policies, encryption, alarm coverage and absence of consumer read permissions.
 - [x] CloudFormation workflow run #2 passed cfn-lint 1.61.0 and all seven contract tests; .NET CI run #86 passed restore, Release build, Compose validation and 92 tests.
 
+- [x] Created local RabbitMQ transport SDD (proposal/spec/design/tasks) in `docs/changes/identity-local-rabbitmq-transport/`; EventBridge deployment explicitly deferred by the owner.
+- [x] Added transport selection to Identity outbox dispatch. `EventBridge` remains the code default for deployment compatibility; local development explicitly selects `RabbitMq`; the dispatcher remains disabled in checked-in appsettings.
+- [x] Added RabbitMQ.Client 7.2.2 publisher with a serialized reusable connection/channel, automatic recovery, durable topic exchange, persistent envelope body, message/correlation/type/schema metadata, publisher-confirm tracking and mandatory routing. Broker failures remain systemic/retryable and do not mark outbox rows published.
+- [x] Added local RabbitMQ 4.1 Compose service, health check, persistent volume, imported topology and five durable queues for Habit, Challenge, Event Tracking, Insight and Notification.
+- [x] Added RabbitMQ Testcontainers integration tests for confirmed fan-out to all five queues, envelope/AMQP metadata preservation and unroutable publication, plus RabbitMQ configuration tests.
+- [x] Added four Python topology contract tests and CI verification that starts the actual Compose RabbitMQ service and checks the exchange and all five queues.
+- [x] Updated README local run instructions, communication architecture and event-envelope transport mapping. Updated open questions to defer EventBridge provisioning and CloudWatch telemetry until cloud setup.
+- [x] .NET CI run #93 passed restore, Release build (0 warnings/errors), Compose validation, actual RabbitMQ Compose startup/topology checks, four Python topology tests and 100 .NET tests (0 failed, 0 skipped; 1m09s). MySQL 8.4 and RabbitMQ Testcontainers tests passed.
+
 ## In progress
 
-- The Identity EventBridge fan-out CloudFormation template, deployment README, cfn-lint workflow and seven Python resource/security contract tests are committed and verified by GitHub Actions runs #1 and #2.
-- The .NET solution restore/build/Compose validation and all 92 tests passed in run #86. No application code or EF migration was changed by this infrastructure increment.
-- No AWS stack has been deployed. The dispatcher remains disabled. The five queue consumers and their service-owned receive permissions are not implemented.
-- Producer-side outbox alarms remain incomplete: the worker's .NET Meter instruments have no CloudWatch/OpenTelemetry exporter.
+- No active implementation task remains in the local RabbitMQ transport increment; SDD, implementation, documentation and CI verification are complete.
+- Habit, Challenge, Event Tracking, Insight and Notification still need their own version-aware employee-status projections and consumers. The local queues exist, but no downstream consumer is implemented yet.
+- EventBridge remains the intended production transport; live AWS deployment is deferred until the owner provisions cloud infrastructure.
 
 ## Blockers and decisions
 
-- **AWS deployment blocker:** The CloudFormation template now defines the bus, scoped Identity role policy, lifecycle rule, five SQS targets, target-delivery DLQs, queue policies and AWS-managed delivery alarms, but no stack has been deployed. A non-production AWS account/region, authorized provisioning role, existing Identity workload role name and approved queue-age threshold are required. Supply an existing SNS topic ARN if alarm notifications are required. Keep `OutboxDispatcher__Enabled=false` until the stack is reviewed and verified.
-- Bus name is a required deployment parameter and is passed to the API as `EventBridge__BusName`; region uses `AWS_REGION`; the fixed source is `teampulse.identity`. No account-specific ARN or credential is committed. The stack attaches policy to an existing same-account role and does not create or alter its trust relationship.
-- **Producer telemetry blocker:** The worker's `System.Diagnostics.Metrics` instruments are not exported to CloudWatch. The template therefore does not claim to alarm on oldest pending outbox age, quarantined rows or systemic publisher failures. Approve and implement a telemetry exporter, namespace/dimensions and thresholds before adding those alarms.
-- **Consumer readiness blocker:** Habit, Challenge, Event Tracking, Insight and Notification status projections and their queue receive policies are not implemented. The shared stack intentionally grants no consumer read access. Do not enable production dispatch until all five consumers are ready.
+- **EventBridge deployment — intentionally deferred by owner:** The CloudFormation template and production EventBridge adapter are committed and CI-verified. Do not deploy AWS resources, request credentials or make EventBridge a prerequisite for local development. The owner will configure EventBridge during cloud infrastructure setup. The local RabbitMQ adapter is available meanwhile.
+- **Producer CloudWatch telemetry — deferred with cloud infrastructure:** Identity emits .NET Meter instruments but no CloudWatch/OpenTelemetry exporter is configured. Add exporter, namespace/dimensions, least-privilege permissions and producer-side alarms only during/after AWS setup.
+- **Downstream projection rollout — implementation not started:** The five service queues are seeded locally, but no Habit/Challenge/Event Tracking/Insight/Notification consumers or local projections exist. Do not claim global immediate token revocation. The next increment starts with Habit.
+- **Retention/legal sign-off — production blocker:** ADR-0002 retention defaults still require jurisdiction-specific privacy/legal approval.
+- Employee invitation/provisioning, HRIS integration, role mutation and Organization Admin request intake remain deferred pending the decisions in `docs/open-questions.md`.
 - The bootstrap utility has not been executed against a production database; no claim is made that a production HR administrator account exists.
-- Employee invitation/provisioning and credential activation remain deferred pending invitation delivery, token expiry and password setup decisions.
-- Organization Admins have no direct employee profile/lifecycle write access. Their HR request-intake workflow is not defined. HR role catalogue/elevated-role assignment and HRIS service authentication are also deferred.
-- Downstream employee-status projections and global revocation remain future work. Existing stateless JWTs may remain usable by receiving services until expiry.
-- Retention defaults (90-day evidence, 12-month identifiable activity/participation, 24-month security/admin audit, up to 5-year anonymized aggregates) require jurisdiction-specific privacy/legal sign-off before production.
-- This execution environment has no .NET SDK or Docker CLI. Local restore/build/test/Compose validation cannot be performed here; GitHub Actions is the verification environment.
-- No unresolved initial MVP product questions remain. Dispatcher deployment resources are an infrastructure prerequisite, not a reason to hard-code a bus or credentials in application code.
+- This execution environment has no local .NET SDK or Docker CLI. GitHub Actions ran all required .NET, Docker Compose, RabbitMQ and MySQL checks; no local build/test/Compose success is claimed.
+- No AWS deployment, IAM simulation, EventBridge/SQS live-delivery test or CloudWatch export test was performed or required for this increment.
 
 ## Verification evidence
+
+### Local RabbitMQ transport — implementation and CI verification
+
+- Start-of-run live HEAD: `f490cbe53288e15d953d61acd8fbd408fbb9fb0f`. Reconciled the recent commits, repository tree, `AGENTS.md`, `README.md`, this status file, open questions, service ownership, communication conventions, Identity/event contracts and existing outbox implementation/tests.
+- SDD commit: `91def68254b2cbf1937267e3d706f659921e8d6a`.
+- Initial implementation commit: `4e4512e83c221e6e22980fe8084acb2a9acf1966`. CI run #91 (44714606365) caught one compile error: RabbitMQ.Client 7.2.2 exposes `BasicProperties.DeliveryMode` as `DeliveryModes`, not `int`. Corrected to `DeliveryModes.Persistent` in `4e923bd96d727caa4f1c067ce8adaa5d714698d6`.
+- Documentation commit: `35efa2221abca851d7e2365bff7f0f88f3ffd27f`.
+- CI topology-verification commit: `b26eb0710c1708fb0bbb027fb349636daa4c3a35`.
+- CI run #92: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44714787175 — passed restore, Release build, Docker Compose config, four Python topology tests and 100 .NET tests (0 failed, 0 skipped; 54 seconds).
+- CI run #93: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44715089935 — passed all checks on the final verified code/workflow commit `b26eb0710c1708fb0bbb027fb349636daa4c3a35`.
+- Exact executed commands:
+  - `dotnet restore backend/TeamPulse.sln` — passed.
+  - `dotnet build backend/TeamPulse.sln --configuration Release --no-restore` — passed, 0 warnings, 0 errors.
+  - `docker compose config --quiet` — passed.
+  - `docker compose up -d --wait --wait-timeout 90 rabbitmq` — passed; Compose health check succeeded.
+  - `docker compose exec -T rabbitmq rabbitmqctl list_queues name --no-table-headers` — executed; CI asserted all five expected queue names.
+  - `docker compose exec -T rabbitmq rabbitmqctl list_exchanges name type --no-table-headers` — executed; CI asserted `teampulse.domain.events` exists.
+  - `python -m unittest discover -s infra/rabbitmq/tests -v` — 4 passed, 0 failed.
+  - `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"` — 100 passed, 0 failed, 0 skipped (1m09s in run #93). MySQL 8.4 and RabbitMQ Testcontainers integration tests passed.
+- Run #91's compile failure is retained in history and was fixed in a separate commit; run #92 and #93 passed. The latest workflow verifies both the real local Compose topology and the .NET publisher against a disposable RabbitMQ Testcontainer.
+- No EF Core model change or migration was required. No AWS credentials or live EventBridge resources were used.
 
 ### Latest verified code and infrastructure
 
@@ -151,6 +178,28 @@ Updated: 2026-11-20
 - .NET CI run #86 (44705631388) on commit `1f85ef9f3e65ef9047dfb6720bb61b88b9dba818` passed `dotnet restore backend/TeamPulse.sln`, `dotnet build backend/TeamPulse.sln --configuration Release --no-restore` (0 warnings, 0 errors), `docker compose config --quiet`, and `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"` (92 passed, 0 failed, 0 skipped; 53 seconds). MySQL 8.4 Testcontainers integration tests passed.
 - CloudFormation run #2 executed `python -m pip install --upgrade pip cfn-lint`, `cfn-lint --non-zero-exit-code warning infra/cloudformation/identity-eventbridge.yaml`, and `python -m unittest discover -s infra/cloudformation/tests -v` (7 passed; 0 failed; 0.052 seconds).
 
+## Changed files in this local RabbitMQ increment
+
+- `.github/workflows/dotnet.yml`
+- `docker-compose.yml`
+- `README.md`
+- `backend/src/Services/Identity/Identity.API/Program.cs`
+- `backend/src/Services/Identity/Identity.API/BackgroundServices/OutboxDispatcherWorker.cs`
+- `backend/src/Services/Identity/Identity.API/appsettings.json`
+- `backend/src/Services/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj`
+- `backend/src/Services/Identity/Identity.Infrastructure/Messaging/RabbitMqOptions.cs`
+- `backend/src/Services/Identity/Identity.Infrastructure/Messaging/RabbitMqPublisher.cs`
+- `backend/tests/Identity.UnitTests/Identity.UnitTests.csproj`
+- `backend/tests/Identity.UnitTests/RabbitMqPublisherIntegrationTests.cs`
+- `infra/rabbitmq/rabbitmq.conf`
+- `infra/rabbitmq/definitions.json`
+- `infra/rabbitmq/tests/test_definitions.py`
+- `docs/architecture/communication.md`
+- `docs/contracts/event-envelope.md`
+- `docs/changes/identity-local-rabbitmq-transport/{proposal,spec,design,tasks}.md`
+- `docs/open-questions.md`
+- `docs/project-status.md`
+
 ## Single next task
 
-Create the SDD for exporting Identity outbox Meter instruments to CloudWatch and provisioning producer-side alarms for oldest pending age, quarantined rows and systemic publisher failures. First approve the exporter/telemetry ownership, metric namespace/dimensions, least-privilege permissions and alert thresholds; keep the dispatcher disabled.
+Create the SDD for Habit's first downstream consumer of the versioned Employee Status Projection contract, then implement only the projection persistence and RabbitMQ consumer behavior required by that contract. Preserve Habit ownership, idempotent eventId handling, strict lifecycleVersion ordering and atomic projection/deduplication. Do not add unrelated Habit business features or invent global token-revocation guarantees.

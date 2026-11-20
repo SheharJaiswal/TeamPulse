@@ -1,6 +1,6 @@
 # Specification: Local RabbitMQ Outbox Transport
 
-**Status:** Approved for implementation from the project owner's direction to defer EventBridge provisioning and continue with a .NET-runnable local transport.
+**Status:** Implemented and CI-verified (GitHub Actions run #93, commit `b26eb0710c1708fb0bbb027fb349636daa4c3a35`).
 
 ## Runtime selection
 

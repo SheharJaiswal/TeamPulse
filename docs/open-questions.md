@@ -14,7 +14,7 @@ The initial nine product questions are resolved using the project owner's instru
 
 ## Remaining implementation work (not unresolved product questions)
 - HR provisioning/invitation and HRIS integration.
-- HR-authorized lifecycle commands, immutable audit persistence and transactional outbox record creation are implemented in Identity (CI run #72). EventBridge outbox dispatch and acceptance-test hardening are implemented and CI-verified (run #84); production deployment remains pending.
+- HR-authorized lifecycle commands, immutable audit persistence and transactional outbox record creation are implemented in Identity. The lease-safe dispatcher and EventBridge production adapter are implemented; local RabbitMQ development transport is implemented and CI-verified (run #93). EventBridge deployment remains deferred until the owner sets up cloud infrastructure.
 - Downstream employee-status projections and access revocation.
 - Retention/deletion jobs and privacy/legal sign-off.
 - Insight cohort suppression and anti-differencing controls.
