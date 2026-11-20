@@ -90,8 +90,8 @@ public sealed class HrAdminBootstrapperIntegrationTests : IClassFixture<MySqlInt
     private async Task ResetDatabaseAsync()
     {
         await using var database = CreateDatabase();
-        await database.Database.EnsureDeletedAsync();
         await database.Database.MigrateAsync();
+        await database.Employees.ExecuteDeleteAsync();
     }
 
     private async Task<BootstrapResult> RunAsync(BootstrapOptions options)
