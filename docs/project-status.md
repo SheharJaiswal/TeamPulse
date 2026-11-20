@@ -4,7 +4,7 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD before this checkpoint update: `1f85ef9f3e65ef9047dfb6720bb61b88b9dba818`.
+- Live branch HEAD before this checkpoint update: `30cb9a57bfa78614199fec355c11e1e2fc2b2f96`.
 - `feature/backend-foundation` is ahead of `main` and 0 commits behind; `main` was not modified.
 - Latest verified code commit: `1f85ef9f3e65ef9047dfb6720bb61b88b9dba818` (GitHub Actions run #86).
 - Current SDD increment: `docs/changes/identity-eventbridge-infrastructure/`; the parameterized CloudFormation stack, exact event-type matching and Python contract tests are committed. cfn-lint and all seven contract tests passed in CloudFormation workflow run #2; .NET CI run #86 also passed. Live AWS deployment and production activation remain blocked.
@@ -142,8 +142,9 @@ Updated: 2026-11-20
 - Added a dedicated cfn-lint workflow, deployment README, event/communication contract updates, dispatcher task updates and open-question #18 for missing producer-side CloudWatch telemetry export.
 - AWS documentation review confirmed custom EventBridge bus rule metrics use EventBusName and RuleName dimensions, and EventBridge targets support per-target SQS DLQs. References: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-monitoring.html and https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-events-rule.html.
 - Local .NET/Docker validation is not relevant to this IaC-only increment and no AWS credentials were available. The cfn-lint workflow is the static template validation gate; live CloudFormation deployment is not attempted.
-- Changed files: `.github/workflows/cloudformation.yml`, `infra/cloudformation/identity-eventbridge.yaml`, `infra/cloudformation/README.md`, `docs/changes/identity-eventbridge-infrastructure/{proposal,spec,design,tasks}.md`, `README.md`, `docs/architecture/communication.md`, `docs/contracts/event-envelope.md`, `docs/changes/identity-outbox-eventbridge-dispatcher/{spec,tasks}.md`, `docs/open-questions.md`, `docs/project-status.md`.
+- Changed files: `.github/workflows/cloudformation.yml`, `infra/cloudformation/identity-eventbridge.yaml`, `infra/cloudformation/README.md`, `docs/changes/identity-eventbridge-infrastructure/{proposal,spec,design,tasks}.md`, `README.md`, `docs/architecture/communication.md`, `docs/contracts/event-envelope.md`, `docs/changes/identity-outbox-eventbridge-dispatcher/{spec,tasks}.md`, `infra/cloudformation/tests/test_template_contract.py`, `docs/open-questions.md`, `docs/project-status.md`.
 - CloudFormation workflow run #1 (44705245155) passed cfn-lint 1.61.0. After adding exact `$or` event-type pairing and seven resource/security contract tests, run #2 (44705631530) passed cfn-lint and all seven tests.
+- Infrastructure commits: `4ccf753f4086097a6af12302c52f68688c7632e7` (stack/SDD) and `1f85ef9f3e65ef9047dfb6720bb61b88b9dba818` (exact event pairing and contract tests). Checkpoint documentation commit: `30cb9a57bfa78614199fec355c11e1e2fc2b2f96`.
 - .NET CI run #86 (44705631388) on commit `1f85ef9f3e65ef9047dfb6720bb61b88b9dba818` passed `dotnet restore backend/TeamPulse.sln`, `dotnet build backend/TeamPulse.sln --configuration Release --no-restore` (0 warnings, 0 errors), `docker compose config --quiet`, and `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"` (92 passed, 0 failed, 0 skipped; 53 seconds). MySQL 8.4 Testcontainers integration tests passed.
 - CloudFormation run #2 executed `python -m pip install --upgrade pip cfn-lint`, `cfn-lint --non-zero-exit-code warning infra/cloudformation/identity-eventbridge.yaml`, and `python -m unittest discover -s infra/cloudformation/tests -v` (7 passed; 0 failed; 0.052 seconds).
 
