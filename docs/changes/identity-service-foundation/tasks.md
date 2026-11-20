@@ -18,5 +18,6 @@
 - [x] Enforce development-only access to the bootstrap registration endpoint; non-Development environments return 404 without mutation, covered by unit and MySQL-backed integration tests.
 - [x] Approve HR-controlled account lifecycle baseline in ADR-0002; deny login for existing inactive employee records with generic 401 after password verification, without hash upgrade, persistence or token issuance.
 - [x] Add a one-time, operator-invoked Identity HR administrator bootstrap utility using secret-backed configuration, ASP.NET Core password hashing, MySQL advisory locking and transaction; CI run #51 passed 49 tests.
-- [ ] Implement HR-authorized employee provisioning/lifecycle commands, transition audit, transactional outbox and downstream status projections as separate SDD increments.
+- [x] Implement HR-authorized employee deactivate/reactivate commands, lifecycle version, immutable audit and transactional outbox persistence with MySQL migration; GitHub Actions run #72 passed 56 tests.
+- [ ] Implement employee invitation/provisioning and downstream employee-status projection consumers as separate SDD increments.
 - [x] Upgrade password hashes on successful login when ASP.NET Core returns SuccessRehashNeeded; persist the replacement before issuing the JWT, with unit and MySQL-backed legacy-hash coverage.
