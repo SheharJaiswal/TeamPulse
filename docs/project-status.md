@@ -3,12 +3,12 @@ Updated: 2026-11-20
 
 ## Continuation checkpoint
 - Active branch: feature/backend-foundation.
-- Previous checkpoint: bcbf39e0e6bc19253867ba70019acfe2bc254a74.
-- Current live HEAD before this checkpoint update: 9553839ffdb4bb75620c0e1376befa1e7127deb9.
-- Latest code commit covered by CI: 1031fa830ce26496b2b4d8f98c0ad5f87c306eb3.
+- Previous checkpoint: 436f4ad2e28f9fec6f2a566c2c5611fddb9d7e5f.
+- Current live HEAD before this checkpoint update: 71e2208442ec0224726185f8cae1a15da9767135.
+- Latest code commit covered by CI: 71e2208442ec0224726185f8cae1a15da9767135.
 - Product policy baseline: ADR-0002; all nine initial open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
 - Completed SDD increment: docs/changes/identity-inactive-login-guard/.
-- Next SDD increment: docs/changes/identity-hr-admin-bootstrap/.
+- Completed SDD increment: docs/changes/identity-hr-admin-bootstrap/.
 - Resume rule: fetch live branch HEAD, inspect recent commits/tree and read this checkpoint before choosing work. Continue the single next task; do not recreate completed work.
 
 ## Completed
@@ -30,31 +30,35 @@ Updated: 2026-11-20
 - [x] Added MySQL Testcontainers integration test for inactive employee login and unchanged stored password hash.
 - [x] Updated Identity specification, API contract and Identity foundation checklist.
 - [x] Corrected inactive-login SDD test strategy/checklist to match the implemented password-verification-first flow.
-- [x] Created SDD proposal/spec/design/tasks for a one-time, operator-invoked HR administrator bootstrap utility.
+- [x] Added Identity.AdminBootstrap console project to backend/TeamPulse.sln.
+- [x] Bootstrap utility reads credentials only from protected environment configuration, requires explicit --execute, hashes the password, refuses any existing HrAdmin (active or inactive), refuses duplicate email and serializes concurrent calls with a MySQL advisory lock and transaction.
+- [x] Added unit and MySQL integration tests for configuration validation, password hashing, existing admin, duplicate email and concurrent invocation.
+- [x] Added docs/runbooks/identity-hr-admin-bootstrap.md.
 
 ## In progress
-- [ ] Implement docs/changes/identity-hr-admin-bootstrap/ as the next focused SDD increment.
+- [ ] Create the next SDD change for HR-authorized employee provisioning and lifecycle commands, including transition audit and transactional outbox semantics.
 
 ## Blockers / decisions
 - No unresolved product questions remain for MVP design.
 - Retention defaults (90-day evidence, 12-month identifiable activity/participation, 24-month security/admin audit, up to 5-year anonymized aggregates) require jurisdiction-specific privacy/legal sign-off before production.
-- HRIS integration, HR provisioning/lifecycle commands, lifecycle audit persistence, transactional outbox and downstream employee-status projections remain future implementation work, not completed capabilities.
-- The HR administrator bootstrap utility is not implemented yet; no production HR admin provisioning path currently exists.
+- HRIS integration, HR provisioning/lifecycle commands, lifecycle audit persistence, transactional outbox publication and downstream employee-status projections remain future implementation work, not completed capabilities.
+- The bootstrap utility is implemented but has not been executed against a production database; no claim is made that a production HR administrator account exists.
+- The bootstrap utility does not implement employee invitations, password reset/change, HTTP provisioning endpoints, HRIS integration or lifecycle audit/outbox publication.
 - This automation environment has no .NET SDK or Docker CLI; local restore/build/test/Compose execution is unavailable. GitHub Actions is the Docker-capable verification environment.
 
 ## Verification evidence
 
 ### Latest code increment
-- GitHub Actions run #36: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44678135548
-- Head commit: 1031fa830ce26496b2b4d8f98c0ad5f87c306eb3.
-- Run conclusion: success; job "Restore, build and test" completed successfully.
+- GitHub Actions run #51: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44680155186
+- Head commit: 71e2208442ec0224726185f8cae1a15da9767135.
+- Run conclusion: success; restore, Release build, Docker Compose validation and full test step all completed successfully.
 - `dotnet restore backend/TeamPulse.sln`: passed.
 - `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: passed; 0 warnings, 0 errors.
 - `docker compose config --quiet`: passed.
-- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 40 passed, 0 failed, 0 skipped.
-- MySQL 8.4 Testcontainers integration tests ran as part of the test step.
-- Test artifact: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44678135548/artifacts/14602534207.
-- The later commits in this checkpoint are documentation-only; the workflow ignores docs-only changes.
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 49 passed, 0 failed, 0 skipped.
+- MySQL 8.4 Testcontainers integration tests, including concurrent bootstrap invocations, ran successfully.
+- Test artifact: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44680155186/artifacts/14603449182.
+- The initial implementation run #48 passed all 49 tests but exposed three warnings; run #51 is the clean verification after aligning EF Core package versions and correcting xUnit analyzer usage.
 
 ### Prior verified baseline
 - CI run #31: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675962776.
@@ -72,13 +76,22 @@ Updated: 2026-11-20
 - docs/contracts/identity-api.md
 - docs/changes/identity-service-foundation/tasks.md
 
+## Changed files in the HR administrator bootstrap increment
+- backend/src/Tools/Identity.AdminBootstrap/{Identity.AdminBootstrap.csproj,Program.cs,BootstrapOptions.cs,HrAdminBootstrapper.cs}
+- backend/tests/Identity.UnitTests/{BootstrapOptionsTests.cs,HrAdminBootstrapperIntegrationTests.cs,Identity.UnitTests.csproj}
+- backend/TeamPulse.sln
+- docs/changes/identity-hr-admin-bootstrap/{proposal,spec,design,tasks}.md
+- docs/runbooks/identity-hr-admin-bootstrap.md
+
 ## Latest run record
-- Reconciled live branch feature/backend-foundation at bcbf39e0e6bc19253867ba70019acfe2bc254a74 and read AGENTS.md, README.md, project status, open questions, Identity spec/contract, service ownership, communication conventions, ADR-0002, Identity controller/entity/repository/DbContext, unit/integration tests and CI workflow.
-- Inspected GitHub Actions run #36 and its job logs. Restore, Release build, Compose validation and all 40 tests passed on code commit 1031fa830ce26496b2b4d8f98c0ad5f87c306eb3.
-- Confirmed the unit test verifies the supplied password exactly once for an inactive employee and asserts no rehash, persistence or token issuance.
-- Corrected stale design/task/spec wording that incorrectly described zero password-verification calls.
-- Created the HR administrator bootstrap SDD artifacts. They define a dedicated operator-invoked console utility, secret-backed password configuration, a one-time guard, no HTTP bootstrap route, and database-level protection against concurrent creation.
-- Latest branch HEAD before this checkpoint update: 9553839ffdb4bb75620c0e1376befa1e7127deb9.
+- Reconciled live branch at 436f4ad2e28f9fec6f2a566c2c5611fddb9d7e5f and read the engineering instructions, status, Identity specs/contracts, project/solution structure, persistence model and Testcontainers fixture.
+- Created the HR administrator bootstrap SDD before implementation.
+- Implemented a dedicated console utility; no new microservice or public HTTP endpoint was added.
+- Used a MySQL named advisory lock on the same open connection, then a ReadCommitted transaction, to serialize first-admin creation. Existing active or inactive HrAdmin records block another bootstrap. Duplicate normalized email is rejected.
+- Added a runbook that requires protected environment injection, an already-migrated Identity database, explicit operator invocation and removal/rotation of the one-time secret.
+- First CI run #48 completed with 49 passing tests but 3 warnings (EF Core Relational version conflict and two xUnit analyzer warnings). Fixed by aligning EF Core/Relational package references to 8.0.11, avoiding a record-generated password ToString, and using Count assertions in the concurrency test.
+- Final CI run #51 completed successfully on 71e2208442ec0224726185f8cae1a15da9767135: restore passed; Release build had 0 warnings/0 errors; Compose validation passed; 49 tests passed, 0 failed, 0 skipped.
+- The only subsequent commits in this checkpoint are documentation updates; the workflow ignores docs-only changes.
 
 ## Single next task
-Implement the HR administrator bootstrap SDD change. First inspect project/solution conventions and Testcontainers fixture, then implement the console project with secret-backed configuration and a database-level one-time guard. Add unit and MySQL integration/concurrency tests, run the full GitHub Actions workflow, and update this checkpoint with exact evidence. Keep all changes on feature/backend-foundation; do not modify main.
+Create an SDD proposal/spec/design/tasks for HR-authorized employee provisioning and lifecycle commands. Define how the bootstrapped HrAdmin role is authorized, which fields can be changed by HR versus Organization Admin, atomic lifecycle audit persistence and outbox publication, event schema/versioning, idempotency and failure behavior, and the contract for downstream employee-status projections. Then implement only the approved scoped increment on feature/backend-foundation, add unit and MySQL integration tests, run GitHub Actions, and update this checkpoint with exact evidence. Keep main untouched.
