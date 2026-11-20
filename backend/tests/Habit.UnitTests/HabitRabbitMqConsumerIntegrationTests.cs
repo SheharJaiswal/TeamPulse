@@ -197,9 +197,11 @@ public sealed class HabitRabbitMqConsumerIntegrationTests : IAsyncLifetime
         options.RetryMaxDelayMilliseconds = 5;
         options.Validate();
 
+        var status = new HabitRabbitMqConsumerStatus();
         var consumer = new HabitRabbitMqConsumer(
             provider.GetRequiredService<IServiceScopeFactory>(),
             options,
+            status,
             NullLogger<HabitRabbitMqConsumer>.Instance);
 
         _consumers.Add((consumer, provider));
