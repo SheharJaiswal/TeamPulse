@@ -14,12 +14,11 @@ The initial nine product questions are resolved using the project owner's instru
 
 ## Remaining implementation work (not unresolved product questions)
 - HR provisioning/invitation and HRIS integration.
-- HR-authorized lifecycle commands, immutable audit persistence and transactional outbox record creation are implemented in Identity (CI run #72). EventBridge dispatch remains pending.
+- HR-authorized lifecycle commands, immutable audit persistence and transactional outbox record creation are implemented in Identity (CI run #72). EventBridge dispatch is specified in `docs/changes/identity-outbox-eventbridge-dispatcher/`; implementation and deployment remain pending.
 - Downstream employee-status projections and access revocation.
 - Retention/deletion jobs and privacy/legal sign-off.
 - Insight cohort suppression and anti-differencing controls.
 - Challenge scoring/versioned rules and evidence verification.
-
 
 ## Additional implementation decisions identified by the HR lifecycle SDD
 
@@ -30,6 +29,6 @@ These are not unresolved MVP product-baseline questions; they are implementation
 12. **Organization Admin request intake — OPEN / BLOCKS REQUEST WORKFLOW:** Define request fields, permitted request types, approval/denial workflow, notification, status visibility and audit. Organization Admins have no direct employee field or lifecycle write access meanwhile.
 13. **HRIS authentication and reconciliation — OPEN / BLOCKS HRIS FEED:** Define service authentication, source identifiers, mapping to TeamPulse organization/team IDs, conflict precedence, replay/idempotency and termination/reactivation ordering.
 14. **Lifecycle reason-code catalogue — OPEN / NON-BLOCKING FOR INITIAL API:** Decide whether reason codes require a controlled vocabulary, localization or policy-specific validation. The initial lifecycle API stores a required bounded opaque reason code without inventing allowed values.
-15. **EventBridge deployment and outbox dispatcher — OPEN / BLOCKS EVENT DELIVERY:** Confirm event bus name, source/detail-type conventions, IAM deployment role, outbox lease/claim strategy, retry/backoff, DLQ, poison-message handling and alerting. The lifecycle transaction may persist an outbox record, but no delivery is claimed until a dispatcher is deployed and verified.
+15. **EventBridge deployment and outbox dispatcher — DISPATCHER DESIGN SPECIFIED; DEPLOYMENT BLOCKER REMAINS:** The SDD change `docs/changes/identity-outbox-eventbridge-dispatcher/` defines the producer contract: bus name from `EventBridge__BusName`, region from `AWS_REGION`, source `teampulse.identity`, detail type equal to eventType, full envelope as Detail, AWS SDK workload-role credentials, least-privilege `events:PutEvents`, MySQL `FOR UPDATE SKIP LOCKED` leases, bounded retry/quarantine, and PublishedAtUtc only after per-entry EventBridge acceptance. The repository has no deployment/IaC tree, EventBridge bus, Identity workload role, rule/target, SQS DLQ or CloudWatch alarm definitions. These resources must be provisioned and reviewed before enabling the worker in a deployed environment. SQS DLQs apply to EventBridge target-delivery failures, not producer-side PutEvents failures.
 16. **Downstream projection rollout and token revocation — OPEN / BLOCKS GLOBAL REVOCATION CLAIM:** Implement and operate version-aware status projections in Habit, Challenge, Event Tracking, Insight and Notification. Decide whether any stronger-than-token-expiry revocation mechanism is required. ADR-0002 remains authoritative: do not claim immediate global revocation before consumers are deployed.
 17. **Retention/legal sign-off — OPEN / PRODUCTION BLOCKER:** Obtain jurisdiction-specific privacy/legal approval for the ADR-0002 retention defaults and employee offboarding/deletion policy.

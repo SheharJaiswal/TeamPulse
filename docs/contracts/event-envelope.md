@@ -22,3 +22,18 @@ Identity emits `EmployeeDeactivated` and `EmployeeReactivated` using this envelo
 - `note` (optional explanatory note)
 
 The `eventId` is also the immutable lifecycle audit ID. The outbox row, audit row and employee state transition are committed in one Identity database transaction. The outbox record is not evidence of EventBridge delivery; dispatch is a separate at-least-once operation.
+
+## EventBridge transport mapping
+
+For Identity lifecycle events, the EventBridge entry maps:
+- `EventBusName`: deployment-supplied `EventBridge__BusName`.
+- `Source`: fixed `teampulse.identity`.
+- `DetailType`: the exact envelope `eventType`.
+- `Time`: the envelope `occurredAtUtc`.
+- `Detail`: the complete serialized envelope above, without a second wrapper.
+
+The publisher processes each `PutEvents` response entry independently. Only an entry with a returned EventBridge event ID and no entry error is accepted. The outbox `PublishedAtUtc` is written after that individual acknowledgement and means only that the bus accepted the event. It does not mean that any rule target or consumer received or processed it.
+
+A crash after bus acceptance but before the MySQL acknowledgement can result in the same `eventId` being published again. This is expected at-least-once behavior; consumers must deduplicate by `eventId` and apply lifecycle events only when their `lifecycleVersion` is newer than the local projection.
+
+Producer-side EventBridge publish failures are retried or quarantined in the Identity outbox. SQS DLQs are configured on EventBridge rule targets for failures after bus acceptance. Do not treat an EventBridge target DLQ as a substitute for the producer's outbox retry/quarantine state.
