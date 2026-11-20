@@ -8,5 +8,5 @@
 - [x] Extend the real API test factory to select the host environment.
 - [x] Add MySQL-backed integration tests for Production and Testing, including no persisted employee.
 - [x] Update Identity spec, API contract, README and foundation task checklist.
-- [ ] Run .NET 8 restore, Release build, Docker Compose validation and full Testcontainers test suite in GitHub Actions.
-- [ ] Record exact workflow result and final commit SHA in project status.
+- [x] Run .NET 8 CI: restore passed; Release build passed with 0 warnings and 0 errors; Docker Compose validation passed; 33 tests passed, 0 failed, 0 skipped (run #28: 44663321579).
+- [x] Record the exact workflow result and implementation commit in docs/project-status.md.
