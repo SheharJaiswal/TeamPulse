@@ -4,10 +4,10 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD before this checkpoint update: `8fed4e9994a73f7be33b3974d6968588e7a0d0cd` (documentation-only commits followed the verified code commit).
-- `feature/backend-foundation` remains ahead of `main` with no commits behind; `main` was not modified.
-- Latest verified code commit: `9b908203b44954b56b8a13b49c96979626be126d` (GitHub Actions run #80).
-- Current SDD increment: `docs/changes/identity-outbox-eventbridge-dispatcher/`; proposal/spec/design/tasks were completed before implementation. Core dispatcher implementation is now committed and CI-verified; additional acceptance-test hardening and production infrastructure remain.
+- Live branch HEAD before this checkpoint update: `38c90810ff1fece5382c69d81fa025478d0a8ce6`.
+- `feature/backend-foundation` compares to `main` as 185 commits ahead and 0 behind; `main` was not modified.
+- Latest verified code commit: `38c90810ff1fece5382c69d81fa025478d0a8ce6` (GitHub Actions run #84).
+- Current SDD increment: `docs/changes/identity-outbox-eventbridge-dispatcher/`; core implementation and the remaining acceptance-test hardening are committed and CI-verified. Production activation remains blocked on deployment infrastructure.
 - Product policy baseline: ADR-0002; all nine initial product open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
 - Completed SDD increments include inactive-login guard, HR administrator bootstrap, HR employee lifecycle and the new Identity outbox/EventBridge dispatcher design.
 - Resume rule: fetch the live branch HEAD, inspect recent commits and repository tree, read this checkpoint and relevant specs/contracts, then continue the single next task. Do not recreate completed work.
@@ -48,18 +48,21 @@ Updated: 2026-11-20
 - [x] Added Identity API BackgroundService, disabled by default, with validated bus/region/options and a 20-second AWS request timeout beneath the 60-second default lease.
 - [x] Added full-jitter bounded retries, systemic-failure pause, publisher-side DB quarantine and no premature PublishedAtUtc updates.
 - [x] Added System.Diagnostics.Metrics gauges/counters for pending count/age, active/expired leases, quarantined rows, claims, accepted/retried/quarantined events, systemic failures and lost-lease acknowledgements; publisher records PutEvents latency and failed entries.
+- [x] Extracted a deterministic full-jitter retry-delay policy; the worker supplies a runtime random sample while unit tests verify exponential ceilings and jitter boundaries.
+- [x] Hardened EventBridge response handling: an omitted aggregate `FailedEntryCount` does not override valid per-entry results; a present count that contradicts entry results makes the whole batch retryable rather than acknowledging ambiguous events.
+- [x] Added acceptance tests for disabled/enabled configuration, missing bus/region, invalid option ranges, retry/backoff boundaries, systemic/permanent error classification, payload-free worker logs, persisted retry due times and crash-after-acceptance replay preserving the original eventId.
 - [x] Added domain, EventBridge publisher and MySQL Testcontainers coverage for envelope mapping, partial failures, concurrent claims, lease expiry, stale-owner fencing, acknowledgement, quarantine and queue metrics.
 
 ## In progress
 
-- [ ] Complete remaining acceptance-test coverage: options validation, retry scheduling/backoff boundaries, systemic/permanent error classification, log-payload redaction and crash-after-EventBridge-acceptance replay with the same eventId.
-- [ ] Review CI evidence and update the SDD task checklist after those tests are complete.
-- [ ] Keep production activation blocked until EventBridge/IAM/targets/SQS DLQs/alarms are provisioned and verified in a non-production AWS environment.
+- No application-code task is currently in progress. The dispatcher implementation and acceptance-test hardening are complete and verified by CI run #84.
+- The next development increment is the parameterized AWS deployment SDD/template recorded under **Single next task**; the dispatcher remains disabled until that infrastructure is reviewed and verified.
 
 ## Blockers and decisions
 
 - **Deployment enablement blocker:** The repository has no deployment/IaC tree (the inspected root contains .github, backend, docs and docker-compose.yml; `deploy/` and `infra/` do not exist). No EventBridge bus, Identity workload IAM role, EventBridge rules/targets, SQS queues/DLQs or CloudWatch alarms are defined. The dispatcher is implemented and tested with a mocked EventBridge client while disabled, but `OutboxDispatcher__Enabled` must remain false in deployed environments until those resources are provisioned and reviewed.
 - Bus name is intentionally deployment-supplied through `EventBridge__BusName`; region uses `AWS_REGION`; the fixed source is `teampulse.identity`. No account-specific ARN or credential is to be invented or committed.
+- Required before live EventBridge verification: a non-production AWS account/region and either authorized provisioning access or the provisioned bus, Identity workload role, rules/targets, SQS DLQs and alarms. No account-specific ARN or credentials are stored in the repository.
 - The bootstrap utility has not been executed against a production database; no claim is made that a production HR administrator account exists.
 - Employee invitation/provisioning and credential activation remain deferred pending invitation delivery, token expiry and password setup decisions.
 - Organization Admins have no direct employee profile/lifecycle write access. Their HR request-intake workflow is not defined. HR role catalogue/elevated-role assignment and HRIS service authentication are also deferred.
@@ -72,19 +75,21 @@ Updated: 2026-11-20
 
 ### Latest verified code
 
-- GitHub Actions run #80: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44692124602
-- Verified code commit: `9b908203b44954b56b8a13b49c96979626be126d`.
+- GitHub Actions run #84: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44698318341
+- Verified code commit: `38c90810ff1fece5382c69d81fa025478d0a8ce6`.
 - Run conclusion: success.
 - `dotnet restore backend/TeamPulse.sln`: passed.
 - `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: passed; 0 warnings, 0 errors.
 - `docker compose config --quiet`: passed.
-- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 64 passed, 0 failed, 0 skipped.
-- MySQL 8.4 Testcontainers integration tests passed for concurrent claims, lease expiry, stale-token fencing, published acknowledgement, quarantine and queue snapshot metrics.
-- EventBridge publisher tests passed for complete envelope mapping and per-entry partial failure handling; no live AWS credentials or EventBridge account were required.
-- Run #78 exposed a test assumption that the outbox table was empty; the test was corrected to compare against a baseline snapshot in commit `b6c39fccdd7056d68307e4b66a543ae3ea70bccc`. Run #79 passed 64 tests; run #80 verifies the final publisher latency/failure metrics code.
-- Run #77 verified the warning-free dispatcher core (63 passed, 0 warnings/errors).
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 92 passed, 0 failed, 0 skipped (58 seconds).
+- MySQL 8.4 Testcontainers integration tests passed, including persisted retry scheduling/due-time gating and crash-after-EventBridge-acceptance replay with the same eventId/envelope.
+- Dispatcher acceptance tests passed for disabled/enabled options, configuration bounds, deterministic full-jitter boundaries, systemic/permanent/transient entry classification, inconsistent aggregate failure counts, missing per-entry event IDs and payload-free worker logging.
+- No live AWS credentials or EventBridge account were used; publisher behavior is tested with a mocked AWS SDK client.
+- Earlier attempts are retained in history: runs #81 and #82 failed during build because the retry test fixture contained over-escaped JSON; corrected in commit `d757910d28a612a20bb5c5d37c056bdafdd414f9`. Run #83 built cleanly but 2 of 92 tests exposed that the AWS SDK response's aggregate failure count may be absent; the publisher now checks the aggregate only when supplied, and run #84 verifies the fix.
+- Run #80 remains the previous verified dispatcher-core baseline (64 passed, 0 failed/skipped, 0 warnings/errors); run #84 verifies the acceptance-test hardening and response-handling fix.
 
-### This run — dispatcher implementation
+
+### Prior implementation increment — dispatcher core (historical checkpoint)
 
 - Reconciled the live branch at `6a85445f71692b436c8289c1de24cfbf964e4429`, including recent commit history and repository tree. The existing checkpoint's last code commit `3f0d8bfb...` was correct; two subsequent docs commits were present in live history.
 - Read AGENTS.md, README.md, docs/project-status.md, docs/open-questions.md, ADR-0001/0002, service ownership, communication conventions, Identity specification, event catalog/envelope, lifecycle SDD and current outbox entity/context/migration/tests.
@@ -97,26 +102,30 @@ Updated: 2026-11-20
 - No new CI run was triggered or claimed: the workflow ignores `docs/**` and README-only changes. The previous run #72 remains the latest code verification.
 - SDD commit: `3f6f3b9041acb9d681de9c993e626d79c55b1e6b`.
 
-## Changed files in this implementation increment
+### This run — dispatcher acceptance-test hardening
 
-- backend/src/Services/Identity/Identity.Domain/Entities/OutboxMessage.cs
-- backend/src/Services/Identity/Identity.Application/Abstractions/OutboxDispatchContracts.cs
-- backend/src/Services/Identity/Identity.Infrastructure/Persistence/IdentityDbContext.cs
-- backend/src/Services/Identity/Identity.Infrastructure/Persistence/OutboxMessageStore.cs
-- backend/src/Services/Identity/Identity.Infrastructure/Persistence/Migrations/20261120070000_OutboxDispatcher.cs
-- backend/src/Services/Identity/Identity.Infrastructure/Persistence/Migrations/IdentityDbContextModelSnapshot.cs
+- At run start, fetched live `feature/backend-foundation` HEAD `fce20738676ac466f6efc3d0beda705ac381439c`, inspected the recent commit history and recursive repository tree, and reconciled the checkpoint. The dispatcher core and metrics were already complete; the single unfinished task was acceptance-test hardening.
+- Read `AGENTS.md`, `README.md`, this checkpoint, `docs/open-questions.md`, ADR-0001/0002, Identity ownership/specification, event envelope/catalog, employee-status projection, lifecycle SDD, dispatcher proposal/spec/design/tasks, implementation and existing tests.
+- Added a deterministic full-jitter delay policy and wired the worker to use it. Hardened EventBridge response handling so a missing aggregate `FailedEntryCount` does not override valid per-entry responses, while a contradictory supplied count causes conservative batch retry without acknowledgement.
+- Added tests for options validation, retry/backoff boundaries, EventBridge transient/systemic/permanent classification, aggregate/per-entry mismatch, payload-free structured logs, persisted retry due-time gating and crash-after-acceptance replay with the same eventId/envelope.
+- Commits on the feature branch: `7bae0c99e5ca5c312f26b4e4004403d2b2ed751c` (acceptance tests and publisher guard), `64e4ef2598a5ef30c018019e845f127254780548` (retry scheduling/replay coverage), `d757910d28a612a20bb5c5d37c056bdafdd414f9` (correct escaped retry fixture), and `38c90810ff1fece5382c69d81fa025478d0a8ce6` (optional aggregate failure-count handling).
+- CI run #81 failed at build because the initial fixture JSON was over-escaped; run #82 had the same build failure on the subsequent test commit. Run #83 built cleanly and passed Compose validation but reported 90 passed / 2 failed because the mocked AWS SDK response omitted the optional aggregate failure count. Both issues were corrected without rewriting history.
+- CI run #84 on `38c90810ff1fece5382c69d81fa025478d0a8ce6` passed: restore, Release build (0 warnings/errors), Compose validation, and 92 tests (0 failed, 0 skipped; 58 seconds), including MySQL 8.4 Testcontainers.
+- Local `dotnet --info` and `docker --version` are unavailable (exit 127); `git --version` is 2.47.3. Local restore/build/test/Compose commands were not run; CI run #84 is the executed verification.
+- No AWS credentials, EventBridge bus, workload IAM role, target queues/DLQs or alarms were available, so no live AWS deployment or dispatcher enablement was attempted.
+
+## Changed files in this acceptance-test hardening increment
+
 - backend/src/Services/Identity/Identity.Infrastructure/Messaging/EventBridgePublisher.cs
-- backend/src/Services/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj
-- backend/src/Services/Identity/Identity.API/Program.cs
-- backend/src/Services/Identity/Identity.API/appsettings.json
 - backend/src/Services/Identity/Identity.API/BackgroundServices/OutboxDispatcherWorker.cs
-- backend/tests/Identity.UnitTests/Identity.UnitTests.csproj
-- backend/tests/Identity.UnitTests/OutboxDispatcherTests.cs
+- backend/src/Services/Identity/Identity.API/BackgroundServices/OutboxRetryDelayPolicy.cs (new)
+- backend/tests/Identity.UnitTests/OutboxDispatcherAcceptanceTests.cs (new)
 - docs/changes/identity-outbox-eventbridge-dispatcher/tasks.md
-- docs/changes/identity-outbox-eventbridge-dispatcher/proposal.md
 - docs/changes/identity-outbox-eventbridge-dispatcher/spec.md
+- docs/changes/identity-outbox-eventbridge-dispatcher/design.md
+- docs/open-questions.md
 - docs/project-status.md
 
 ## Single next task
 
-Complete the remaining dispatcher acceptance tests: validate disabled/enabled configuration, retry/backoff boundaries, systemic versus permanent EventBridge errors, payload-free structured logging and ambiguous publish-after-acceptance replay preserving the same eventId. Then reconcile the test checklist and keep the worker disabled until EventBridge bus/IAM/rules/targets/SQS DLQs/alarms are provisioned and verified in non-production.
+Create the SDD package and parameterized AWS CloudFormation deployment increment for the Identity EventBridge producer: custom bus, least-privilege Identity workload-role attachment, lifecycle-event rule, five service-owned SQS target queues with target-delivery DLQs/queue policies, and operational alarms. Keep the dispatcher disabled; do not deploy or enable it until non-production AWS access and resource review are available.

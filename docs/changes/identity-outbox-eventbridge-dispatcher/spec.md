@@ -1,6 +1,6 @@
 # Specification: Lease-Safe Identity Outbox Dispatcher
 
-**Status:** Core implementation CI-verified; some acceptance-test scenarios remain, and production activation requires external infrastructure.  
+**Status:** Core implementation and dispatcher acceptance-test hardening CI-verified by run #84; production activation requires external infrastructure.  
 **Authority:** AGENTS.md, ADR-0001, ADR-0002, `docs/architecture/communication.md`, Identity service ownership and the shared domain-event envelope.
 
 ## Runtime configuration
@@ -114,7 +114,7 @@ Log event ID, event type, correlation ID, attempt count, bus name, AWS request I
 | OBD-01 | Dispatcher is disabled by default and the API starts without AWS credentials. | API configuration/startup tests. |
 | OBD-02 | Enabling the worker requires a bus name and AWS region; invalid enabled configuration fails fast. | Options validation tests. |
 | OBD-03 | EventBridge mapping preserves the complete envelope and uses the agreed source, detail type and event time. | Publisher unit tests with a fake/mock AWS client. |
-| OBD-04 | Batches never exceed 10 and partial response failures affect only their matching outbox rows. | Publisher/dispatcher unit tests. |
+| OBD-04 | Batches never exceed 10 and partial response failures affect only their matching outbox rows. If a supplied aggregate `FailedEntryCount` contradicts per-entry results, no event in that batch is acknowledged. | Publisher/dispatcher unit tests. |
 | OBD-05 | Concurrent workers claim disjoint rows using MySQL `SKIP LOCKED`. | MySQL 8.4 Testcontainers concurrency test. |
 | OBD-06 | A stale or expired lease holder cannot acknowledge a row claimed by another worker. | MySQL Testcontainers lease-token test. |
 | OBD-07 | Only an individually accepted EventBridge entry sets `PublishedAtUtc`. | Success, partial-failure and exception tests. |

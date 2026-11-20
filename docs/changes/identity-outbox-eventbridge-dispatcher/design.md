@@ -38,7 +38,7 @@ An index should begin with the state/due-time columns used by the pending predic
 
 1. Map each row to one PutEvents entry: configured bus, fixed source `teampulse.identity`, exact event type as detail type, occurrence time as EventBridge Time, and the complete stored envelope as Detail.
 2. Send up to 10 entries. Use the AWS SDK's standard retry behavior for an individual API request; application retry state handles a final unsuccessful entry/request.
-3. Match response entries to request entries by array position. A response entry with EventId and no ErrorCode is accepted. Handle a non-zero FailedEntryCount and individual errors even when the HTTP call returned normally.
+3. Match response entries to request entries by array position. A response entry with EventId and no ErrorCode is accepted. When `FailedEntryCount` is present, compare it with the per-entry failures; if the aggregate contradicts the entries, conservatively retry the whole batch and acknowledge none. If the aggregate is absent, use the per-entry results. Handle individual errors even when the HTTP call returned normally.
 4. For each accepted row, conditionally set PublishedAtUtc and clear lease/retry/error fields only if its lease token still matches.
 5. For each failed row, conditionally persist a retry time or quarantine state using the same lease token.
 6. If the lease token no longer matches, do not overwrite the newer owner's state. The other worker will complete or the lease will expire.
@@ -47,7 +47,7 @@ The database acknowledgement is intentionally after EventBridge acceptance. If t
 
 ## Retry policy
 
-Use an injectable clock and jitter source so retry calculations are deterministic in tests. For transient failures, compute a full-jitter delay in the range `[0, min(baseDelay * 2^(attempt-1), maxDelay)]`. Initial defaults are base 1 second, cap 5 minutes and maximum 10 attempts.
+Use the injected `TimeProvider` for timestamps and a deterministic retry-delay policy that accepts an explicit jitter sample. Production supplies `Random.Shared.NextDouble()`; unit tests pass fixed samples. For transient failures, compute a full-jitter delay in the range `[0, min(baseDelay * 2^(attempt-1), maxDelay)]`. Initial defaults are base 1 second, cap 5 minutes and maximum 10 attempts.
 
 Permanent event-specific errors are quarantined immediately. A systemic bus/region/IAM failure pauses the worker and emits an operational failure signal; it must not quarantine every pending event. Store only a sanitized error code, not raw exception text or request payload.
 

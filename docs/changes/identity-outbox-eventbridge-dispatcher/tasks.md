@@ -3,14 +3,14 @@
 ## Reconciliation and SDD
 
 - [x] Fetch the live `feature/backend-foundation` branch and inspect recent commits and repository tree.
-- [x] Reconcile the live branch with `docs/project-status.md`; confirm HR lifecycle implementation is complete and CI run #80 is the latest verified code result.
+- [x] Reconcile the live branch with `docs/project-status.md`; confirm HR lifecycle implementation is complete and CI run #84 is the latest verified code result.
 - [x] Read AGENTS.md, README.md, Identity specification, ownership, communication conventions, ADR-0001/0002, event envelope/catalog, lifecycle SDD, open questions and current outbox persistence.
 - [x] Confirm the repository has no deployment/IaC tree, EventBridge bus definition, workload IAM role, EventBridge rules/targets, SQS queue/DLQ definitions or monitoring resources.
 - [x] Define configuration-gated EventBridge publishing, AWS credential/IAM boundary and event mapping.
 - [x] Define lease-safe MySQL claim/acknowledgement, partial batch results, retry/backoff, producer-side quarantine and target-side SQS DLQ boundary.
 - [x] Create proposal.md, spec.md, design.md and this task checklist before implementation.
 
-## Implementation — core complete; acceptance-test hardening remains
+## Implementation — core and acceptance-test hardening complete; deployment remains blocked
 
 - [x] Add Application publisher/dispatcher abstractions and validated options.
 - [x] Add outbox lease, retry, quarantine and acknowledgement domain behavior.
@@ -21,8 +21,9 @@
 - [x] Add tests for event mapping, partial failures, lease domain transitions, concurrent claims, lease expiry, stale tokens, acknowledgement, quarantine and queue metrics.
 - [x] Add focused tests for options validation, retry/backoff boundaries, systemic versus permanent error classification and payload-free log behavior.
 - [x] Add retry scheduling and ambiguous publish-after-acceptance replay tests proving stable eventId behavior.
-- [x] Run restore, Release build, Compose validation and full tests in CI: run #80 passed 64 tests, 0 failed/skipped, 0 warnings/errors.
-- [x] Update the project checkpoint with the verified code commit and deployment blockers.
+- [x] Harden aggregate EventBridge `FailedEntryCount` handling: absent counts defer to per-entry results; contradictory counts conservatively retry the batch without acknowledging any entry.
+- [x] Run restore, Release build, Compose validation and full tests in CI: run #84 passed 92 tests, 0 failed/skipped, 0 warnings/errors; MySQL 8.4 Testcontainers included.
+- [x] Update the project checkpoint with run #84 evidence, remaining infrastructure blockers and the next deployment SDD task.
 
 ## Deployment enablement — blocked on infrastructure
 
