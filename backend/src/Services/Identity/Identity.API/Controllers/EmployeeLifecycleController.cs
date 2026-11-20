@@ -33,8 +33,10 @@ public sealed class EmployeeLifecycleController(IEmployeeLifecycleService lifecy
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var actorEmployeeId))
             return Unauthorized();
 
-        var idempotencyKey = Request.Headers["Idempotency-Key"].ToString();
-        if (idempotencyKey.Length is < 1 or > 128 ||
+        var idempotencyValues = Request.Headers["Idempotency-Key"];
+        var idempotencyKey = idempotencyValues.Count == 1 ? idempotencyValues[0] ?? string.Empty : string.Empty;
+        if (idempotencyValues.Count != 1 || string.IsNullOrWhiteSpace(idempotencyKey) ||
+            idempotencyKey.Length > 128 ||
             idempotencyKey.Any(character => character < 0x20 || character > 0x7e))
         {
             return BadRequest(new { message = "Idempotency-Key must contain 1–128 visible ASCII characters." });
@@ -46,7 +48,11 @@ public sealed class EmployeeLifecycleController(IEmployeeLifecycleService lifecy
             return BadRequest(new { message = "A reasonCode (1–100 characters) is required; note must not exceed 1000 characters." });
         }
 
-        var correlationHeader = Request.Headers["X-Correlation-ID"].ToString();
+        var correlationValues = Request.Headers["X-Correlation-ID"];
+        if (correlationValues.Count > 1)
+            return BadRequest(new { message = "X-Correlation-ID must be supplied at most once." });
+
+        var correlationHeader = correlationValues.Count == 1 ? correlationValues[0] ?? string.Empty : string.Empty;
         Guid correlationId;
         if (string.IsNullOrEmpty(correlationHeader))
         {
