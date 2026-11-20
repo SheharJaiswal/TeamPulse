@@ -9,6 +9,13 @@ public sealed record OutboxDispatchMessage(
     Guid EventId, string EventType, int SchemaVersion, DateTime OccurredAtUtc,
     Guid CorrelationId, string Detail, Guid LeaseToken, int AttemptCount);
 
+public sealed record OutboxQueueSnapshot(
+    long PendingCount,
+    DateTime? OldestPendingCreatedAtUtc,
+    long ActiveLeaseCount,
+    long ExpiredLeaseCount,
+    long QuarantinedCount);
+
 public enum OutboxPublishOutcome
 {
     Accepted = 0,
@@ -45,4 +52,6 @@ public interface IOutboxMessageStore
     Task<bool> ReleaseForSystemicFailureAsync(
         Guid eventId, Guid leaseToken, DateTime retryAtUtc, string errorCode,
         CancellationToken cancellationToken);
+
+    Task<OutboxQueueSnapshot> GetQueueSnapshotAsync(CancellationToken cancellationToken);
 }

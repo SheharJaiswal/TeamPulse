@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,6 +47,30 @@ public sealed class OutboxDispatcherWorker(
     TimeProvider timeProvider,
     ILogger<OutboxDispatcherWorker> logger) : BackgroundService
 {
+    private static readonly Meter DispatcherMeter = new("TeamPulse.Identity.OutboxDispatcher", "1.0.0");
+    private static long _pendingCount;
+    private static long _activeLeaseCount;
+    private static long _expiredLeaseCount;
+    private static long _quarantinedCount;
+    private static double _oldestPendingAgeSeconds;
+
+    private static readonly ObservableGauge<long> PendingGauge =
+        DispatcherMeter.CreateObservableGauge("teampulse.identity.outbox.pending", () => Interlocked.Read(ref _pendingCount));
+    private static readonly ObservableGauge<double> OldestPendingAgeGauge =
+        DispatcherMeter.CreateObservableGauge("teampulse.identity.outbox.oldest_pending_age", () => Volatile.Read(ref _oldestPendingAgeSeconds), "s");
+    private static readonly ObservableGauge<long> ActiveLeaseGauge =
+        DispatcherMeter.CreateObservableGauge("teampulse.identity.outbox.active_leases", () => Interlocked.Read(ref _activeLeaseCount));
+    private static readonly ObservableGauge<long> ExpiredLeaseGauge =
+        DispatcherMeter.CreateObservableGauge("teampulse.identity.outbox.expired_leases", () => Interlocked.Read(ref _expiredLeaseCount));
+    private static readonly ObservableGauge<long> QuarantinedGauge =
+        DispatcherMeter.CreateObservableGauge("teampulse.identity.outbox.quarantined", () => Interlocked.Read(ref _quarantinedCount));
+    private static readonly Counter<long> ClaimedCounter = DispatcherMeter.CreateCounter<long>("teampulse.identity.outbox.claimed");
+    private static readonly Counter<long> AcceptedCounter = DispatcherMeter.CreateCounter<long>("teampulse.identity.outbox.accepted");
+    private static readonly Counter<long> RetriedCounter = DispatcherMeter.CreateCounter<long>("teampulse.identity.outbox.retried");
+    private static readonly Counter<long> QuarantinedCounter = DispatcherMeter.CreateCounter<long>("teampulse.identity.outbox.quarantined_events");
+    private static readonly Counter<long> SystemicFailureCounter = DispatcherMeter.CreateCounter<long>("teampulse.identity.outbox.systemic_failures");
+    private static readonly Counter<long> LostLeaseCounter = DispatcherMeter.CreateCounter<long>("teampulse.identity.outbox.lost_lease_acknowledgements");
+
     private readonly OutboxDispatcherOptions _options = options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -66,6 +91,7 @@ public sealed class OutboxDispatcherWorker(
                 }
                 else
                 {
+                    ClaimedCounter.Add(claimed.Count);
                     IReadOnlyList<OutboxPublishResult> results;
                     try
                     {
@@ -98,18 +124,25 @@ public sealed class OutboxDispatcherWorker(
                             case OutboxPublishOutcome.Accepted:
                                 if (await store.MarkPublishedAsync(
                                     message.EventId, message.LeaseToken, nowUtc, stoppingToken))
+                                {
+                                    AcceptedCounter.Add(1);
                                     logger.LogInformation(
                                         "Outbox event accepted. EventId={EventId} EventType={EventType} CorrelationId={CorrelationId} Attempt={AttemptCount}",
                                         message.EventId, message.EventType, message.CorrelationId, message.AttemptCount);
+                                }
                                 else
+                                {
+                                    LostLeaseCounter.Add(1);
                                     logger.LogWarning(
                                         "Outbox acknowledgement skipped after lease ownership changed. EventId={EventId}",
                                         message.EventId);
+                                }
                                 break;
 
                             case OutboxPublishOutcome.PermanentFailure:
-                                await store.QuarantineAsync(
-                                    message.EventId, message.LeaseToken, nowUtc, result.ErrorCode, stoppingToken);
+                                if (await store.QuarantineAsync(
+                                    message.EventId, message.LeaseToken, nowUtc, result.ErrorCode, stoppingToken))
+                                    QuarantinedCounter.Add(1);
                                 logger.LogError(
                                     "Outbox event quarantined after a permanent event error. EventId={EventId} ErrorCode={ErrorCode}",
                                     message.EventId, result.ErrorCode);
@@ -117,6 +150,7 @@ public sealed class OutboxDispatcherWorker(
 
                             case OutboxPublishOutcome.SystemicFailure:
                                 systemicFailure = true;
+                                SystemicFailureCounter.Add(1);
                                 await store.ReleaseForSystemicFailureAsync(
                                     message.EventId, message.LeaseToken,
                                     nowUtc.AddSeconds(_options.SystemicFailurePauseSeconds),
@@ -129,18 +163,20 @@ public sealed class OutboxDispatcherWorker(
                             default:
                                 if (message.AttemptCount >= _options.MaxAttempts)
                                 {
-                                    await store.QuarantineAsync(
-                                        message.EventId, message.LeaseToken, nowUtc, result.ErrorCode, stoppingToken);
+                                    if (await store.QuarantineAsync(
+                                        message.EventId, message.LeaseToken, nowUtc, result.ErrorCode, stoppingToken))
+                                        QuarantinedCounter.Add(1);
                                     logger.LogError(
                                         "Outbox event quarantined after retry limit. EventId={EventId} ErrorCode={ErrorCode}",
                                         message.EventId, result.ErrorCode);
                                 }
                                 else
                                 {
-                                    await store.ScheduleRetryAsync(
+                                    if (await store.ScheduleRetryAsync(
                                         message.EventId, message.LeaseToken,
                                         nowUtc.Add(NextRetryDelay(message.AttemptCount)),
-                                        result.ErrorCode, stoppingToken);
+                                        result.ErrorCode, stoppingToken))
+                                        RetriedCounter.Add(1);
                                     logger.LogWarning(
                                         "Outbox event scheduled for retry. EventId={EventId} Attempt={AttemptCount} ErrorCode={ErrorCode}",
                                         message.EventId, message.AttemptCount, result.ErrorCode);
@@ -152,6 +188,8 @@ public sealed class OutboxDispatcherWorker(
                     if (systemicFailure)
                         delay = TimeSpan.FromSeconds(_options.SystemicFailurePauseSeconds);
                 }
+
+                await RefreshQueueMetricsAsync(store, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -170,6 +208,20 @@ public sealed class OutboxDispatcherWorker(
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             }
         }
+    }
+
+    private async Task RefreshQueueMetricsAsync(
+        IOutboxMessageStore store, CancellationToken cancellationToken)
+    {
+        var snapshot = await store.GetQueueSnapshotAsync(cancellationToken);
+        Interlocked.Exchange(ref _pendingCount, snapshot.PendingCount);
+        Interlocked.Exchange(ref _activeLeaseCount, snapshot.ActiveLeaseCount);
+        Interlocked.Exchange(ref _expiredLeaseCount, snapshot.ExpiredLeaseCount);
+        Interlocked.Exchange(ref _quarantinedCount, snapshot.QuarantinedCount);
+        var ageSeconds = snapshot.OldestPendingCreatedAtUtc is DateTime createdAt
+            ? Math.Max(0, (timeProvider.GetUtcNow().UtcDateTime - createdAt).TotalSeconds)
+            : 0;
+        Volatile.Write(ref _oldestPendingAgeSeconds, ageSeconds);
     }
 
     private TimeSpan NextRetryDelay(int attemptCount)

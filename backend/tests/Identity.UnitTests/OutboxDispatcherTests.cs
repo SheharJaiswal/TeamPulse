@@ -184,6 +184,34 @@ public sealed class OutboxMessageStoreIntegrationTests : IClassFixture<MySqlInte
             eventId, secondClaim.LeaseToken, DateTime.UtcNow, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task QueueSnapshot_ReportsPendingLeaseAndQuarantineCounts()
+    {
+        using var apiFactory = _fixture.CreateFactory();
+        using var client = apiFactory.CreateClient();
+        Assert.Equal(System.Net.HttpStatusCode.OK,
+            (await client.GetAsync("/health/ready")).StatusCode);
+
+        await SeedMessagesAsync(apiFactory, 2);
+        var store = CreateStore();
+        var claimed = (await store.ClaimBatchAsync(
+            1, TimeSpan.FromSeconds(60), CancellationToken.None)).Single();
+
+        var beforeQuarantine = await store.GetQueueSnapshotAsync(CancellationToken.None);
+        Assert.Equal(2, beforeQuarantine.PendingCount);
+        Assert.Equal(1, beforeQuarantine.ActiveLeaseCount);
+        Assert.Equal(0, beforeQuarantine.QuarantinedCount);
+        Assert.NotNull(beforeQuarantine.OldestPendingCreatedAtUtc);
+
+        Assert.True(await store.QuarantineAsync(
+            claimed.EventId, claimed.LeaseToken, DateTime.UtcNow,
+            "MalformedDetail", CancellationToken.None));
+        var afterQuarantine = await store.GetQueueSnapshotAsync(CancellationToken.None);
+        Assert.Equal(1, afterQuarantine.PendingCount);
+        Assert.Equal(1, afterQuarantine.QuarantinedCount);
+        Assert.Equal(0, afterQuarantine.ActiveLeaseCount);
+    }
+
     private async Task<List<Guid>> SeedMessagesAsync(IdentityApiFactory apiFactory, int count)
     {
         var ids = Enumerable.Range(0, count).Select(_ => Guid.NewGuid()).ToList();

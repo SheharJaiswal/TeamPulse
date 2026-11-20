@@ -72,6 +72,30 @@ FOR UPDATE SKIP LOCKED")
         string errorCode, CancellationToken cancellationToken) =>
         UpdateOwnedAsync(eventId, message => message.TryScheduleRetry(leaseToken, retryAtUtc, errorCode), cancellationToken);
 
+    public async Task<OutboxQueueSnapshot> GetQueueSnapshotAsync(CancellationToken cancellationToken)
+    {
+        await using var database = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
+        var pending = database.OutboxMessages.Where(message =>
+            message.PublishedAtUtc == null && message.DeadLetteredAtUtc == null);
+
+        var pendingCount = await pending.LongCountAsync(cancellationToken);
+        var oldestPending = await pending
+            .Select(message => (DateTime?)message.CreatedAtUtc)
+            .MinAsync(cancellationToken);
+        var activeLeases = await pending.LongCountAsync(
+            message => message.LeaseExpiresAtUtc.HasValue && message.LeaseExpiresAtUtc > nowUtc,
+            cancellationToken);
+        var expiredLeases = await pending.LongCountAsync(
+            message => message.LeaseExpiresAtUtc.HasValue && message.LeaseExpiresAtUtc <= nowUtc,
+            cancellationToken);
+        var quarantinedCount = await database.OutboxMessages.LongCountAsync(
+            message => message.DeadLetteredAtUtc != null, cancellationToken);
+
+        return new OutboxQueueSnapshot(
+            pendingCount, oldestPending, activeLeases, expiredLeases, quarantinedCount);
+    }
+
     private async Task<bool> UpdateOwnedAsync(Guid eventId, Func<OutboxMessage, bool> transition,
         CancellationToken cancellationToken)
     {
