@@ -115,7 +115,7 @@ public sealed class RabbitMqPublisherIntegrationTests : IAsyncLifetime
                 Assert.Equal("EmployeeDeactivated", delivery.BasicProperties.Type);
                 Assert.Equal(correlationId.ToString("D"), delivery.BasicProperties.CorrelationId);
                 Assert.Equal("application/json", delivery.BasicProperties.ContentType);
-                Assert.Equal((byte)2, delivery.BasicProperties.DeliveryMode);
+                Assert.Equal(DeliveryModes.Persistent, delivery.BasicProperties.DeliveryMode);
                 Assert.Equal(1, Convert.ToInt32(delivery.BasicProperties.Headers!["schemaVersion"]));
                 await _channel.BasicAckAsync(delivery.DeliveryTag, multiple: false);
             }

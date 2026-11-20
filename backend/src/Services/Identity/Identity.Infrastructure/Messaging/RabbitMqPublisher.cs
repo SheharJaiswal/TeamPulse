@@ -68,7 +68,7 @@ public sealed class RabbitMqPublisher : IEventPublisher, IAsyncDisposable
                         Type = message.EventType,
                         CorrelationId = message.CorrelationId.ToString("D"),
                         ContentType = "application/json",
-                        DeliveryMode = 2,
+                        DeliveryMode = DeliveryModes.Persistent,
                         Headers = new Dictionary<string, object?>
                         {
                             ["schemaVersion"] = message.SchemaVersion
