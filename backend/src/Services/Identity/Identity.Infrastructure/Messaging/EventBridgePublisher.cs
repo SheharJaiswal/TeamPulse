@@ -86,7 +86,8 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
         var mappedFailureCount = response.Entries.Count(entry =>
             !string.IsNullOrWhiteSpace(entry.ErrorCode) ||
             string.IsNullOrWhiteSpace(entry.EventId));
-        if (response.FailedEntryCount != mappedFailureCount)
+        if (response.FailedEntryCount is { } reportedFailureCount &&
+            reportedFailureCount != mappedFailureCount)
         {
             var inconsistent = messages.Select(message =>
                 new OutboxPublishResult(message.EventId, OutboxPublishOutcome.RetryableFailure,
