@@ -80,6 +80,7 @@ public sealed class EmployeeLifecycleService(IdentityDbContext database) : IEmpl
         catch (DbUpdateConcurrencyException)
         {
             await transaction.RollbackAsync(cancellationToken);
+            await transaction.DisposeAsync();
             database.ChangeTracker.Clear();
             return await ResolveRaceAsync(
                 actorEmployeeId, idempotencyKey, fingerprint, employeeId, correlationId, cancellationToken);
@@ -87,6 +88,7 @@ public sealed class EmployeeLifecycleService(IdentityDbContext database) : IEmpl
         catch (DbUpdateException)
         {
             await transaction.RollbackAsync(cancellationToken);
+            await transaction.DisposeAsync();
             database.ChangeTracker.Clear();
             var committed = await FindByIdempotencyKeyAsync(actorEmployeeId, idempotencyKey, cancellationToken);
             if (committed is not null)
