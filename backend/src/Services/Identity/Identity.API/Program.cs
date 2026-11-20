@@ -29,6 +29,7 @@ var connectionString = builder.Configuration.GetConnectionString("IdentityDataba
 builder.Services.AddDbContext<IdentityDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Identity.Domain.Entities.Employee>,
     Microsoft.AspNetCore.Identity.PasswordHasher<Identity.Domain.Entities.Employee>>();
