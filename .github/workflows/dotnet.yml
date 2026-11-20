@@ -46,7 +46,25 @@ jobs:
       - name: Validate Docker Compose configuration
         run: docker compose config --quiet
 
-      - name: Validate local RabbitMQ topology
+      - name: Start and verify local RabbitMQ topology
+        run: |
+          docker compose up -d --wait --wait-timeout 90 rabbitmq
+          queues="$(docker compose exec -T rabbitmq rabbitmqctl list_queues name --no-table-headers)"
+          for queue in teampulse.habit.events teampulse.challenge.events teampulse.event-tracking.events teampulse.insight.events teampulse.notification.events; do
+            if ! grep -Fxq "$queue" <<< "$queues"; then
+              echo "Expected local RabbitMQ queue not found: $queue"
+              printf '%s\n' "$queues"
+              exit 1
+            fi
+          done
+          exchanges="$(docker compose exec -T rabbitmq rabbitmqctl list_exchanges name type --no-table-headers)"
+          if ! grep -Fq "teampulse.domain.events" <<< "$exchanges"; then
+            echo "Expected local RabbitMQ topic exchange not found."
+            printf '%s\n' "$exchanges"
+            exit 1
+          fi
+
+      - name: Validate local RabbitMQ topology contract
         run: python -m unittest discover -s infra/rabbitmq/tests -v
 
       - name: Test (includes MySQL 8.4 and RabbitMQ Testcontainers integration tests)
