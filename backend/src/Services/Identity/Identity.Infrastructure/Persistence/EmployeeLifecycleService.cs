@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Data.Common;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,7 @@ using Identity.Application.Abstractions;
 using Identity.Application.Contracts;
 using Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Identity.Infrastructure.Persistence;
 
@@ -37,6 +39,23 @@ public sealed class EmployeeLifecycleService(IdentityDbContext database) : IEmpl
         if (employee is null)
             return new EmployeeLifecycleCommandResult(
                 EmployeeLifecycleCommandStatus.NotFound, employeeId, false, 0, null, correlationId);
+
+        var observedVersion = employee.LifecycleVersion;
+        var lockedVersion = await LockEmployeeAndReadVersionAsync(employeeId, cancellationToken);
+        if (lockedVersion is null)
+            return new EmployeeLifecycleCommandResult(
+                EmployeeLifecycleCommandStatus.NotFound, employeeId, false, 0, null, correlationId);
+
+        if (lockedVersion.Value != observedVersion)
+        {
+            existing = await FindByIdempotencyKeyAsync(actorEmployeeId, idempotencyKey, cancellationToken);
+            if (existing is not null)
+                return ReplayOrConflict(existing, fingerprint);
+
+            return new EmployeeLifecycleCommandResult(
+                EmployeeLifecycleCommandStatus.Conflict,
+                employeeId, false, lockedVersion.Value, null, correlationId);
+        }
 
         if (!employee.ChangeActiveState(desiredIsActive))
         {
@@ -96,6 +115,23 @@ public sealed class EmployeeLifecycleService(IdentityDbContext database) : IEmpl
 
             throw;
         }
+    }
+
+    private async Task<long?> LockEmployeeAndReadVersionAsync(
+        Guid employeeId, CancellationToken cancellationToken)
+    {
+        await using var command = database.Database.GetDbConnection().CreateCommand();
+        command.Transaction = database.Database.CurrentTransaction?.GetDbTransaction();
+        command.CommandText = "SELECT LifecycleVersion FROM employees WHERE Id = @employeeId FOR UPDATE";
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@employeeId";
+        parameter.Value = employeeId;
+        command.Parameters.Add(parameter);
+
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is null or DBNull
+            ? null
+            : Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private Task<EmployeeLifecycleAudit?> FindByIdempotencyKeyAsync(
