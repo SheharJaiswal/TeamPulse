@@ -4,17 +4,13 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD reconciled at run start: `f490cbe53288e15d953d61acd8fbd408fbb9fb0f`. Recent history and the working tree were inspected. The previous checkpoint was one documentation commit behind the live branch.
-- This run's final verified implementation/CI commit: `b26eb0710c1708fb0bbb027fb349636daa4c3a35` (GitHub Actions .NET CI run #93). The documentation checkpoint commit will be a docs-only child of this verified commit.
-- SDD: `docs/changes/identity-local-rabbitmq-transport/` is implemented and CI-verified. SDD commit: `91def68254b2cbf1937267e3d706f659921e8d6a`.
-- Implementation: `RabbitMQ.Client` 7.2.2 adapter, explicit `RabbitMq` / `EventBridge` provider selection, durable topic exchange, publisher confirms, mandatory routing, persistent envelope messages and systemic retry outcomes are committed.
-- Local runtime: Docker Compose starts RabbitMQ 4.1 management with the imported exchange and five durable receiving-service queues. The API dispatcher remains disabled by default; local runs explicitly set `OutboxDispatcher__Enabled=true` and `OutboxDispatcher__Transport=RabbitMq`.
-- Production architecture is unchanged: EventBridge remains the intended production transport. The owner will provision it during cloud infrastructure setup. Do not attempt AWS deployment, ask for AWS credentials or build CloudWatch exporters until that setup.
-- Completed baseline: Identity HR lifecycle and transactional MySQL outbox; lease-safe dispatcher; EventBridge production adapter and CloudFormation fan-out template; local RabbitMQ adapter/topology; unit, MySQL and RabbitMQ Testcontainers coverage.
-- In progress: no active implementation task in the local transport change. Five downstream consumer projects/projections are not implemented yet.
-- Blockers/deferred: EventBridge provisioning and producer CloudWatch exporter/alarms are intentionally deferred with cloud infrastructure and do not block local development. Privacy/legal retention sign-off remains a production prerequisite. Employee invitation, HRIS, role mutation and Organization Admin request intake remain separately unresolved.
-- Single next task: create the SDD for the first downstream consumer, Habit's version-aware Employee Status Projection consumer, limited to the existing `docs/contracts/employee-status-projection.md` contract and the Habit-owned persistence boundary. Do not invent Habit business behavior or global token-revocation guarantees.
-- Resume rule: fetch the live branch HEAD and reconcile this checkpoint before every run; continue from the exact committed files and tests without repeating the completed RabbitMQ or dispatcher work.
+- Start-of-run live HEAD: `845e4f5b85a94ab549e5d02446b735dfd42f3b30`. The GitHub branch ref, last 10 commits, recursive repository tree and required project instructions/contracts were fetched and reconciled. The checkpoint at the start still named SDD creation as the next task.
+- Habit consumer SDD commit: `775be1f3fe5767ba84a5de70ba11492d25f70588` (`docs/changes/habit-employee-status-projection-consumer/`). Four required artifacts are committed.
+- Completed baseline remains: Identity HR lifecycle and transactional MySQL outbox; lease-safe dispatcher; EventBridge adapter and CloudFormation fan-out template; local RabbitMQ publisher and five service queues; 100 .NET tests and four RabbitMQ topology tests verified by CI run #93.
+- In progress: Habit has no code project yet. The consumer implementation is now the only active development task, governed by the new SDD and the existing Employee Status Projection Contract v1.
+- Blockers/deferred: no missing business decision blocks the local Habit consumer. EventBridge provisioning and the production SQS adapter remain deferred until the owner sets up cloud infrastructure. Producer CloudWatch export/alarms remain deferred with AWS setup. Privacy/legal retention sign-off remains a production prerequisite. Employee invitation, HRIS, role mutation and Organization Admin request intake remain separately unresolved.
+- Single next task: implement the Habit Employee Status Projection consumer exactly as specified in `docs/changes/habit-employee-status-projection-consumer/`: add the Habit Clean Architecture projects, Habit-owned MySQL schema/migration applied at startup, atomic eventId inbox + strictly newer lifecycleVersion projection processing, and local RabbitMQ manual-ack consumer with bounded retry/DLQ. Add unit, MySQL 8.4 and RabbitMQ Testcontainers tests. Do not add Habit product features, SQS/AWS dependencies or global token-revocation claims.
+- Resume rule: fetch the live branch HEAD and reconcile this checkpoint before every run. Continue from committed SDD and existing files; do not recreate the RabbitMQ publisher or repeat completed Identity work.
 
 ## Completed
 
@@ -66,14 +62,14 @@ Updated: 2026-11-20
 - [x] Added RabbitMQ.Client 7.2.2 publisher with a serialized reusable connection/channel, automatic recovery, durable topic exchange, persistent envelope body, message/correlation/type/schema metadata, publisher-confirm tracking and mandatory routing. Broker failures remain systemic/retryable and do not mark outbox rows published.
 - [x] Added local RabbitMQ 4.1 Compose service, health check, persistent volume, imported topology and five durable queues for Habit, Challenge, Event Tracking, Insight and Notification.
 - [x] Added RabbitMQ Testcontainers integration tests for confirmed fan-out to all five queues, envelope/AMQP metadata preservation and unroutable publication, plus RabbitMQ configuration tests.
+- [x] Created the Habit Employee Status Projection consumer SDD (proposal/spec/design/tasks), deriving behavior only from the existing projection/event contracts; implementation remains the next task.
 - [x] Added four Python topology contract tests and CI verification that starts the actual Compose RabbitMQ service and checks the exchange and all five queues.
 - [x] Updated README local run instructions, communication architecture and event-envelope transport mapping. Updated open questions to defer EventBridge provisioning and CloudWatch telemetry until cloud setup.
 - [x] .NET CI run #93 passed restore, Release build (0 warnings/errors), Compose validation, actual RabbitMQ Compose startup/topology checks, four Python topology tests and 100 .NET tests (0 failed, 0 skipped; 1m09s). MySQL 8.4 and RabbitMQ Testcontainers tests passed.
 
 ## In progress
 
-- No active implementation task remains in the local RabbitMQ transport increment; SDD, implementation, documentation and CI verification are complete.
-- Habit, Challenge, Event Tracking, Insight and Notification still need their own version-aware employee-status projections and consumers. The local queues exist, but no downstream consumer is implemented yet.
+- Habit consumer implementation has not started; its four-artifact SDD is complete and committed. Habit, Challenge, Event Tracking, Insight and Notification do not yet have downstream projection consumers.
 - EventBridge remains the intended production transport; live AWS deployment is deferred until the owner provisions cloud infrastructure.
 
 ## Blockers and decisions
@@ -200,6 +196,18 @@ Updated: 2026-11-20
 - `docs/open-questions.md`
 - `docs/project-status.md`
 
+## This run — Habit Employee Status Projection consumer SDD
+
+- Start-of-run live branch HEAD: `845e4f5b85a94ab549e5d02446b735dfd42f3b30`. Fetched the live branch ref, last 10 commits, recursive tree and required instructions, README, project checkpoint, open questions, service ownership, communication conventions, event envelope, employee-status projection contract, Identity specifications and local RabbitMQ implementation/tests.
+- Confirmed the repository has no Habit project yet; only Identity exists in the backend solution. The local RabbitMQ Habit queue is already durable and bound to the Identity lifecycle routing key. The existing contract defines only employeeId, isActive, lifecycleVersion and updatedAtUtc; no profile or wellness fields are needed.
+- Created and committed `docs/changes/habit-employee-status-projection-consumer/{proposal,spec,design,tasks}.md` in commit `775be1f3fe5767ba84a5de70ba11492d25f70588`.
+- The SDD defines a Habit-owned `teampulse_habit` MySQL database, EF Core 8/Pomelo startup migrations, a minimal processed-event inbox, atomic conditional projection updates, eventId deduplication, strict lifecycleVersion ordering, local RabbitMQ manual acknowledgements, bounded retries and a Habit-owned quorum-queue DLQ.
+- The application processor is transport-independent so a future SQS adapter can reuse it. AWS/SQS, Habit product APIs, other consumers and global token revocation are explicitly out of scope.
+- Artifact checks executed during authoring: all four SDD files present and non-empty; specification includes HESP-14 acceptance mapping; design includes the required Database.MigrateAsync startup behavior. These checks passed.
+- No .NET build, test or Docker Compose command was run because this increment changes documentation only. The existing .NET workflow explicitly ignores `docs/**` and README-only changes, so no CI run was triggered or claimed. The latest code verification remains run #93 (100 .NET tests passed; four RabbitMQ topology tests passed) on commit `b26eb0710c1708fb0bbb027fb349636daa4c3a35`.
+- Changed files: `docs/changes/habit-employee-status-projection-consumer/{proposal,spec,design,tasks}.md` and `docs/project-status.md`. `docs/open-questions.md` was not changed because no new business rule was required by the approved projection contract.
+- SDD commit: `775be1f3fe5767ba84a5de70ba11492d25f70588`. The following documentation checkpoint commit records this SHA and the single next task.
+
 ## Single next task
 
-Create the SDD for Habit's first downstream consumer of the versioned Employee Status Projection contract, then implement only the projection persistence and RabbitMQ consumer behavior required by that contract. Preserve Habit ownership, idempotent eventId handling, strict lifecycleVersion ordering and atomic projection/deduplication. Do not add unrelated Habit business features or invent global token-revocation guarantees.
+Implement the Habit Employee Status Projection consumer exactly as specified in `docs/changes/habit-employee-status-projection-consumer/`: create the Habit Clean Architecture projects; add the Habit-owned MySQL database and checked-in EF migration applied at startup; implement atomic eventId inbox/projection persistence with strictly newer lifecycleVersion handling; add the local RabbitMQ manual-ack consumer, bounded retry and Habit DLQ; and cover the behavior with unit, MySQL 8.4 and RabbitMQ Testcontainers tests. Do not add Habit product features, AWS/SQS dependencies or global token-revocation claims.
