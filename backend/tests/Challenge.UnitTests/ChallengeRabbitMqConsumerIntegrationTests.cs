@@ -223,7 +223,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Consumer_ReconnectsAndDeadLettersRedeliveryAfterDeadLetterRouteIsRestored()
     {
-        const string body = "{\\"eventId\\":\\"dlq-route-restored\\"}";
+        const string body = "{\"eventId\":\"dlq-route-restored\"}";
         var status = await StartConsumerAsync(
             new FixedOutcomeProcessor(ProjectionProcessingOutcome.Invalid),
             reconnectDelayMilliseconds: 1000);
