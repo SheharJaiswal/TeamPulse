@@ -7,5 +7,6 @@
 - [x] Preserve `/health` as the readiness compatibility alias.
 - [x] Add an integration test that stops MySQL after startup and distinguishes liveness from readiness.
 - [x] Update Identity API contract and README.
+- [x] Correct .NET 8 health-check API usage found by the first CI build (HealthCheckOptions namespace and timeout registration).
 - [ ] Run restore, Release build, Compose validation and the full MySQL-backed test suite in CI.
 - [ ] Record exact CI evidence and resulting commit SHA.

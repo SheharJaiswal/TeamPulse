@@ -2,12 +2,13 @@ using System;
 using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Identity.Application.Abstractions;
+using Identity.API.HealthChecks;
 using Identity.API.Security;
 using Identity.Infrastructure.Persistence;
 using Identity.Infrastructure.Security;
@@ -56,10 +57,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddDbContextCheck<IdentityDbContext>(
+    .Add(new HealthCheckRegistration(
         "identity-database",
-        tags: new[] { "ready" },
-        timeout: TimeSpan.FromSeconds(3));
+        serviceProvider => new IdentityDatabaseHealthCheck(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+        HealthStatus.Unhealthy,
+        new[] { "ready" },
+        TimeSpan.FromSeconds(3)));
 
 var app = builder.Build();
 
@@ -88,14 +92,16 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("live")
 });
 
-var readinessOptions = new HealthCheckOptions
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
-};
-app.MapHealthChecks("/health/ready", readinessOptions);
+});
 
 // Preserve the original endpoint and its database-readiness semantics for existing probes.
-app.MapHealthChecks("/health", readinessOptions);
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 app.Run();
 
 public partial class Program { }

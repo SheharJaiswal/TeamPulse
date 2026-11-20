@@ -17,6 +17,3 @@ Bearer token required. Returns subject, email, displayName, organizationId, team
 - `GET /health/ready`: checks the Identity-owned MySQL database and returns HTTP 503 when it is unavailable.
 - `GET /health`: compatibility alias for `/health/ready`; retains the previous database-readiness behavior.
 Health responses expose only aggregate health status, not dependency exception details or connection information.
-
-## GET /health
-Compatibility alias for database readiness.
