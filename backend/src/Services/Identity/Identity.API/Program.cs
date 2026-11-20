@@ -16,8 +16,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT configuration is missing.");
-if (Encoding.UTF8.GetByteCount(jwt.SigningKey) < 32)
-    throw new InvalidOperationException("JWT signing key must be at least 32 bytes.");
+if (string.IsNullOrWhiteSpace(jwt.SigningKey) ||
+    Encoding.UTF8.GetByteCount(jwt.SigningKey) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT signing key must be configured and at least 32 UTF-8 bytes.");
+}
 
 var connectionString = builder.Configuration.GetConnectionString("IdentityDatabase")
     ?? throw new InvalidOperationException("IdentityDatabase connection string is missing.");

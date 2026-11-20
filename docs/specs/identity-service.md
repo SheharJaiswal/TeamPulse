@@ -23,5 +23,5 @@ Employee persistence; password-based login; short-lived JWT issuance; authentica
 - IA-05: Signed JWT with configured issuer, audience and expiry.
 - IA-06: Anonymous access to /me is denied.
 - IA-07: /me returns claims from validated token.
-- IA-08: Missing or weak signing key prevents startup.
+- IA-08: Missing, blank, whitespace-only or fewer than 32 UTF-8 bytes signing key prevents startup with an actionable configuration error.
 - IA-09: Inactive employees cannot authenticate (when account status management is implemented).

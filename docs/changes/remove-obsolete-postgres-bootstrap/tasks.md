@@ -7,5 +7,5 @@
 - [x] Review active local runtime/deployment configuration and developer documentation; no dependency on the PostgreSQL script was found.
 - [x] Delete the obsolete PostgreSQL SQL artifact without changing MySQL configuration.
 - [x] Verify the resulting repository tree and relevant content references.
-- [ ] Run and record the .NET 8 GitHub Actions validation.
+- [x] Run and record the .NET 8 GitHub Actions validation: run #24 completed successfully for the deletion commit.
 - [x] Update docs/project-status.md with the resulting commit, checks and the single next task.
