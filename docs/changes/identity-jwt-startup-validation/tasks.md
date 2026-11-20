@@ -10,6 +10,6 @@
 - [x] Add real-entry-point startup tests for missing and weak keys plus UTF-8 byte-boundary unit tests.
 - [x] Diagnose CI run #25 failure and correct test-host configuration isolation.
 - [x] Diagnose CI run #26 failure and add the required System import and nullable context.
-- [x] Update docs/project-status.md with both failures, corrective commits and the next task.
-- [ ] Run .NET 8 restore/build/test and Docker Compose validation in GitHub Actions (run #27 queued).
-- [ ] Record final CI evidence and update Identity acceptance checklists after the run completes.
+- [x] Run .NET 8 restore/build/test and Docker Compose validation in GitHub Actions.
+- [x] Verify CI run #27: restore passed; Release build passed with 0 warnings/errors; Compose validation passed; 28 tests passed, 0 failed, 0 skipped.
+- [x] Update Identity acceptance checklists and docs/project-status.md with verification evidence and the next single task.

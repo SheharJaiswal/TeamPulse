@@ -11,5 +11,9 @@
 - [x] Add unit tests for password hashing and JWT signature/claims.
 - [x] Add controller unit tests for registration validation, duplicate normalized email, successful hashed registration, generic login failures and successful normalized login.
 - [x] Add MySQL-backed integration-test harness and cases for migration/restart, persistence, database unique-email constraint, bearer authentication and /me.
+- [x] Add IA-08 startup validation for absent/blank/weak JWT signing keys and UTF-8 byte-boundary tests.
+- [x] Remove the committed JWT signing-key fallback from appsettings and document environment/secret-store configuration.
 - [x] Run restore/build/test with .NET 8 SDK and MySQL Testcontainers in GitHub Actions.
-- [x] Record CI evidence: 21 passed, 0 failed, 0 skipped; build had 0 warnings and 0 errors.
+- [x] Record CI evidence: run #27 passed 28 tests, 0 failed, 0 skipped; Release build had 0 warnings and 0 errors; Docker Compose validation passed.
+- [ ] Enforce development-only access to the bootstrap registration endpoint, per the existing Identity spec and API contract.
+- [ ] Resolve account lifecycle requirements before implementing IA-09 inactive-employee enforcement.

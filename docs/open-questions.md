@@ -9,3 +9,4 @@ Resolve through SDD before implementing related behavior.
 6. Can one personal habit link to multiple programmes, and how are target mismatches handled?
 7. Are manager permissions limited to direct reports or configurable team scopes?
 8. What retention/deletion policy applies to activity and audit data?
+9. What employee account lifecycle events can deactivate or reactivate an account, which authority may perform those actions, and what audit/reason requirements apply?
