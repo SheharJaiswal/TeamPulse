@@ -55,24 +55,12 @@ public sealed class HrAdminBootstrapper(
 
             var id = Guid.NewGuid();
             var employeeForHash = new Employee(
-                id,
-                options.Email.Trim(),
-                normalizedEmail,
-                options.DisplayName.Trim(),
-                "temporary",
-                options.OrganizationId.Trim(),
-                options.TeamId.Trim(),
-                HrAdminRole);
+                id, options.Email.Trim(), normalizedEmail, options.DisplayName.Trim(),
+                "temporary", options.OrganizationId.Trim(), options.TeamId.Trim(), HrAdminRole);
             var passwordHash = passwordHasher.HashPassword(employeeForHash, options.Password);
             var employee = new Employee(
-                id,
-                options.Email.Trim(),
-                normalizedEmail,
-                options.DisplayName.Trim(),
-                passwordHash,
-                options.OrganizationId.Trim(),
-                options.TeamId.Trim(),
-                HrAdminRole);
+                id, options.Email.Trim(), normalizedEmail, options.DisplayName.Trim(),
+                passwordHash, options.OrganizationId.Trim(), options.TeamId.Trim(), HrAdminRole);
 
             database.Employees.Add(employee);
             await database.SaveChangesAsync(cancellationToken);
@@ -81,17 +69,21 @@ public sealed class HrAdminBootstrapper(
         }
         finally
         {
-            if (lockAcquired)
-                await ReleaseLockAsync(cancellationToken);
-
-            await database.Database.CloseConnectionAsync();
+            try
+            {
+                if (lockAcquired)
+                    await ReleaseLockAsync(CancellationToken.None);
+            }
+            finally
+            {
+                await database.Database.CloseConnectionAsync();
+            }
         }
     }
 
     private async Task<bool> AcquireLockAsync(CancellationToken cancellationToken)
     {
-        await using var command = CreateCommand(
-            "SELECT GET_LOCK(@lockName, @timeoutSeconds)");
+        await using var command = CreateCommand("SELECT GET_LOCK(@lockName, @timeoutSeconds)");
         AddParameter(command, "@lockName", LockName);
         AddParameter(command, "@timeoutSeconds", 10);
         var result = await command.ExecuteScalarAsync(cancellationToken);
