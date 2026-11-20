@@ -1,6 +1,6 @@
 # Specification: Lease-Safe Identity Outbox Dispatcher
 
-**Status:** Ready for implementation; production activation requires external infrastructure.  
+**Status:** Core implementation CI-verified; some acceptance-test scenarios remain, and production activation requires external infrastructure.  
 **Authority:** AGENTS.md, ADR-0001, ADR-0002, `docs/architecture/communication.md`, Identity service ownership and the shared domain-event envelope.
 
 ## Runtime configuration
