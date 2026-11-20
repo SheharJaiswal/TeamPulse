@@ -4,8 +4,8 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD before this checkpoint update: `38c90810ff1fece5382c69d81fa025478d0a8ce6`.
-- `feature/backend-foundation` compares to `main` as 185 commits ahead and 0 behind; `main` was not modified.
+- Live branch HEAD before this checkpoint update: `63f20ffb65e05977ddfa5e901a4cd4188789ee53`.
+- `feature/backend-foundation` is ahead of `main` and 0 commits behind; `main` was not modified.
 - Latest verified code commit: `38c90810ff1fece5382c69d81fa025478d0a8ce6` (GitHub Actions run #84).
 - Current SDD increment: `docs/changes/identity-outbox-eventbridge-dispatcher/`; core implementation and the remaining acceptance-test hardening are committed and CI-verified. Production activation remains blocked on deployment infrastructure.
 - Product policy baseline: ADR-0002; all nine initial product open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
