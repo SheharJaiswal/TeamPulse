@@ -300,7 +300,9 @@ public sealed class HabitRabbitMqConsumerIntegrationTests : IAsyncLifetime
         {
             var call = Interlocked.Increment(ref CallCount);
             if (call == 1)
-                throw new TimeoutException("Injected transient failure.");
+                throw new InvalidOperationException(
+                    "Injected EF-style wrapper.",
+                    new TimeoutException("Injected transient failure."));
 
             return Task.FromResult(ProjectionProcessingOutcome.Applied);
         }

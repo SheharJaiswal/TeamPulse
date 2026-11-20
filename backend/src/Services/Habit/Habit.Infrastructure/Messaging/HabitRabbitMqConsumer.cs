@@ -199,8 +199,29 @@ public sealed class HabitRabbitMqConsumer(
         return TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * boundedCeiling);
     }
 
-    private static bool IsTransient(Exception exception) =>
-        exception is TimeoutException or IOException or SocketException ||
-        exception is MySqlException mysqlException &&
-        mysqlException.Number is 1040 or 1205 or 1213 or 2002 or 2003 or 2006 or 2013 or 2055;
+    private static bool IsTransient(Exception exception)
+    {
+        if (exception is AggregateException aggregate)
+        {
+            foreach (var innerException in aggregate.InnerExceptions)
+            {
+                if (IsTransient(innerException))
+                    return true;
+            }
+        }
+
+        // EF Core commonly wraps provider failures in DbUpdateException. Inspect the complete
+        // inner-exception chain so transient MySQL/network faults are retried rather than DLQ'd.
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is TimeoutException or IOException or SocketException)
+                return true;
+
+            if (current is MySqlException mysqlException &&
+                mysqlException.Number is 1040 or 1205 or 1213 or 2002 or 2003 or 2006 or 2013 or 2055)
+                return true;
+        }
+
+        return false;
+    }
 }
