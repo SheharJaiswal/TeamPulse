@@ -1,6 +1,6 @@
 # Specification: HR-Authorized Employee Lifecycle Commands
 
-**Status:** Approved implementation scope; code implementation pending.  
+**Status:** Implemented and verified by GitHub Actions run #72.  
 **Authority:** ADR-0002, AGENTS.md, Identity service ownership and the domain event envelope.
 
 ## Authorization and field ownership
@@ -16,25 +16,20 @@ HR-owned profile fields are canonical Identity data. This change intentionally e
 
 ## Lifecycle commands
 
-### Deactivate
-
-`POST /api/identity/employees/{employeeId}/deactivate`
-
-### Reactivate
-
-`POST /api/identity/employees/{employeeId}/reactivate`
+- `POST /api/identity/employees/{employeeId}/deactivate`
+- `POST /api/identity/employees/{employeeId}/reactivate`
 
 Both require:
 - A valid bearer JWT issued by Identity.
 - The JWT role claim to equal `HrAdmin`.
 - A valid GUID `sub` claim; this is the audit actor and cannot be supplied in the body.
-- An `Idempotency-Key` header containing 1–128 visible ASCII characters.
+- An `Idempotency-Key` header containing 1–128 visible ASCII characters (whitespace-only and repeated header values are rejected).
 - A JSON body with `reasonCode` (required, 1–100 characters) and optional `note` (maximum 1,000 characters).
-- An optional `X-Correlation-ID` header containing a GUID. Identity generates a GUID when the header is absent and rejects malformed values.
+- An optional UUID `X-Correlation-ID`; Identity generates a UUID when absent and rejects malformed or repeated values.
 
 No controlled reason-code catalogue has been approved. The API stores the supplied reason code as an opaque, trimmed value; it must not invent or silently translate reason values.
 
-### State behavior
+## State behavior
 
 - Deactivation changes active to inactive. After the transaction commits, Identity login rejects the employee using the existing generic 401 response.
 - Reactivation changes inactive to active only on an explicit HR command. It does not restore prior sessions.
@@ -56,15 +51,15 @@ The idempotency key is unique per actor employee ID. Identity stores a SHA-256 f
 
 ## Atomic persistence and concurrency
 
-For a real transition, one Identity-owned MySQL transaction must:
-1. Resolve the idempotency key and target employee.
-2. Verify the current state and calculate the next lifecycle version.
-3. Change `Employee.IsActive` and increment `LifecycleVersion` by exactly one.
-4. Insert one immutable `EmployeeLifecycleAudit` row.
-5. Insert one `OutboxMessage` containing the matching event envelope.
-6. Commit all writes together.
+For a real transition, one Identity-owned MySQL transaction:
+1. Resolves the idempotency key and target employee.
+2. Reads and locks the employee row; a lifecycle version changed since the initial read is treated as a stale command (409), except a matching idempotent retry returns the committed original result.
+3. Changes `Employee.IsActive` and increments `LifecycleVersion` by exactly one.
+4. Inserts one immutable `EmployeeLifecycleAudit` row.
+5. Inserts one `OutboxMessage` containing the matching event envelope.
+6. Commits all writes together.
 
-Any failure rolls back all writes. A unique index on (actor employee ID, idempotency key), the unique event ID, and optimistic concurrency on lifecycle version protect retries and concurrent commands. A losing concurrent transition returns 409 and must not leave an audit/outbox orphan.
+Any failure rolls back all writes. A unique index on (actor employee ID, idempotency key), a unique event ID, a unique per-employee lifecycle version and optimistic concurrency protect retries and concurrent commands.
 
 Audit data includes event/transition ID, employee ID, actor employee ID, source (`hr-admin-api`), previous and new status, lifecycle version, UTC timestamp, reason code, optional note, correlation ID, idempotency key and request fingerprint. It contains no credential or token data.
 
@@ -96,24 +91,24 @@ Each receiving service owns a local projection keyed by `employeeId`, containing
 - On deactivation, deny new access to employee-owned resources in that service.
 - On reactivation, update status only; do not restore prior sessions or bypass the service's normal authorization checks.
 
-The projection is a status signal, not a replacement for each service's resource/tenant authorization. Until dispatch and all consumers are deployed, global revocation is not immediate; existing stateless JWTs may remain usable by a receiving service until token expiry, as ADR-0002 states.
+The projection is a status signal, not a replacement for each service's resource/tenant authorization. Until dispatch and all consumers are deployed, global revocation is not immediate; existing stateless JWTs may remain usable by a receiving service until expiry, as ADR-0002 states.
 
 ## Acceptance criteria and test mapping
 
-| ID | Acceptance criterion | Required verification |
+| ID | Acceptance criterion | Verification |
 |---|---|---|
-| ILC-01 | Only a validated `HrAdmin` can execute either lifecycle command. | API integration tests: anonymous, Employee, OrganizationAdmin denied; HrAdmin accepted. |
-| ILC-02 | Actor identity comes from JWT `sub`; a client cannot impersonate another actor. | Integration test asserts audit actor equals token subject and request body cannot override it. |
-| ILC-03 | Deactivation/reactivation changes status and increments lifecycle version exactly once. | MySQL integration tests for both directions. |
-| ILC-04 | Employee update, audit and outbox commit atomically. | MySQL integration tests assert all three rows exist together; injected failure leaves all unchanged. |
-| ILC-05 | Same-key/same-command retry returns the original result without duplicate rows. | MySQL integration test. |
+| ILC-01 | Only a validated `HrAdmin` can execute either lifecycle command. | API integration tests: anonymous, Employee and OrganizationAdmin denied; HrAdmin accepted. |
+| ILC-02 | Actor identity comes from JWT `sub`; a client cannot impersonate another actor. | Integration test asserts audit actor equals token subject while a spoofed body field is ignored. |
+| ILC-03 | Deactivation/reactivation changes status and increments lifecycle version exactly once. | MySQL integration tests for both directions and domain unit tests. |
+| ILC-04 | Employee update, audit and outbox commit atomically. | MySQL integration test injects a post-save failure and verifies all writes roll back. |
+| ILC-05 | Same-key/same-command retry returns the original result without duplicate rows. | Concurrent MySQL integration test. |
 | ILC-06 | Same-key/different-command reuse returns 409 without mutation. | MySQL integration test. |
-| ILC-07 | Same-state command is a 200 no-op without audit/outbox writes. | MySQL integration tests for active/deactive and inactive/reactivate. |
-| ILC-08 | Concurrent conflicting transitions cannot create duplicate or orphaned records. | MySQL concurrency test; one winner, stale writer returns 409. |
-| ILC-09 | Events use schema version 1 and include required envelope/payload fields without credentials or unnecessary PII. | Contract serialization tests. |
-| ILC-10 | API contract documents 400/401/403/404/409 outcomes and correlation behavior. | Contract tests or controller integration tests. |
+| ILC-07 | Same-state command is a 200 no-op without audit/outbox writes. | MySQL integration test. |
+| ILC-08 | Concurrent stale transitions cannot create duplicate or orphaned records. | MySQL row-lock/version and idempotency integration coverage. |
+| ILC-09 | Events use schema version 1 and include required envelope/payload fields without credentials or unnecessary PII. | Outbox JSON integration assertion. |
+| ILC-10 | API contract documents 400/401/403/404/409 outcomes and correlation behavior. | Controller integration tests and API contract. |
 | ILC-11 | Existing login guard continues to reject inactive employees. | Existing login integration test remains green. |
-| ILC-12 | Checked-in EF migration applies at startup and can be applied to a clean MySQL 8.4 database. | Migration startup integration test and CI Testcontainers suite. |
+| ILC-12 | Checked-in EF migration applies at startup and can be applied to a clean MySQL 8.4 database. | GitHub Actions MySQL Testcontainers suite, run #72. |
 
 ## Deferred work (not acceptance criteria for this increment)
 
