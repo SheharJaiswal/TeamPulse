@@ -24,7 +24,7 @@
 
 - [x] Add unit tests for envelope validation/transition mapping and MySQL integration tests for duplicate eventId, stale/equal and strict lifecycleVersion ordering.
 - [x] Run MySQL 8.4 Testcontainers migration/repeated startup, inbox rollback, duplicate, stale/equal and concurrent N/N+1 version tests (CI run #93).
-- [ ] Run a broker-connection-loss redelivery test after an established session; current RabbitMQ Testcontainers coverage verifies ack-after-processor-completion, invalid-message DLQ routing, transient retry and retry exhaustion, plus startup reconnect.
+- [ ] Run a broker-connection-loss redelivery test after an established session; current RabbitMQ Testcontainers coverage verifies ack-after-processor-completion, invalid-message DLQ routing, transient retry (including an EF-style wrapped timeout), retry exhaustion and startup reconnect.
 - [x] Validate Docker Compose configuration and shared RabbitMQ exchange/five service queues plus Habit quorum queue/DLX/DLQ definitions; actual Compose startup is covered by CI.
 - [x] Run full solution restore, Release build and test workflow (CI run #93: 112 passed, 0 failed, 0 skipped; 0 build warnings/errors).
 - [x] Review project references and EF model: Habit references no Identity project and has no cross-service foreign key.
@@ -55,7 +55,7 @@
 - Implemented the Habit Clean Architecture projects, application envelope validator/processor, minimal projection and inbox entities, EF Core/Pomelo context, transactional store, initial migration/model snapshot, startup migration and database-only health checks.
 - The atomic MySQL upsert compares the incoming lifecycleVersion against the stored version in the database; the inbox marker is inserted in the same transaction. Duplicate eventId conflicts are isolated to the inbox insert and returned as Duplicate.
 - Added processor unit tests, MySQL 8.4 Testcontainers tests for startup/repeated migration, inbox rollback, duplicate event IDs, stale/equal events and concurrent N/N+1 processing. GitHub Actions run #93 passed all 12 Habit tests.
-- Remaining implementation is the RabbitMQ consumer, acknowledgement/reconnect behavior, bounded retries and Habit-owned quorum DLQ topology.
+- RabbitMQ consumer, manual acknowledgement, bounded retry, startup reconnect and Habit-owned quorum DLQ topology are implemented and verified; only established-session broker-loss redelivery remains unchecked.
 
 
 ## Verification result — Habit projection core
@@ -78,3 +78,15 @@
 - Updated only Habit's local queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; added a Habit-owned quorum DLQ and direct DLX. Other service queues remain unchanged.
 - Added RabbitMQ Testcontainers tests for ack-after-processor-completion, invalid-envelope DLQ routing, transient retry success, retry exhaustion and startup reconnect; added eight Python topology contract tests and extended CI to assert the Habit DLQ and DLX exist.
 - Broker-connection-loss redelivery after an established consumer session is not yet covered by a dedicated Testcontainers test and remains unchecked. Existing MySQL tests continue to verify the processor's atomic inbox/projection commit.
+
+
+## Verification result — Habit RabbitMQ consumer
+
+- GitHub Actions run #97: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44739492656
+- `dotnet restore backend/TeamPulse.sln`: passed.
+- `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: passed, 0 warnings and 0 errors.
+- `docker compose config --quiet`: passed; actual RabbitMQ Compose startup and queue/exchange checks passed.
+- `python -m unittest discover -s infra/rabbitmq/tests -v`: 8 passed.
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 123 passed (23 Habit, 100 Identity), 0 failed, 0 skipped.
+- The transient retry integration test wraps a `TimeoutException` in an `InvalidOperationException`, verifying the classifier walks inner exceptions as EF Core does.
+- Remaining unchecked verification: broker connection loss after an established session with an unacknowledged message, followed by redelivery and idempotent processing.
