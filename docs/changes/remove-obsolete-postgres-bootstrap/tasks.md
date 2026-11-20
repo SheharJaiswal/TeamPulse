@@ -5,7 +5,7 @@
 - [x] Inspect existing Identity unit/integration tests and the successful Docker-capable .NET 8 CI run.
 - [x] Confirm the PostgreSQL directory contains only one orphaned SQL bootstrap file.
 - [x] Review active local runtime/deployment configuration and developer documentation; no dependency on the PostgreSQL script was found.
-- [ ] Delete the obsolete PostgreSQL SQL artifact without changing MySQL configuration.
-- [ ] Verify the resulting repository tree and relevant content references.
+- [x] Delete the obsolete PostgreSQL SQL artifact without changing MySQL configuration.
+- [x] Verify the resulting repository tree and relevant content references.
 - [ ] Run and record the .NET 8 GitHub Actions validation.
-- [ ] Update docs/project-status.md with the resulting commit, checks and the single next task.
+- [x] Update docs/project-status.md with the resulting commit, checks and the single next task.
