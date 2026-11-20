@@ -126,3 +126,44 @@ The Habit consumer uses manual acknowledgements and a prefetch of one. It acknow
 The Habit source queue is a quorum queue with a finite delivery limit and at-least-once dead-lettering to `teampulse.habit.events.dlq`. The DLX and DLQ are part of the local Compose definitions. Existing RabbitMQ volumes created before this topology change may retain the previous classic queue declaration; for a disposable local development environment only, stop Compose and recreate the RabbitMQ volume before starting the updated broker. Do not delete a volume containing messages or data you need to retain.
 
 Habit database readiness remains independent of RabbitMQ. Use `/health/consumer` to inspect the separate consumer connection state; `/health/ready` continues to report only the Habit database. No AWS credentials or EventBridge resources are required for local event delivery.
+
+
+### Challenge employee-status projection foundation
+
+Challenge owns the logical MySQL database `teampulse_challenge`; the local MySQL initialization script creates it and grants access to the development application user on a fresh data volume. Production uses separately provisioned Challenge credentials. The Challenge API applies its checked-in EF Core/Pomelo migration before starting hosted services.
+
+Run the Challenge API locally:
+
+PowerShell:
+```powershell
+$env:ConnectionStrings__ChallengeDatabase = "Server=localhost;Port=3306;Database=teampulse_challenge;User=teampulse_app;Password=local_teampulse_password;"
+dotnet run --project backend/src/Services/Challenge/Challenge.API
+```
+
+Bash:
+```bash
+export ConnectionStrings__ChallengeDatabase="Server=localhost;Port=3306;Database=teampulse_challenge;User=teampulse_app;Password=local_teampulse_password;"
+dotnet run --project backend/src/Services/Challenge/Challenge.API
+```
+
+The Challenge API exposes `/health/live`, `/health/ready` and `/health/consumer`. Readiness checks only Challenge MySQL; RabbitMQ connectivity is reported separately. The lifecycle consumer is disabled by default. To enable it for local development:
+
+PowerShell:
+```powershell
+$env:ChallengeConsumer__Enabled = "true"
+$env:ChallengeConsumer__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
+$env:ChallengeConsumer__QueueName = "teampulse.challenge.events"
+dotnet run --project backend/src/Services/Challenge/Challenge.API
+```
+
+Bash:
+```bash
+export ChallengeConsumer__Enabled=true
+export ChallengeConsumer__Uri="amqp://teampulse:local_rabbitmq_password@localhost:5672/"
+export ChallengeConsumer__QueueName=teampulse.challenge.events
+dotnet run --project backend/src/Services/Challenge/Challenge.API
+```
+
+Challenge consumes the direct schema-v1 envelope from `teampulse.challenge.events`. It records a minimal event inbox marker and version-aware employee status projection in one Challenge database transaction. It acknowledges Applied, Stale and Duplicate messages only after commit. Invalid messages and exhausted transient retries are routed to `teampulse.challenge.events.dlq`. The Challenge queue is a quorum queue with a finite delivery limit and at-least-once dead-lettering.
+
+This increment only materializes the employee lifecycle projection. It does not mutate programmes, eligibility, participation, completion, scores or evidence, and it does not expose Challenge business APIs. The policy for inactive employees' historical reads versus new participation/task mutations remains open question 19 and must be approved before those APIs are implemented. EventBridge/SQS deployment remains deferred until cloud infrastructure setup.

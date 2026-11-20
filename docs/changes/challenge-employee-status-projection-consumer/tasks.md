@@ -26,12 +26,12 @@
 - [ ] MySQL 8.4 Testcontainers: clean and repeated host-startup migration, exact schema/model assertions and projection reader.
 - [x] RabbitMQ Testcontainers: processor-completion acknowledgement boundary, poison-message DLQ, transient retry success and retry exhaustion.
 - [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay.
-- [ ] RabbitMQ Testcontainers: broker unavailable at startup and established-session loss/reconnect.
+- [ ] RabbitMQ Testcontainers: broker unavailable at startup and established-session loss/reconnect. A startup-reconnect test has been authored and is included in the next CI run; established-session loss/redelivery remains outstanding.
 - [ ] Verify database readiness is independent of RabbitMQ and consumer health is separately observable through host integration tests.
 - [x] Review project references, database ownership, minimal projection/inbox fields and absence of Challenge business-state mutation.
 - [x] Extend RabbitMQ topology contract tests for Challenge quorum queue, delivery limit and dedicated DLQ binding.
 - [x] Baseline CI run #103 passed for commit `121bba186bb46df139f7e49def8082ab9d541afa`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 144 .NET tests (20 Challenge, 24 Habit, 100 Identity). Re-run after the persistence hardening commit.
-- [ ] Update README and communication documentation, then record final acceptance and exact checks in docs/project-status.md.
+- [x] Update README and communication documentation with Challenge local run/configuration guidance and the consumer transport contract.
 
 ## Deferred
 - [ ] Implement Challenge programme/task/eligibility/participation APIs only under a separate approved SDD.

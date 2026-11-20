@@ -34,7 +34,7 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
         self.assertEqual("direct", exchanges[DLX]["type"])
         self.assertTrue(exchanges[DLX]["durable"])
 
-    def test_exactly_five_service_queues_and_one_habit_dlq_are_defined(self):
+    def test_five_service_queues_and_existing_service_dlqs_are_defined(self):
         queues = {item["name"]: item for item in self.definitions["queues"]}
         self.assertEqual(SERVICE_QUEUES | {HABIT_DLQ, "teampulse.challenge.events.dlq"}, set(queues))
         self.assertTrue(all(queues[name]["durable"] for name in queues))
@@ -63,6 +63,10 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
         self.assertEqual("challenge.employee.lifecycle.dead", arguments["x-dead-letter-routing-key"])
         self.assertEqual("at-least-once", arguments["x-dead-letter-strategy"])
         self.assertEqual("reject-publish", arguments["x-overflow"])
+
+    def test_challenge_dead_letter_queue_is_a_durable_quorum_queue(self):
+        queues = {item["name"]: item for item in self.definitions["queues"]}
+        self.assertEqual("quorum", queues["teampulse.challenge.events.dlq"]["arguments"]["x-queue-type"])
 
     def test_challenge_dead_letter_queue_has_its_own_binding(self):
         bindings = {(item["source"], item["destination"], item["routing_key"]) for item in self.definitions["bindings"]}

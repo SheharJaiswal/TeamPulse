@@ -49,3 +49,15 @@
 - The Habit queue has a finite broker delivery limit and an at-least-once dead-letter route. The local topology is seeded by `infra/rabbitmq/definitions.json`; other service queues remain unchanged.
 - RabbitMQ connectivity is exposed separately at Habit `/health/consumer`. Habit database readiness does not depend on the broker.
 - The application projection processor remains transport-independent. A future SQS adapter can call the same processor when cloud infrastructure is provisioned; no AWS dependency is needed for local development.
+
+
+## Challenge local lifecycle consumer
+
+- Challenge consumes the direct schema-v1 envelope from `teampulse.challenge.events`; it does not expect an EventBridge outer wrapper on RabbitMQ.
+- The consumer is disabled by default and enabled explicitly through `ChallengeConsumer__Enabled` and `ChallengeConsumer__Uri` for local development.
+- Challenge owns its MySQL projection and processed-event inbox. Inbox insertion and the conditional strictly-newer-version projection upsert commit atomically.
+- Manual acknowledgement follows the Challenge MySQL inbox/projection transaction. Applied, Stale and Duplicate outcomes are acknowledged only after the store commits.
+- Prefetch is fixed at one. Known transient MySQL/network failures use bounded full-jitter retries; malformed messages and exhausted retries are rejected without requeue to the Challenge quorum DLQ.
+- The Challenge queue has a finite broker delivery limit and an at-least-once dead-letter route to `teampulse.challenge.events.dlq`. Its queue, DLX routing key and DLQ are Challenge-owned; Habit topology remains unchanged.
+- RabbitMQ connectivity is exposed separately at Challenge `/health/consumer`. Challenge database readiness does not depend on the broker.
+- The application processor is transport-independent. A future SQS adapter can extract the envelope from EventBridge `detail` and call the same processor; AWS deployment remains deferred.
