@@ -24,6 +24,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Habit.Infrastructure", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Habit.UnitTests", "tests/Habit.UnitTests/Habit.UnitTests.csproj", "{B5B5B5B5-5555-4555-8555-555555555555}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Challenge.API", "src/Services/Challenge/Challenge.API/Challenge.API.csproj", "{C1C1C1C1-1111-4111-8111-111111111111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Challenge.Application", "src/Services/Challenge/Challenge.Application/Challenge.Application.csproj", "{C2C2C2C2-2222-4222-8222-222222222222}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Challenge.Domain", "src/Services/Challenge/Challenge.Domain/Challenge.Domain.csproj", "{C3C3C3C3-3333-4333-8333-333333333333}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Challenge.Infrastructure", "src/Services/Challenge/Challenge.Infrastructure/Challenge.Infrastructure.csproj", "{C4C4C4C4-4444-4444-8444-444444444444}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Challenge.UnitTests", "tests/Challenge.UnitTests/Challenge.UnitTests.csproj", "{C5C5C5C5-5555-4555-8555-555555555555}"
+EndProject
 Global
  GlobalSection(SolutionConfigurationPlatforms) = preSolution
   Debug|Any CPU = Debug|Any CPU
@@ -74,5 +84,25 @@ Global
  {B5B5B5B5-5555-4555-8555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
  {B5B5B5B5-5555-4555-8555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
  {B5B5B5B5-5555-4555-8555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
+   {C1C1C1C1-1111-4111-8111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+   {C1C1C1C1-1111-4111-8111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+   {C1C1C1C1-1111-4111-8111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+   {C1C1C1C1-1111-4111-8111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+   {C2C2C2C2-2222-4222-8222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+   {C2C2C2C2-2222-4222-8222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+   {C2C2C2C2-2222-4222-8222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+   {C2C2C2C2-2222-4222-8222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+   {C3C3C3C3-3333-4333-8333-333333333333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+   {C3C3C3C3-3333-4333-8333-333333333333}.Debug|Any CPU.Build.0 = Debug|Any CPU
+   {C3C3C3C3-3333-4333-8333-333333333333}.Release|Any CPU.ActiveCfg = Release|Any CPU
+   {C3C3C3C3-3333-4333-8333-333333333333}.Release|Any CPU.Build.0 = Release|Any CPU
+   {C4C4C4C4-4444-4444-8444-444444444444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+   {C4C4C4C4-4444-4444-8444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
+   {C4C4C4C4-4444-4444-8444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
+   {C4C4C4C4-4444-4444-8444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
+   {C5C5C5C5-5555-4555-8555-555555555555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+   {C5C5C5C5-5555-4555-8555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+   {C5C5C5C5-5555-4555-8555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+   {C5C5C5C5-5555-4555-8555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
  EndGlobalSection
 EndGlobal
