@@ -68,6 +68,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     private const string DeadLetterRoutingKey = "challenge.employee.lifecycle.dead";
     private const string QueueName = "teampulse.challenge.events";
     private const string DeadLetterQueueName = "teampulse.challenge.events.dlq";
+    private const string FailureClassificationHeader = "x-teampulse-failure-classification";
 
     private readonly RabbitMqContainer _container = new RabbitMqBuilder()
         .WithImage("rabbitmq:4.1-management")
@@ -146,14 +147,43 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         Assert.Null(redelivered);
     }
 
-    [Fact]
-    public async Task Consumer_RoutesInvalidEnvelopeToChallengeDeadLetterQueue()
+    [Theory]
+    [InlineData(ProjectionProcessingOutcome.Invalid, "InvalidEvent")]
+    [InlineData(ProjectionProcessingOutcome.UnsupportedSchemaVersion, "UnsupportedSchemaVersion")]
+    [InlineData(ProjectionProcessingOutcome.InvalidProducer, "InvalidProducer")]
+    [InlineData(ProjectionProcessingOutcome.DuplicateEventIntegrityViolation, "DuplicateEventIntegrityViolation")]
+    public async Task Consumer_PublishesTerminalValidationOutcomesToClassifiedDeadLetterQueue(
+        ProjectionProcessingOutcome outcome,
+        string expectedClassification)
     {
-        await StartConsumerAsync(new FixedOutcomeProcessor(ProjectionProcessingOutcome.Invalid));
+        await StartConsumerAsync(new FixedOutcomeProcessor(outcome));
         await PublishAsync("{\"eventId\":\"invalid\"}");
 
-        var deadLetterBody = await WaitForDeadLetterAsync();
-        Assert.Equal("{\"eventId\":\"invalid\"}", deadLetterBody);
+        var deadLetter = await WaitForDeadLetterAsync();
+        Assert.Equal("{\"eventId\":\"invalid\"}", deadLetter.Body);
+        Assert.Equal(expectedClassification, deadLetter.Classification);
+    }
+
+    [Fact]
+    public async Task Consumer_LeavesOriginalUnacknowledgedWhenDeadLetterPublishCannotBeConfirmed()
+    {
+        const string body = "{\"eventId\":\"unroutable-dlq\"}";
+        var status = await StartConsumerAsync(
+            new FixedOutcomeProcessor(ProjectionProcessingOutcome.Invalid),
+            reconnectDelayMilliseconds: 60000);
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+
+        await _channel!.QueueUnbindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
+        await PublishAsync(body);
+
+        // The mandatory publish is returned because no DLQ binding exists. The consumer must
+        // close its source channel without acknowledging, allowing RabbitMQ to requeue the body.
+        await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
+        var redelivered = await _channel.BasicGetAsync(QueueName, autoAck: false);
+        Assert.NotNull(redelivered);
+        Assert.Equal(body, Encoding.UTF8.GetString(redelivered!.Body.ToArray()));
+        await _channel.BasicAckAsync(redelivered.DeliveryTag, multiple: false);
+        Assert.Null(await _channel.BasicGetAsync(DeadLetterQueueName, autoAck: false));
     }
 
     [Fact]
@@ -182,9 +212,10 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         Assert.Equal(2, processor.CallCount);
     }
 
-    private async Task StartConsumerAsync(
+    private async Task<ChallengeRabbitMqConsumerStatus> StartConsumerAsync(
         IEmployeeStatusProjectionProcessor processor,
-        int maxAttempts = 3)
+        int maxAttempts = 3,
+        int reconnectDelayMilliseconds = 5000)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IEmployeeStatusProjectionProcessor>(processor);
@@ -195,6 +226,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         options.MaxProcessingAttempts = maxAttempts;
         options.RetryBaseDelayMilliseconds = 1;
         options.RetryMaxDelayMilliseconds = 5;
+        options.ReconnectDelayMilliseconds = reconnectDelayMilliseconds;
         options.Validate();
 
         var status = new ChallengeRabbitMqConsumerStatus();
@@ -206,6 +238,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
 
         _consumers.Add((consumer, provider));
         await consumer.StartAsync(CancellationToken.None);
+        return status;
     }
 
     private async Task OpenTestChannelAsync()
@@ -237,7 +270,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
             body: Encoding.UTF8.GetBytes(body));
     }
 
-    private async Task<string> WaitForDeadLetterAsync()
+    private async Task<(string Body, string? Classification)> WaitForDeadLetterAsync()
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (DateTime.UtcNow < deadline)
@@ -245,8 +278,21 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
             var delivery = await _channel!.BasicGetAsync(DeadLetterQueueName, autoAck: false);
             if (delivery is not null)
             {
+                string? classification = null;
+                var headers = delivery.BasicProperties.Headers;
+                if (headers is not null && headers.TryGetValue(FailureClassificationHeader, out var value))
+                {
+                    classification = value switch
+                    {
+                        string text => text,
+                        byte[] bytes => Encoding.UTF8.GetString(bytes),
+                        _ => value?.ToString()
+                    };
+                }
+
+                var body = Encoding.UTF8.GetString(delivery.Body.ToArray());
                 await _channel.BasicAckAsync(delivery.DeliveryTag, multiple: false);
-                return Encoding.UTF8.GetString(delivery.Body.ToArray());
+                return (body, classification);
             }
 
             await Task.Delay(50);

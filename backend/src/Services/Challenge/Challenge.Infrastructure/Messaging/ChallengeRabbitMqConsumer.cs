@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -22,6 +23,9 @@ public sealed class ChallengeRabbitMqConsumer(
     ILogger<ChallengeRabbitMqConsumer> logger) : BackgroundService
 {
     private const string ConnectionName = "TeamPulse.Challenge.EmployeeLifecycleConsumer";
+    private const string DeadLetterExchangeName = "teampulse.domain.events.dlx";
+    private const string DeadLetterRoutingKey = "challenge.employee.lifecycle.dead";
+    private const string FailureClassificationHeader = "x-teampulse-failure-classification";
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -70,11 +74,20 @@ public sealed class ChallengeRabbitMqConsumer(
         await using var connection = await factory.CreateConnectionAsync(ConnectionName, stoppingToken);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
+        // This dedicated channel confirms every DLQ publish. Mandatory routing plus tracked
+        // publisher confirms makes BasicPublishAsync fail if the DLQ binding is absent or the
+        // broker does not accept the dead-letter message.
+        await using var deadLetterChannel = await connection.CreateChannelAsync(
+            new CreateChannelOptions(
+                publisherConfirmationsEnabled: true,
+                publisherConfirmationTrackingEnabled: true),
+            stoppingToken);
+
         await channel.BasicQosAsync(0, options.PrefetchCount, false, stoppingToken);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, delivery) =>
-            await HandleDeliveryAsync(channel, delivery, stoppingToken);
+            await HandleDeliveryAsync(channel, deadLetterChannel, delivery, stoppingToken);
 
         await channel.BasicConsumeAsync(
             options.QueueName,
@@ -83,14 +96,19 @@ public sealed class ChallengeRabbitMqConsumer(
             cancellationToken: stoppingToken);
 
         status.MarkConnected();
-        logger.LogInformation("Challenge employee lifecycle consumer connected to queue {QueueName}.", options.QueueName);
+        logger.LogInformation("Challenge RabbitMQ consumer connected to queue {QueueName}.", options.QueueName);
 
         try
         {
             // Automatic recovery is deliberately disabled. A closed connection/channel exits this
             // session and the hosted service reconnects with bounded delay.
-            while (!stoppingToken.IsCancellationRequested && connection.IsOpen && channel.IsOpen)
+            while (!stoppingToken.IsCancellationRequested &&
+                   connection.IsOpen &&
+                   channel.IsOpen &&
+                   deadLetterChannel.IsOpen)
+            {
                 await Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken);
+            }
         }
         finally
         {
@@ -100,6 +118,7 @@ public sealed class ChallengeRabbitMqConsumer(
 
     private async Task HandleDeliveryAsync(
         IChannel channel,
+        IChannel deadLetterChannel,
         BasicDeliverEventArgs delivery,
         CancellationToken stoppingToken)
     {
@@ -112,19 +131,44 @@ public sealed class ChallengeRabbitMqConsumer(
             }
             catch (DecoderFallbackException)
             {
-                await channel.BasicNackAsync(delivery.DeliveryTag, false, false, stoppingToken);
+                await PublishDeadLetterAndAcknowledgeAsync(
+                    deadLetterChannel, channel, delivery, "InvalidEvent", stoppingToken);
                 logger.LogWarning(
-                    "Challenge rejected a non-UTF8 lifecycle message {MessageId}.",
-                    delivery.BasicProperties.MessageId);
+                    "Challenge dead-lettered lifecycle message {MessageId} with classification {FailureClassification}.",
+                    delivery.BasicProperties.MessageId,
+                    "InvalidEvent");
                 return;
             }
 
             var outcome = await ProcessWithRetriesAsync(message, delivery.BasicProperties.MessageId, stoppingToken);
-            if (!outcome.HasValue || outcome == ProjectionProcessingOutcome.Invalid)
+            var failureClassification = outcome switch
             {
+                ProjectionProcessingOutcome.Invalid => "InvalidEvent",
+                ProjectionProcessingOutcome.UnsupportedSchemaVersion => "UnsupportedSchemaVersion",
+                ProjectionProcessingOutcome.InvalidProducer => "InvalidProducer",
+                ProjectionProcessingOutcome.DuplicateEventIntegrityViolation => "DuplicateEventIntegrityViolation",
+                _ => null
+            };
+
+            if (failureClassification is not null)
+            {
+                await PublishDeadLetterAndAcknowledgeAsync(
+                    deadLetterChannel, channel, delivery, failureClassification, stoppingToken);
+                logger.LogWarning(
+                    "Challenge dead-lettered lifecycle message {MessageId} with classification {FailureClassification}.",
+                    delivery.BasicProperties.MessageId,
+                    failureClassification);
+                return;
+            }
+
+            if (!outcome.HasValue)
+            {
+                // Retry exhaustion and unexpected terminal processing failures are handled by
+                // the existing broker DLX path in this increment; the next increment adds
+                // explicit, classified confirmed publishing for those outcomes as well.
                 await channel.BasicNackAsync(delivery.DeliveryTag, false, false, stoppingToken);
                 logger.LogWarning(
-                    "Challenge routed lifecycle message {MessageId} to its DLQ after validation or processing failure.",
+                    "Challenge rejected lifecycle message {MessageId} after processing failure.",
                     delivery.BasicProperties.MessageId);
                 return;
             }
@@ -138,10 +182,10 @@ public sealed class ChallengeRabbitMqConsumer(
         }
         catch (Exception exception)
         {
-            // If ack/nack fails, close the channel so RabbitMQ redelivers rather than losing
-            // a delivery whose database commit outcome may already be durable.
+            // If DLQ publication/confirmation or the source acknowledgement fails, close the
+            // consumer channel so the original delivery remains eligible for redelivery.
             logger.LogWarning(
-                "Challenge could not complete acknowledgement for message {MessageId} ({ErrorType}); closing the channel for redelivery.",
+                "Challenge could not complete delivery handling for message {MessageId} ({ErrorType}); closing the channel for redelivery.",
                 delivery.BasicProperties.MessageId,
                 exception.GetType().Name);
             try
@@ -153,6 +197,39 @@ public sealed class ChallengeRabbitMqConsumer(
                 // The connection may already be closed; broker-side unacked delivery recovery applies.
             }
         }
+    }
+
+    private static async Task PublishDeadLetterAndAcknowledgeAsync(
+        IChannel deadLetterChannel,
+        IChannel consumerChannel,
+        BasicDeliverEventArgs delivery,
+        string classification,
+        CancellationToken cancellationToken)
+    {
+        var properties = new BasicProperties
+        {
+            MessageId = delivery.BasicProperties.MessageId,
+            CorrelationId = delivery.BasicProperties.CorrelationId,
+            Type = delivery.BasicProperties.Type,
+            ContentType = delivery.BasicProperties.ContentType ?? "application/octet-stream",
+            DeliveryMode = DeliveryModes.Persistent,
+            Headers = new Dictionary<string, object?>
+            {
+                [FailureClassificationHeader] = classification
+            }
+        };
+
+        await deadLetterChannel.BasicPublishAsync(
+            DeadLetterExchangeName,
+            DeadLetterRoutingKey,
+            mandatory: true,
+            basicProperties: properties,
+            body: delivery.Body,
+            cancellationToken: cancellationToken);
+
+        // BasicPublishAsync completes only after a positive broker confirmation because the
+        // dedicated channel enables confirmation tracking. Ack the source only after that point.
+        await consumerChannel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
     }
 
     private async Task<ProjectionProcessingOutcome?> ProcessWithRetriesAsync(

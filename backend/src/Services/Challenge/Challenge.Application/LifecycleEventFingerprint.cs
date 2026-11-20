@@ -35,7 +35,7 @@ internal static class LifecycleEventFingerprint
             .Append(Quote("occurredAtUtc")).Append(':').Append(Quote(occurredAtUtc)).Append(',')
             .Append(Quote("previousStatus")).Append(':').Append(Quote(payload.PreviousStatus)).Append(',')
             .Append(Quote("reasonCode")).Append(':').Append(Quote(payload.ReasonCode)).Append(',')
-            .Append(Quote("schemaVersion")).Append(':').Append(envelope.SchemaVersion.ToString(CultureInfo.InvariantCulture)).Append(',')
+            .Append(Quote("schemaVersion")).Append(':').Append(envelope.SchemaVersion!.Value.ToString(CultureInfo.InvariantCulture)).Append(',')
             .Append(Quote("source")).Append(':').Append(Quote(payload.Source))
             .Append('}')
             .ToString();

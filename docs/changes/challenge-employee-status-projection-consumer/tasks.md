@@ -31,7 +31,8 @@
 - [x] Add normalized RFC 8785 JCS + SHA-256 fingerprint and algorithm identifier to inbox persistence.
 - [x] Compare fingerprints on duplicate event IDs; distinguish matching Duplicate from conflicting DuplicateEventIntegrityViolation without mutating the original inbox/projection.
 - [x] Ensure fingerprint excludes optional note and unknown additive properties and includes the complete recognized normalized envelope fields.
-- [ ] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling.
+- [x] Implement explicit classified publish-confirm handling for invalid events, unsupported schema versions, invalid producers and duplicate-event integrity violations; source acknowledgement follows successful mandatory publish confirmation.
+- [ ] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling in RabbitMQ Testcontainers CI.
 - [ ] Verify bounded exponential full-jitter transient retry, configurable limits and DLQ on exhaustion.
 - [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note.
 - [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract.

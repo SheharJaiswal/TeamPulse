@@ -1,5 +1,17 @@
 # Project Status
-Updated: 2026-11-20
+Updated: 2026-11-21
+
+## Latest continuation checkpoint — classified confirmed Challenge DLQ handoff implemented (CI pending)
+
+- CI #106 verified the prior fingerprint/integrity increment at `98595993774edfd8e6b83028f217dcf3d72377b8`: Release build passed with 0 warnings/errors; Compose and RabbitMQ topology checks passed; .NET tests passed (27 Challenge, 24 Habit, 100 Identity; 151 total, 0 failed/skipped). The next consumer/DLQ increment below is not included in that run.
+- Added explicit processing outcomes for `InvalidEvent`, `UnsupportedSchemaVersion`, `InvalidProducer` and `DuplicateEventIntegrityViolation`; missing schemaVersion is distinguished from a present unsupported version.
+- Challenge now publishes those terminal validation/integrity deliveries to the shared Challenge lifecycle DLQ through a dedicated RabbitMQ publisher-confirm channel. Mandatory routing and tracked publisher confirms must succeed before the original source delivery is acknowledged. The DLQ message retains the original body/message metadata and adds `x-teampulse-failure-classification`.
+- If the DLQ exchange/binding is unavailable or the publish is nacked/returned, the consumer does not acknowledge the source delivery; it closes the consumer channel so RabbitMQ can redeliver it.
+- Added deterministic processor classification tests and RabbitMQ Testcontainers cases for the four distinct DLQ classifications and unroutable-DLQ redelivery. CI for this increment is pending.
+- Retry exhaustion still uses the existing broker DLX path without the final explicit classification/confirmed-publish policy; this is the next focused increment. Health/migration/privacy assertions and commit-before-ack/established-session reconnect coverage remain open.
+- No local .NET SDK or Docker CLI is available in this execution environment; no local build/test is claimed.
+- Scope remains projection/inbox reconciliation only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially, with privacy/legal sign-off still a production prerequisite. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup.
+- Branch `feature/backend-foundation` only; `main` untouched.
 
 ## Latest continuation checkpoint — Challenge fingerprint and duplicate identity implemented
 

@@ -24,7 +24,13 @@ public sealed class EmployeeStatusProjectionProcessor(IEmployeeStatusProjectionS
         try { envelope = JsonSerializer.Deserialize<EmployeeLifecycleEnvelope>(message, JsonOptions); }
         catch (JsonException) { return ProjectionProcessingOutcome.Invalid; }
 
-        if (envelope is null || !TryMap(envelope, out var lifecycleEvent)) return ProjectionProcessingOutcome.Invalid;
+        if (envelope is null || !envelope.SchemaVersion.HasValue) return ProjectionProcessingOutcome.Invalid;
+        if (envelope.SchemaVersion.Value != 1) return ProjectionProcessingOutcome.UnsupportedSchemaVersion;
+        if (envelope.Payload is null) return ProjectionProcessingOutcome.Invalid;
+        if (!string.Equals(envelope.Payload.Source, "hr-admin-api", StringComparison.Ordinal))
+            return ProjectionProcessingOutcome.InvalidProducer;
+
+        if (!TryMap(envelope, out var lifecycleEvent)) return ProjectionProcessingOutcome.Invalid;
         return await store.ProcessAsync(lifecycleEvent, timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
     }
 
@@ -37,7 +43,6 @@ public sealed class EmployeeStatusProjectionProcessor(IEmployeeStatusProjectionS
 
         var payload = envelope.Payload;
         if (payload.EmployeeId == Guid.Empty || payload.ActorEmployeeId == Guid.Empty ||
-            !string.Equals(payload.Source, "hr-admin-api", StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(payload.ReasonCode) || payload.ReasonCode.Length > 100 ||
             payload.LifecycleVersion <= 0)
             return false;
@@ -51,7 +56,7 @@ public sealed class EmployeeStatusProjectionProcessor(IEmployeeStatusProjectionS
 
         var fingerprint = LifecycleEventFingerprint.Create(envelope, payload);
         lifecycleEvent = new EmployeeLifecycleEvent(
-            envelope.EventId, envelope.EventType, envelope.SchemaVersion, payload.EmployeeId, isActive,
+            envelope.EventId, envelope.EventType, envelope.SchemaVersion.Value, payload.EmployeeId, isActive,
             payload.LifecycleVersion, envelope.CorrelationId, envelope.OccurredAtUtc.UtcDateTime,
             payload.ActorEmployeeId, payload.Source, payload.PreviousStatus, payload.NewStatus,
             payload.ReasonCode, LifecycleEventFingerprint.Algorithm, fingerprint);

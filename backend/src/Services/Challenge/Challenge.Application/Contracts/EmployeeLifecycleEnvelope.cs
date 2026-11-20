@@ -7,7 +7,7 @@ public sealed record EmployeeLifecycleEnvelope
 {
     [JsonPropertyName("eventId")] public Guid EventId { get; init; }
     [JsonPropertyName("eventType")] public string EventType { get; init; } = string.Empty;
-    [JsonPropertyName("schemaVersion")] public int SchemaVersion { get; init; }
+    [JsonPropertyName("schemaVersion")] public int? SchemaVersion { get; init; }
     [JsonPropertyName("occurredAtUtc")] public DateTimeOffset OccurredAtUtc { get; init; }
     [JsonPropertyName("correlationId")] public Guid CorrelationId { get; init; }
     [JsonPropertyName("payload")] public EmployeeLifecyclePayload? Payload { get; init; }

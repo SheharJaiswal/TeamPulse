@@ -30,12 +30,14 @@ public sealed class EmployeeStatusProjectionProcessorTests
     }
 
     [Fact]
-    public async Task ProcessAsync_RejectsInvalidSourceAndMalformedActor()
+    public async Task ProcessAsync_ClassifiesInvalidProducerAndMalformedActor()
     {
         var store = new RecordingStore();
         var processor = new EmployeeStatusProjectionProcessor(store, TimeProvider.System);
-        Assert.Equal(ProjectionProcessingOutcome.Invalid, await processor.ProcessAsync(CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid(), source: "HR-Admin-Api"), CancellationToken.None));
-        Assert.Equal(ProjectionProcessingOutcome.Invalid, await processor.ProcessAsync(CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid(), actor: "not-a-guid"), CancellationToken.None));
+        Assert.Equal(ProjectionProcessingOutcome.InvalidProducer,
+            await processor.ProcessAsync(CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid(), source: "HR-Admin-Api"), CancellationToken.None));
+        Assert.Equal(ProjectionProcessingOutcome.Invalid,
+            await processor.ProcessAsync(CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid(), actor: "not-a-guid"), CancellationToken.None));
         Assert.Equal(0, store.CallCount);
     }
 
@@ -88,13 +90,16 @@ public sealed class EmployeeStatusProjectionProcessorTests
     }
 
     [Fact]
-    public async Task ProcessAsync_RejectsMalformedJsonAndUnsupportedSchema()
+    public async Task ProcessAsync_ClassifiesUnsupportedSchemaAndRejectsMissingSchema()
     {
         var store = new RecordingStore();
         var processor = new EmployeeStatusProjectionProcessor(store, TimeProvider.System);
-        Assert.Equal(ProjectionProcessingOutcome.Invalid, await processor.ProcessAsync("{", CancellationToken.None));
-        Assert.Equal(ProjectionProcessingOutcome.Invalid, await processor.ProcessAsync(
-            CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid(), schemaVersion: 2), CancellationToken.None));
+        Assert.Equal(ProjectionProcessingOutcome.Invalid,
+            await processor.ProcessAsync("{", CancellationToken.None));
+        Assert.Equal(ProjectionProcessingOutcome.UnsupportedSchemaVersion,
+            await processor.ProcessAsync(CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid(), schemaVersion: 2), CancellationToken.None));
+        var missingSchema = CreateMessage("EmployeeDeactivated", "active", "inactive", 2, Guid.NewGuid()).Replace(",\"schemaVersion\":1", "");
+        Assert.Equal(ProjectionProcessingOutcome.Invalid, await processor.ProcessAsync(missingSchema, CancellationToken.None));
         Assert.Equal(0, store.CallCount);
     }
 
