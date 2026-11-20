@@ -50,6 +50,31 @@ public sealed class HrAdminBootstrapperIntegrationTests : IClassFixture<MySqlInt
     }
 
     [Fact]
+    public async Task RunAsync_RefusesWhenInactiveHrAdminAlreadyExistsWithoutMutation()
+    {
+        await ResetDatabaseAsync();
+        await using (var database = CreateDatabase())
+        {
+            var employee = new Employee(
+                Guid.NewGuid(), "former.hr@teampulse.test", "FORMER.HR@TEAMPULSE.TEST",
+                "Former HR Administrator", "already-hashed", "org-test", "team-test", "HrAdmin");
+            database.Employees.Add(employee);
+            await database.SaveChangesAsync();
+            await database.Employees
+                .Where(candidate => candidate.Id == employee.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(candidate => candidate.IsActive, false));
+        }
+
+        var result = await RunAsync(CreateOptions());
+
+        Assert.Equal(BootstrapResult.AdministratorAlreadyExists, result);
+        await using var verify = CreateDatabase();
+        var stored = await verify.Employees.SingleAsync();
+        Assert.Equal("HrAdmin", stored.Role);
+        Assert.False(stored.IsActive);
+    }
+
+    [Fact]
     public async Task RunAsync_RefusesWhenConfiguredEmailAlreadyExistsWithoutMutation()
     {
         await ResetDatabaseAsync();
