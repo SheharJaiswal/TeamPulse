@@ -42,6 +42,13 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         outbox.HasKey(x => x.EventId);
         outbox.Property(x => x.EventType).HasMaxLength(100).IsRequired();
         outbox.Property(x => x.Payload).HasColumnType("longtext").IsRequired();
+        outbox.Property(x => x.LeaseToken).IsConcurrencyToken();
+        outbox.Property(x => x.LastErrorCode).HasMaxLength(100);
         outbox.HasIndex(x => new { x.PublishedAtUtc, x.CreatedAtUtc });
+        outbox.HasIndex(x => new
+        {
+            x.PublishedAtUtc, x.DeadLetteredAtUtc, x.NextAttemptAtUtc,
+            x.LeaseExpiresAtUtc, x.CreatedAtUtc
+        }).HasDatabaseName("IX_outbox_dispatch_queue");
     }
 }
