@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -15,6 +17,11 @@ namespace Identity.Infrastructure.Messaging;
 public sealed class EventBridgePublisher(IAmazonEventBridge client, string eventBusName) : IEventPublisher
 {
     private const string Source = "teampulse.identity";
+    private static readonly Meter PublisherMeter = new("TeamPulse.Identity.EventBridgePublisher", "1.0.0");
+    private static readonly Histogram<double> PutEventsDuration =
+        PublisherMeter.CreateHistogram<double>("teampulse.identity.outbox.put_events.duration", "ms");
+    private static readonly Counter<long> FailedEntryCounter =
+        PublisherMeter.CreateCounter<long>("teampulse.identity.outbox.put_events.failed_entries");
 
     public async Task<IReadOnlyList<OutboxPublishResult>> PublishBatchAsync(
         IReadOnlyList<OutboxDispatchMessage> messages, CancellationToken cancellationToken)
@@ -35,6 +42,7 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
         };
 
         PutEventsResponse response;
+        var startedAt = Stopwatch.GetTimestamp();
         try
         {
             response = await client.PutEventsAsync(request, cancellationToken);
@@ -47,21 +55,33 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
         {
             var outcome = ClassifyRequestFailure(exception);
             var code = SafeCode(exception.ErrorCode, "EventBridgeRequestFailed");
-            return messages.Select(message =>
+            var failed = messages.Select(message =>
                 new OutboxPublishResult(message.EventId, outcome, code)).ToArray();
+            FailedEntryCounter.Add(failed.Length);
+            return failed;
         }
         catch (Exception exception) when (
             exception is HttpRequestException or IOException or TimeoutException)
         {
-            return messages.Select(message =>
+            var failed = messages.Select(message =>
                 new OutboxPublishResult(message.EventId, OutboxPublishOutcome.RetryableFailure,
                     "TransportUnavailable")).ToArray();
+            FailedEntryCounter.Add(failed.Length);
+            return failed;
+        }
+        finally
+        {
+            PutEventsDuration.Record(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
         }
 
         if (response.Entries is null || response.Entries.Count != messages.Count)
-            return messages.Select(message =>
+        {
+            var failed = messages.Select(message =>
                 new OutboxPublishResult(message.EventId, OutboxPublishOutcome.RetryableFailure,
                     "InvalidPutEventsResponse")).ToArray();
+            FailedEntryCounter.Add(failed.Length);
+            return failed;
+        }
 
         var results = new List<OutboxPublishResult>(messages.Count);
         for (var index = 0; index < messages.Count; index++)
@@ -79,6 +99,7 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
             results.Add(new OutboxPublishResult(
                 messages[index].EventId, ClassifyEntryFailure(errorCode), errorCode));
         }
+        FailedEntryCounter.Add(results.Count(result => result.Outcome != OutboxPublishOutcome.Accepted));
         return results;
     }
 
