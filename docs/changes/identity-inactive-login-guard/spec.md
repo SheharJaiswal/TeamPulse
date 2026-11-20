@@ -3,8 +3,8 @@
 ## Acceptance criteria
 - IA-09a: When an employee exists but IsActive is false, POST /api/identity/login returns HTTP 401 with the same generic "Invalid email or password." response used for other invalid credentials.
 - IA-09b: An inactive employee receives no access token.
-- IA-09c: The password hasher is not invoked for an inactive employee; therefore no legacy password-hash upgrade occurs.
-- IA-09d: The stored password hash remains unchanged after an inactive login attempt.
+- IA-09c: The submitted password is verified against the stored hash, then the inactive status is rejected; no password-hash upgrade occurs.
+- IA-09d: The stored password hash remains unchanged after an inactive login attempt, including when verification reports SuccessRehashNeeded.
 - IA-09e: Active employee login, password-hash upgrade and token behavior remain unchanged.
 - IA-09f: The inactive account response does not reveal whether the email exists or the account is inactive.
 
