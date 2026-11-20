@@ -10,19 +10,19 @@
 - [x] Define lease-safe MySQL claim/acknowledgement, partial batch results, retry/backoff, producer-side quarantine and target-side SQS DLQ boundary.
 - [x] Create proposal.md, spec.md, design.md and this task checklist before implementation.
 
-## Implementation — next increment
+## Implementation — core complete; acceptance-test hardening remains
 
-- [ ] Add Application publisher/dispatcher abstractions and validated options.
-- [ ] Add outbox lease, retry, quarantine and acknowledgement domain behavior.
-- [ ] Add MySQL claim/acknowledgement persistence using `FOR UPDATE SKIP LOCKED` and conditional lease-token updates.
-- [ ] Add the EventBridge AWS SDK publisher; preserve the full schema-v1 envelope and inspect every result entry.
-- [ ] Add a BackgroundService hosted by Identity API; disabled by default and cancellation-safe.
-- [ ] Add checked-in EF migration and model snapshot updates for lease/retry/quarantine fields and dispatch index.
-- [ ] Add unit tests for configuration, event mapping, partial failures, retry/backoff, error classification and logging redaction.
-- [ ] Add MySQL 8.4 Testcontainers tests for concurrent claims, lease expiry, stale lease tokens, success acknowledgement, retry and quarantine.
-- [ ] Add crash-after-acceptance replay coverage proving duplicate eventId behavior.
-- [ ] Run restore, Release build, Compose validation and complete tests in CI; record exact workflow/run and results.
-- [ ] Update operational documentation and project checkpoint with the verified code commit.
+- [x] Add Application publisher/dispatcher abstractions and validated options.
+- [x] Add outbox lease, retry, quarantine and acknowledgement domain behavior.
+- [x] Add MySQL claim/acknowledgement persistence using `FOR UPDATE SKIP LOCKED` and conditional lease-token updates.
+- [x] Add the EventBridge AWS SDK publisher; preserve the full schema-v1 envelope and inspect every result entry.
+- [x] Add a BackgroundService hosted by Identity API; disabled by default and cancellation-safe.
+- [x] Add checked-in EF migration and model snapshot updates for lease/retry/quarantine fields and dispatch index.
+- [x] Add tests for event mapping, partial failures, lease domain transitions, concurrent claims, lease expiry, stale tokens, acknowledgement, quarantine and queue metrics.
+- [ ] Add focused tests for options validation, retry/backoff boundaries, systemic versus permanent error classification and payload-free log behavior.
+- [ ] Add retry scheduling and ambiguous publish-after-acceptance replay tests proving stable eventId behavior.
+- [x] Run restore, Release build, Compose validation and full tests in CI: run #80 passed 64 tests, 0 failed/skipped, 0 warnings/errors.
+- [x] Update the project checkpoint with the verified code commit and deployment blockers.
 
 ## Deployment enablement — blocked on infrastructure
 
