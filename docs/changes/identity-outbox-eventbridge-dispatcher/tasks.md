@@ -3,7 +3,7 @@
 ## Reconciliation and SDD
 
 - [x] Fetch the live `feature/backend-foundation` branch and inspect recent commits and repository tree.
-- [x] Reconcile the live branch with `docs/project-status.md`; confirm HR lifecycle implementation is complete and CI run #72 is the latest verified code result.
+- [x] Reconcile the live branch with `docs/project-status.md`; confirm HR lifecycle implementation is complete and CI run #80 is the latest verified code result.
 - [x] Read AGENTS.md, README.md, Identity specification, ownership, communication conventions, ADR-0001/0002, event envelope/catalog, lifecycle SDD, open questions and current outbox persistence.
 - [x] Confirm the repository has no deployment/IaC tree, EventBridge bus definition, workload IAM role, EventBridge rules/targets, SQS queue/DLQ definitions or monitoring resources.
 - [x] Define configuration-gated EventBridge publishing, AWS credential/IAM boundary and event mapping.
