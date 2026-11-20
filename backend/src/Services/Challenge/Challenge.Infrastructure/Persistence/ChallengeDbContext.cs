@@ -27,6 +27,8 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
         inbox.Property(x => x.EmployeeId).HasColumnName("employee_id").HasColumnType("char(36)");
         inbox.Property(x => x.LifecycleVersion).HasColumnName("lifecycle_version").HasColumnType("bigint");
         inbox.Property(x => x.ProcessedAtUtc).HasColumnName("processed_at_utc").HasColumnType("datetime(6)");
+        inbox.Property(x => x.FingerprintAlgorithm).HasColumnName("fingerprint_algorithm").HasMaxLength(40).IsRequired();
+        inbox.Property(x => x.ContentFingerprint).HasColumnName("content_fingerprint").HasColumnType("char(64)").IsRequired();
         inbox.HasIndex(x => new { x.EmployeeId, x.LifecycleVersion }).HasDatabaseName("IX_processed_domain_events_employee_version");
     }
 }

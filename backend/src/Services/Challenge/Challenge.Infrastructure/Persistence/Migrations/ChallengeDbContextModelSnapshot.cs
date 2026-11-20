@@ -31,6 +31,8 @@ partial class ChallengeDbContextModelSnapshot : ModelSnapshot
             b.Property<Guid>("EmployeeId").HasColumnType("char(36)").HasColumnName("employee_id");
             b.Property<long>("LifecycleVersion").HasColumnType("bigint").HasColumnName("lifecycle_version");
             b.Property<DateTime>("ProcessedAtUtc").HasColumnType("datetime(6)").HasColumnName("processed_at_utc");
+            b.Property<string>("FingerprintAlgorithm").IsRequired().HasMaxLength(40).HasColumnType("varchar(40)").HasColumnName("fingerprint_algorithm");
+            b.Property<string>("ContentFingerprint").IsRequired().HasColumnType("char(64)").HasColumnName("content_fingerprint");
             b.HasKey("EventId");
             b.HasIndex("EmployeeId", "LifecycleVersion").HasDatabaseName("IX_processed_domain_events_employee_version");
             b.ToTable("processed_domain_events");

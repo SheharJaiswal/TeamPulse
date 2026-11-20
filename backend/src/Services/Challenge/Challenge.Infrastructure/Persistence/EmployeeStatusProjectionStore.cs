@@ -25,7 +25,8 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
 
         database.ProcessedDomainEvents.Add(new ProcessedDomainEvent(
             lifecycleEvent.EventId, lifecycleEvent.EventType, lifecycleEvent.SchemaVersion,
-            lifecycleEvent.EmployeeId, lifecycleEvent.LifecycleVersion, processedAtUtc));
+            lifecycleEvent.EmployeeId, lifecycleEvent.LifecycleVersion, processedAtUtc,
+            lifecycleEvent.FingerprintAlgorithm, lifecycleEvent.ContentFingerprint));
 
         try
         {
@@ -35,11 +36,20 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
             exception.InnerException is MySqlException mysqlException && mysqlException.Number == 1062)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return ProjectionProcessingOutcome.Duplicate;
+            await database.DisposeAsync();
+
+            await using var verification = await contextFactory.CreateDbContextAsync(cancellationToken);
+            var existing = await verification.ProcessedDomainEvents.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.EventId == lifecycleEvent.EventId, cancellationToken);
+            if (existing is null) throw;
+
+            return existing.FingerprintAlgorithm == lifecycleEvent.FingerprintAlgorithm &&
+                   string.Equals(existing.ContentFingerprint, lifecycleEvent.ContentFingerprint, StringComparison.Ordinal)
+                ? ProjectionProcessingOutcome.Duplicate
+                : ProjectionProcessingOutcome.DuplicateEventIntegrityViolation;
         }
 
-        var previousVersion = await database.EmployeeStatusProjections
-            .AsNoTracking()
+        var previousVersion = await database.EmployeeStatusProjections.AsNoTracking()
             .Where(x => x.EmployeeId == lifecycleEvent.EmployeeId)
             .Select(x => (long?)x.LifecycleVersion)
             .SingleOrDefaultAsync(cancellationToken);
@@ -64,13 +74,8 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
             .SingleAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
-
-        // A new event with an equal or lower version is recorded in the inbox but must
-        // not be reported as an applied projection update. The final version also handles
-        // a concurrent higher-version event winning while this transaction waits on MySQL.
         var applied = (!previousVersion.HasValue || lifecycleEvent.LifecycleVersion > previousVersion.Value)
             && finalVersion == lifecycleEvent.LifecycleVersion;
-
         return applied ? ProjectionProcessingOutcome.Applied : ProjectionProcessingOutcome.Stale;
     }
 

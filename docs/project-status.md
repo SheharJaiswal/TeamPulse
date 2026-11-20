@@ -1,6 +1,21 @@
 # Project Status
 Updated: 2026-11-20
 
+## Latest continuation checkpoint — Challenge fingerprint and duplicate identity implemented
+
+- Owner-approved Challenge SDD remains authoritative; this increment is limited to lifecycle projection/inbox reconciliation.
+- Added strict actor UUID and exact case-sensitive `hr-admin-api` validation; unknown additive properties remain tolerated; note is not copied.
+- Added a normalized fingerprint over recognized envelope fields only. UUIDs are lowercase D format, timestamp is fixed UTC with seven fractional digits, lifecycleVersion is invariant decimal string to preserve int64, canonical object keys are emitted in RFC 8785 order, and SHA-256 is stored lowercase with algorithm id `rfc8785-sha256-v1`.
+- Added fingerprint algorithm/digest to inbox via additive EF migration. Existing rows are marked `legacy-unfingerprinted` with zero digest; they cannot be misclassified as verified matches.
+- Duplicate event ID now rolls back losing insert and compares the committed fingerprint through a fresh DbContext. Matching algorithm+digest returns Duplicate; differing recognized content returns DuplicateEventIntegrityViolation without overwriting inbox or applying the conflicting projection.
+- Added processor tests for source/actor validation, note/unknown-property exclusion, recognized-field change and int64 boundary; added MySQL integration tests for same-fingerprint duplicate and conflicting event-ID no-mutation.
+- CI not yet run for this commit. No local .NET SDK or Docker CLI available; prior CI #105 predates this increment.
+- Remaining gaps include consumer routing of Invalid and DuplicateEventIntegrityViolation to classified shared DLQ with confirmed publish-before-ack; bounded retry exhaustion classification; host health/migration and privacy/logging assertions.
+- Changed files: Challenge event contract/outcome/fingerprint/processor, inbox entity/DbContext/store, additive migration/snapshot, processor and MySQL integration tests, SDD tasks, project status.
+- Single next task: GitHub Actions verification; fix any build/test failures before implementing DLQ classifications.
+- Branch `feature/backend-foundation`; `main` untouched. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup. Open question 19 and privacy/legal retention approval remain prerequisites for later product/production scope.
+
+
 ## Latest continuation checkpoint — revised Challenge SDD approved
 
 - Owner explicitly approved the revised Challenge employee-status projection SDD on 2026-11-20. The approved baseline is proposal/spec/design/tasks in `docs/changes/challenge-employee-status-projection-consumer/`.

@@ -27,10 +27,10 @@
 
 ## Reconcile implementation against approved SDD
 
-- [ ] Validate actorEmployeeId UUID, exact case-sensitive `hr-admin-api` source, tolerant unknown properties and all required schema-v1 fields.
-- [ ] Add normalized RFC 8785 JCS + SHA-256 fingerprint and algorithm identifier to inbox persistence.
-- [ ] Compare fingerprints on duplicate event IDs; distinguish matching Duplicate from conflicting DuplicateEventIntegrityViolation without mutating the original inbox/projection.
-- [ ] Ensure fingerprint excludes optional note and unknown additive properties and includes the complete recognized normalized envelope fields.
+- [x] Validate actorEmployeeId UUID, exact case-sensitive `hr-admin-api` source, tolerant unknown properties and all required schema-v1 fields.
+- [x] Add normalized RFC 8785 JCS + SHA-256 fingerprint and algorithm identifier to inbox persistence.
+- [x] Compare fingerprints on duplicate event IDs; distinguish matching Duplicate from conflicting DuplicateEventIntegrityViolation without mutating the original inbox/projection.
+- [x] Ensure fingerprint excludes optional note and unknown additive properties and includes the complete recognized normalized envelope fields.
 - [ ] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling.
 - [ ] Verify bounded exponential full-jitter transient retry, configurable limits and DLQ on exhaustion.
 - [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note.

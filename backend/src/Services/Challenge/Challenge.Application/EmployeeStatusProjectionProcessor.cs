@@ -37,7 +37,7 @@ public sealed class EmployeeStatusProjectionProcessor(IEmployeeStatusProjectionS
 
         var payload = envelope.Payload;
         if (payload.EmployeeId == Guid.Empty || payload.ActorEmployeeId == Guid.Empty ||
-            string.IsNullOrWhiteSpace(payload.Source) || payload.Source.Length > 50 ||
+            !string.Equals(payload.Source, "hr-admin-api", StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(payload.ReasonCode) || payload.ReasonCode.Length > 100 ||
             payload.LifecycleVersion <= 0)
             return false;
@@ -49,8 +49,12 @@ public sealed class EmployeeStatusProjectionProcessor(IEmployeeStatusProjectionS
             isActive = true;
         else return false;
 
-        lifecycleEvent = new EmployeeLifecycleEvent(envelope.EventId, envelope.EventType, envelope.SchemaVersion,
-            payload.EmployeeId, isActive, payload.LifecycleVersion, envelope.CorrelationId, envelope.OccurredAtUtc.UtcDateTime);
+        var fingerprint = LifecycleEventFingerprint.Create(envelope, payload);
+        lifecycleEvent = new EmployeeLifecycleEvent(
+            envelope.EventId, envelope.EventType, envelope.SchemaVersion, payload.EmployeeId, isActive,
+            payload.LifecycleVersion, envelope.CorrelationId, envelope.OccurredAtUtc.UtcDateTime,
+            payload.ActorEmployeeId, payload.Source, payload.PreviousStatus, payload.NewStatus,
+            payload.ReasonCode, LifecycleEventFingerprint.Algorithm, fingerprint);
         return true;
     }
 }
