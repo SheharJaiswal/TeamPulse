@@ -38,6 +38,12 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
             return ProjectionProcessingOutcome.Duplicate;
         }
 
+        var previousVersion = await database.EmployeeStatusProjections
+            .AsNoTracking()
+            .Where(x => x.EmployeeId == lifecycleEvent.EmployeeId)
+            .Select(x => (long?)x.LifecycleVersion)
+            .SingleOrDefaultAsync(cancellationToken);
+
         await database.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO employee_status_projections
                 (employee_id, is_active, lifecycle_version, updated_at_utc)
@@ -58,9 +64,14 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
             .SingleAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
-        return finalVersion == lifecycleEvent.LifecycleVersion
-            ? ProjectionProcessingOutcome.Applied
-            : ProjectionProcessingOutcome.Stale;
+
+        // A new event with an equal or lower version is recorded in the inbox but must
+        // not be reported as an applied projection update. The final version also handles
+        // a concurrent higher-version event winning while this transaction waits on MySQL.
+        var applied = (!previousVersion.HasValue || lifecycleEvent.LifecycleVersion > previousVersion.Value)
+            && finalVersion == lifecycleEvent.LifecycleVersion;
+
+        return applied ? ProjectionProcessingOutcome.Applied : ProjectionProcessingOutcome.Stale;
     }
 
     public async Task<EmployeeStatusProjection?> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken)

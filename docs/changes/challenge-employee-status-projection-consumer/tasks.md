@@ -8,26 +8,30 @@
 - [x] Record inactive employee historical-read versus mutation policy as an open question for later Challenge API work.
 - [x] Map CEPS-01 through CEPS-15 to implementation and verification.
 
-## Implementation — not started
-- [ ] Add Challenge.API, Challenge.Application, Challenge.Domain and Challenge.Infrastructure with inward-only references.
-- [ ] Add Challenge.UnitTests and register all projects in backend/TeamPulse.sln.
-- [ ] Add Challenge-owned MySQL database initialization/grant and connection configuration.
-- [ ] Implement minimal employee status projection, inbox entity and transport-independent application processor.
-- [ ] Implement atomic inbox + conditional lifecycle-version upsert in Challenge-owned MySQL.
-- [ ] Add checked-in EF Core/Pomelo migration and model snapshot; apply migrations at host startup.
-- [ ] Add database liveness/readiness and separate consumer-health endpoints.
-- [ ] Implement Challenge RabbitMQ consumer with manual ack after commit, prefetch 1, bounded retry and reconnect.
-- [ ] Add Challenge-owned quorum queue, DLX and DLQ without changing Habit or other service queues.
-- [ ] Keep consumer disabled by default and validate configuration when enabled.
+## Implementation — complete
+- [x] Add Challenge.API, Challenge.Application, Challenge.Domain and Challenge.Infrastructure with inward-only references.
+- [x] Add Challenge.UnitTests and register all projects in backend/TeamPulse.sln.
+- [x] Add Challenge-owned MySQL database initialization/grant and connection configuration.
+- [x] Implement minimal employee status projection, inbox entity and transport-independent application processor.
+- [x] Implement atomic inbox + conditional lifecycle-version upsert in Challenge-owned MySQL.
+- [x] Add checked-in EF Core/Pomelo migration and model snapshot; apply migrations at host startup.
+- [x] Add database liveness/readiness and separate consumer-health endpoints.
+- [x] Implement Challenge RabbitMQ consumer with manual ack after processor completion, prefetch 1, bounded retry and reconnect.
+- [x] Add Challenge-owned quorum queue, DLX and DLQ without changing Habit or other service queues.
+- [x] Keep consumer disabled by default and validate configuration when enabled.
 
-## Verification — not started
-- [ ] Unit-test envelope validation, event mapping, invalid input and note non-persistence.
-- [ ] MySQL 8.4 Testcontainers: clean/repeated startup migration, duplicate eventId, stale/equal/newer versions, concurrent N/N+1 and rollback.
-- [ ] RabbitMQ Testcontainers: ack boundary, duplicate redelivery, poison DLQ, retry/exhaustion and broker reconnect/loss.
-- [ ] Verify database readiness is independent of RabbitMQ and consumer health is separate.
-- [ ] Verify project references, database ownership, schema privacy and no Challenge business-state mutation.
-- [ ] Extend RabbitMQ topology contract tests and run full .NET CI.
-- [ ] Update README, communication documentation and checkpoint with exact commands/results.
+## Verification — in progress
+- [x] Unit-test envelope validation, event mapping, invalid input and note non-persistence.
+- [x] MySQL 8.4 Testcontainers: duplicate eventId, stale/equal/newer versions, concurrent N/N+1 and rollback.
+- [ ] MySQL 8.4 Testcontainers: clean and repeated host-startup migration, exact schema/model assertions and projection reader.
+- [x] RabbitMQ Testcontainers: processor-completion acknowledgement boundary, poison-message DLQ, transient retry success and retry exhaustion.
+- [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay.
+- [ ] RabbitMQ Testcontainers: broker unavailable at startup and established-session loss/reconnect.
+- [ ] Verify database readiness is independent of RabbitMQ and consumer health is separately observable through host integration tests.
+- [x] Review project references, database ownership, minimal projection/inbox fields and absence of Challenge business-state mutation.
+- [x] Extend RabbitMQ topology contract tests for Challenge quorum queue, delivery limit and dedicated DLQ binding.
+- [x] Baseline CI run #103 passed for commit `121bba186bb46df139f7e49def8082ab9d541afa`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 144 .NET tests (20 Challenge, 24 Habit, 100 Identity). Re-run after the persistence hardening commit.
+- [ ] Update README and communication documentation, then record final acceptance and exact checks in docs/project-status.md.
 
 ## Deferred
 - [ ] Implement Challenge programme/task/eligibility/participation APIs only under a separate approved SDD.

@@ -1,9 +1,11 @@
 using System;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Challenge.Application.Contracts;
 using Challenge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -71,11 +73,84 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
         Assert.Equal(2, await db.ProcessedDomainEvents.CountAsync(x => x.EmployeeId == employeeId));
     }
 
-    private async Task<ServiceProvider> CreateProviderAsync()
+    [Fact]
+    public async Task ProcessAsync_RecordsEqualVersionAsStaleWithoutChangingProjection()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        var store = new EmployeeStatusProjectionStore(factory);
+        var employeeId = Guid.NewGuid();
+        var firstProcessedAt = new DateTime(DateTime.UtcNow.Ticks / 10 * 10, DateTimeKind.Utc);
+
+        Assert.Equal(ProjectionProcessingOutcome.Applied,
+            await store.ProcessAsync(CreateEvent(Guid.NewGuid(), employeeId, 3, false), firstProcessedAt, CancellationToken.None));
+
+        DateTime originalUpdatedAt;
+        await using (var before = await factory.CreateDbContextAsync())
+            originalUpdatedAt = (await before.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId)).UpdatedAtUtc;
+
+        Assert.Equal(ProjectionProcessingOutcome.Stale,
+            await store.ProcessAsync(CreateEvent(Guid.NewGuid(), employeeId, 3, true), firstProcessedAt.AddSeconds(1), CancellationToken.None));
+
+        await using var after = await factory.CreateDbContextAsync();
+        var projection = await after.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.False(projection.IsActive);
+        Assert.Equal(3, projection.LifecycleVersion);
+        Assert.Equal(originalUpdatedAt.Ticks, projection.UpdatedAtUtc.Ticks);
+        Assert.Equal(2, await after.ProcessedDomainEvents.CountAsync(x => x.EmployeeId == employeeId));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WhenProjectionWriteFails_RollsBackInboxMarker()
+    {
+        var eventId = Guid.NewGuid();
+        var employeeId = Guid.NewGuid();
+        var lifecycleEvent = CreateEvent(eventId, employeeId, 1, false);
+
+        using (var failingProvider = await CreateProviderAsync(new FailProjectionInsertInterceptor()))
+        {
+            var factory = failingProvider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+            var store = new EmployeeStatusProjectionStore(factory);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.ProcessAsync(lifecycleEvent, DateTime.UtcNow, CancellationToken.None));
+        }
+
+        using (var verificationProvider = await CreateProviderAsync())
+        {
+            var factory = verificationProvider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+            await using var database = await factory.CreateDbContextAsync();
+
+            Assert.False(await database.ProcessedDomainEvents.AnyAsync(x => x.EventId == eventId));
+            Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == employeeId));
+        }
+    }
+
+    private sealed class FailProjectionInsertInterceptor : DbCommandInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains(
+                "INSERT INTO employee_status_projections", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Injected projection write failure.");
+
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private async Task<ServiceProvider> CreateProviderAsync(params IInterceptor[] interceptors)
     {
         var services = new ServiceCollection();
         services.AddDbContextFactory<ChallengeDbContext>(options =>
-            options.UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString)));
+        {
+            options.UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString));
+            if (interceptors.Length > 0)
+                options.AddInterceptors(interceptors);
+        });
         var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
         await using var db = await factory.CreateDbContextAsync();
