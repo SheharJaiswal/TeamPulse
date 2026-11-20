@@ -128,6 +128,54 @@ public sealed class IdentityApiIntegrationTests : IClassFixture<MySqlIntegration
     }
 
     [Fact]
+    public async Task Login_WhenEmployeeIsInactive_ReturnsGenericUnauthorizedWithoutChangingHash()
+    {
+        var email = $"inactive-{Guid.NewGuid():N}@teampulse.test";
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+
+        var hasher = new PasswordHasher<Employee>();
+        var employee = new Employee(
+            Guid.NewGuid(), email, email.ToUpperInvariant(), "Inactive Employee",
+            "placeholder", "org-integration", "team-integration", "Employee");
+        var originalHash = hasher.HashPassword(employee, Password);
+        var persistedEmployee = new Employee(
+            employee.Id, employee.Email, employee.NormalizedEmail, employee.DisplayName,
+            originalHash, employee.OrganizationId, employee.TeamId, employee.Role);
+
+        await using (var seedScope = factory.Services.CreateAsyncScope())
+        {
+            var database = seedScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            database.Employees.Add(persistedEmployee);
+            await database.SaveChangesAsync();
+
+            var updatedRows = await database.Employees
+                .Where(x => x.Id == employee.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.IsActive, false));
+            Assert.Equal(1, updatedRows);
+        }
+
+        var response = await client.PostAsJsonAsync(
+            "/api/identity/login", new LoginRequest(email, Password));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        using var responseDocument = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(
+            "Invalid email or password.",
+            responseDocument.RootElement.GetProperty("message").GetString());
+
+        await using var verifyScope = factory.Services.CreateAsyncScope();
+        var verifyDatabase = verifyScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var storedEmployee = await verifyDatabase.Employees.SingleAsync(x => x.Id == employee.Id);
+
+        Assert.False(storedEmployee.IsActive);
+        Assert.Equal(originalHash, storedEmployee.PasswordHash);
+        Assert.Equal(
+            PasswordVerificationResult.Success,
+            hasher.VerifyHashedPassword(storedEmployee, storedEmployee.PasswordHash, Password));
+    }
+
+    [Fact]
     public async Task Login_WhenLegacyPasswordHashIsVerified_UpgradesAndPersistsCurrentHashBeforeReturningToken()
     {
         var email = $"legacy-{Guid.NewGuid():N}@teampulse.test";
