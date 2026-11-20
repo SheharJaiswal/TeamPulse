@@ -22,7 +22,7 @@ public sealed record BootstrapOptions(
         var teamId = configuration["IdentityBootstrap:HrAdmin:TeamId"]?.Trim();
         var password = configuration["IdentityBootstrap:HrAdmin:Password"];
 
-        if (string.IsNullOrWhiteSpace(email) ||
+        if (string.IsNullOrWhiteSpace(email) || email.Length > 320 ||
             !MailAddress.TryCreate(email, out var parsedEmail) ||
             !string.Equals(parsedEmail.Address, email, StringComparison.OrdinalIgnoreCase))
         {
@@ -44,12 +44,7 @@ public sealed record BootstrapOptions(
             return false;
         }
 
-        options = new BootstrapOptions(
-            email,
-            displayName,
-            organizationId,
-            teamId,
-            password);
+        options = new BootstrapOptions(email, displayName, organizationId, teamId, password);
         error = string.Empty;
         return true;
     }
