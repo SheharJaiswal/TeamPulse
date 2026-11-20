@@ -78,6 +78,21 @@ The Identity API applies all pending, checked-in EF Core migrations automaticall
 
 Swagger is enabled in Development. Configure orchestrator liveness against `/health/live` (process-only) and readiness against `/health/ready` (Identity MySQL connectivity). The original `/health` endpoint remains as a compatibility alias for readiness. Health responses expose aggregate status only. Local database credentials are development placeholders. The JWT signing key is intentionally absent from checked-in configuration and must be supplied through `Jwt__SigningKey`. Production secrets must come from AWS Secrets Manager or an equivalent secret store. The POST /api/identity/register bootstrap endpoint is enabled only when ASPNETCORE_ENVIRONMENT=Development; it returns 404 in Testing, Staging, Production and other non-Development environments. It must be replaced with HR provisioning before production.
 
+
+### Habit employee-status projection foundation
+
+Habit owns a separate logical MySQL database named `teampulse_habit`. The local MySQL initialization script creates that database and grants the local `teampulse_app` user access; production uses a separately provisioned Habit database credential. Habit applies its checked-in EF Core/Pomelo migrations at host startup before accepting requests.
+
+Run the Habit API locally after starting MySQL:
+
+PowerShell:
+```powershell
+$env:ConnectionStrings__HabitDatabase = "Server=localhost;Port=3306;Database=teampulse_habit;User=teampulse_app;Password=local_teampulse_password;"
+dotnet run --project backend/src/Services/Habit/Habit.API
+```
+
+The Habit host exposes `/health/live` and `/health/ready`; readiness checks only the Habit database. The employee-status projection processor validates schema-v1 Identity lifecycle envelopes and atomically records the minimal event inbox marker with a strictly version-increasing projection. The RabbitMQ consumer adapter is the next implementation increment; this persistence foundation does not yet consume the queue.
+
 ### Automated tests
 
 Run the full test suite with `dotnet test backend/TeamPulse.sln`. Unit tests do not require external services. Identity API integration tests use Testcontainers to start a disposable MySQL 8.4 container, so Docker Desktop or another compatible Docker daemon must be running. The `.NET 8 CI` GitHub Actions workflow runs restore, build and tests on a Docker-capable GitHub-hosted runner.
