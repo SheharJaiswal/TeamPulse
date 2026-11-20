@@ -42,3 +42,18 @@ Producer-side EventBridge publish failures are retried or quarantined in the Ide
 ## SQS projection target body
 
 The Identity lifecycle EventBridge rule does not configure `Input`, `InputPath` or `InputTransformer`. Each SQS target receives the standard outer EventBridge event JSON. The TeamPulse schema-v1 envelope described above is the outer event's `detail` object. Consumers must parse `detail`, validate the event envelope, deduplicate by its `eventId` and apply only strictly newer `payload.lifecycleVersion` values. The SQS body wrapper does not introduce a new TeamPulse event ID or schema version.
+
+
+## Local RabbitMQ transport mapping
+
+For local development only, Identity publishes the same complete envelope directly as the RabbitMQ message body:
+
+- Exchange: durable topic exchange `teampulse.domain.events`.
+- Routing key: `identity.employee.lifecycle`.
+- AMQP `messageId`: envelope `eventId`.
+- AMQP `type`: envelope `eventType`.
+- AMQP `correlationId`: envelope `correlationId`.
+- AMQP `contentType`: `application/json`; delivery mode is persistent; `schemaVersion` is included as a header.
+- Publisher-confirm tracking and mandatory routing must succeed before the outbox row is marked published.
+
+The local broker has one durable queue for each of Habit, Challenge, Event Tracking, Insight and Notification. The shared local definitions file only seeds development topology; each production service owns its queue and consumer access/failure policy. RabbitMQ and EventBridge are alternative transport adapters for the same immutable event envelope, not simultaneous publishers for one outbox worker.

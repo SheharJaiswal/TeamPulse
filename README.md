@@ -47,13 +47,32 @@ Bash:
 export Jwt__SigningKey="$(openssl rand -base64 32)"
 ```
 
-Start MySQL and the API:
+Start MySQL and the local RabbitMQ broker:
 ```bash
-docker compose up -d mysql
+docker compose up -d mysql rabbitmq
 dotnet restore backend/TeamPulse.sln
 dotnet build backend/TeamPulse.sln
+```
+
+For local cross-service event delivery, explicitly enable the outbox worker and select RabbitMQ. PowerShell:
+```powershell
+$env:OutboxDispatcher__Enabled = "true"
+$env:OutboxDispatcher__Transport = "RabbitMq"
+$env:RabbitMq__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
 dotnet run --project backend/src/Services/Identity/Identity.API
 ```
+
+Bash:
+```bash
+export OutboxDispatcher__Enabled=true
+export OutboxDispatcher__Transport=RabbitMq
+export RabbitMq__Uri="amqp://teampulse:local_rabbitmq_password@localhost:5672/"
+dotnet run --project backend/src/Services/Identity/Identity.API
+```
+
+The local RabbitMQ management UI is available at http://localhost:15672 (local-only credentials: `teampulse` / `local_rabbitmq_password`). Compose imports one durable topic exchange and five service-owned local queues. RabbitMQ publishes the complete TeamPulse envelope as the message body and waits for publisher confirmation. A broker outage leaves the MySQL outbox retryable. Identity liveness/readiness remains independent of broker availability.
+
+The dispatcher remains disabled by default. To use the production EventBridge adapter in a cloud deployment, explicitly set `OutboxDispatcher__Transport=EventBridge`, provide `EventBridge__BusName` and `AWS_REGION`, and use the workload's AWS SDK default credentials. EventBridge provisioning is deferred until cloud infrastructure setup; no AWS credentials are needed for local RabbitMQ development.
 
 The Identity API applies all pending, checked-in EF Core migrations automatically during startup before accepting requests. For local development, the MySQL container creates the `teampulse_identity` database and `teampulse_app` user. The API uses `Server=localhost;Port=3306` when run on the host. If the API is containerized on the Compose network, use `Server=mysql;Port=3306`.
 

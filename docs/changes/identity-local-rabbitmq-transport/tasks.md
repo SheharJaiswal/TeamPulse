@@ -4,15 +4,15 @@
 - [x] Reconcile the live feature branch and existing dispatcher/infra contracts.
 - [x] Record the owner's decision to defer EventBridge provisioning and use a local .NET-compatible broker.
 - [x] Define provider selection, RabbitMQ exchange/queue contract and at-least-once semantics.
-- [ ] Update communication and event-envelope contracts.
+- [x] Update communication and event-envelope contracts.
 
 ## Implementation
-- [ ] Add RabbitMQ options and transport validation.
-- [ ] Add RabbitMQ.Client publisher with durable topic exchange, persistent messages, confirms and mandatory routing.
-- [ ] Select RabbitMQ or EventBridge explicitly in Identity API dependency injection.
-- [ ] Add RabbitMQ service and imported local topology to Docker Compose.
-- [ ] Add RabbitMQ Testcontainers fan-out and unroutable-publish tests.
-- [ ] Add local topology contract tests and CI validation.
+- [x] Add RabbitMQ options and transport validation.
+- [x] Add RabbitMQ.Client publisher with durable topic exchange, persistent messages, confirms and mandatory routing.
+- [x] Select RabbitMQ or EventBridge explicitly in Identity API dependency injection.
+- [x] Add RabbitMQ service and imported local topology to Docker Compose.
+- [x] Add RabbitMQ Testcontainers fan-out and unroutable-publish tests.
+- [x] Add local topology contract tests and CI validation.
 
 ## Verification and completion
 - [ ] Restore and build the full .NET 8 solution.

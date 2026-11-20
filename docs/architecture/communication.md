@@ -28,3 +28,14 @@
 - SQS target messages retain the full outer EventBridge event; the TeamPulse schema-v1 envelope is in its `detail` field. Consumers deduplicate by `eventId` and apply strictly newer `lifecycleVersion` values.
 - EventBridge target DLQs, Identity MySQL outbox quarantine and consumer poison-message DLQs are distinct failure boundaries.
 - The dispatcher remains disabled until non-production infrastructure and all five consumer projections are verified.
+
+
+## Local development transport
+
+- RabbitMQ is the local development and integration-test transport only; it is not a new production messaging architecture or a seventh service.
+- The Identity outbox selects exactly one publisher through `OutboxDispatcher:Transport`. Local runs set `RabbitMq`; production cloud deployments select the existing `EventBridge` adapter explicitly.
+- Local RabbitMQ uses the durable topic exchange `teampulse.domain.events`, routing key `identity.employee.lifecycle`, and one durable queue for each existing receiving service. The topology is preloaded by the local Docker Compose broker.
+- RabbitMQ messages carry the complete TeamPulse envelope as the body with persistent delivery, message ID, event type, correlation ID and schema-version metadata. The publisher uses mandatory routing and publisher confirms before the Identity outbox is acknowledged.
+- RabbitMQ consumers receive the envelope directly. EventBridge/SQS consumers extract the same envelope from the outer EventBridge event's `detail` field. This is a transport adapter difference only.
+- RabbitMQ broker availability is not part of Identity database readiness. If the broker is unavailable, the outbox worker releases leases for delayed retry; it does not mark messages published.
+- Local RabbitMQ credentials/topology are development placeholders. Production EventBridge provisioning is deferred until cloud infrastructure setup.
