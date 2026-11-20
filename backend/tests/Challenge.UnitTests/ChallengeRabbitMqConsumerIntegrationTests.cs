@@ -204,12 +204,50 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Consumer_DeadLettersAfterConfiguredTransientRetryLimit()
     {
+        const string body = "{\"eventId\":\"exhausted\"}";
         var processor = new AlwaysTransientProcessor();
         await StartConsumerAsync(processor, maxAttempts: 2);
-        await PublishAsync("{\"eventId\":\"exhausted\"}");
+        await PublishAsync(body);
 
-        await WaitForDeadLetterAsync();
+        var deadLetter = await WaitForDeadLetterAsync();
+        Assert.Equal(body, deadLetter.Body);
+        Assert.Equal("TransientRetryExhausted", deadLetter.Classification);
         Assert.Equal(2, processor.CallCount);
+    }
+
+    [Fact]
+    public async Task Consumer_DeadLettersNonTransientProcessingFailureWithoutRetry()
+    {
+        const string body = "{\"eventId\":\"terminal\"}";
+        var processor = new AlwaysNonTransientProcessor();
+        await StartConsumerAsync(processor, maxAttempts: 3);
+        await PublishAsync(body);
+
+        var deadLetter = await WaitForDeadLetterAsync();
+        Assert.Equal(body, deadLetter.Body);
+        Assert.Equal("NonTransientProcessingFailure", deadLetter.Classification);
+        Assert.Equal(1, processor.CallCount);
+    }
+
+    [Fact]
+    public async Task Consumer_LeavesOriginalUnacknowledgedWhenRetryExhaustionDeadLetterCannotBeConfirmed()
+    {
+        const string body = "{\"eventId\":\"exhausted-unroutable\"}";
+        var processor = new AlwaysTransientProcessor();
+        var status = await StartConsumerAsync(
+            processor, maxAttempts: 1, reconnectDelayMilliseconds: 60000);
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+
+        await _channel!.QueueUnbindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
+        await PublishAsync(body);
+
+        await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
+        var redelivered = await _channel.BasicGetAsync(QueueName, autoAck: false);
+        Assert.NotNull(redelivered);
+        Assert.Equal(body, Encoding.UTF8.GetString(redelivered!.Body.ToArray()));
+        Assert.Equal(1, processor.CallCount);
+        await _channel.BasicAckAsync(redelivered.DeliveryTag, multiple: false);
+        Assert.Null(await _channel.BasicGetAsync(DeadLetterQueueName, autoAck: false));
     }
 
     private async Task<ChallengeRabbitMqConsumerStatus> StartConsumerAsync(
@@ -363,6 +401,18 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         {
             Interlocked.Increment(ref CallCount);
             throw new TimeoutException("Injected transient failure.");
+        }
+    }
+
+    private sealed class AlwaysNonTransientProcessor : IEmployeeStatusProjectionProcessor
+    {
+        public int CallCount;
+
+        public Task<ProjectionProcessingOutcome> ProcessAsync(
+            string message, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref CallCount);
+            throw new InvalidOperationException("Injected terminal processing failure.");
         }
     }
 }

@@ -1,14 +1,25 @@
 # Project Status
 Updated: 2026-11-21
 
-## Latest continuation checkpoint — classified confirmed Challenge DLQ handoff implemented (CI pending)
+## Latest continuation checkpoint — classified retry-exhaustion and terminal failures implemented (CI pending)
+
+- CI #107 passed for implementation commit `24c13c8c5fc72c4c041be1d862cf203662adddf9`: Release build passed with 0 warnings/errors; Docker Compose validation and RabbitMQ startup/topology checks passed; all 11 Python topology tests passed; all 155 .NET tests passed (31 Challenge, 24 Habit, 100 Identity), with 0 failures and 0 skipped. [CI run #107](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44795560333).
+- Confirmed the prior classified invalid/integrity DLQ handoff: Testcontainers verified all four failure classifications and an unroutable DLQ leaves the original source delivery unacknowledged.
+- Added a deterministic `ChallengeRetryDelayPolicy` for bounded exponential full jitter. Tests supply jitter samples to verify the zero-to-ceiling range, exponential growth, cap behavior and invalid-input rejection; production supplies a fresh random sample.
+- Transient retry exhaustion now publishes with `TransientRetryExhausted`; non-transient processing exceptions are not retried and publish with `NonTransientProcessingFailure`. Both use the existing mandatory, publisher-confirmed Challenge lifecycle DLQ path. The source delivery is acknowledged only after positive confirmation; failure closes the source channel for redelivery.
+- Added RabbitMQ Testcontainers coverage for both classifications and for retry-exhaustion DLQ routing failure/redelivery. CI for this increment is pending.
+- Local .NET SDK and Docker CLI remain unavailable in this execution environment; no local build/test is claimed.
+- Scope remains the approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially, with privacy/legal sign-off still a production prerequisite. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup.
+- Branch `feature/backend-foundation` only; `main` untouched.
+
+## Previous continuation checkpoint — classified confirmed Challenge DLQ handoff (CI #107 passed)
 
 - CI #106 verified the prior fingerprint/integrity increment at `98595993774edfd8e6b83028f217dcf3d72377b8`: Release build passed with 0 warnings/errors; Compose and RabbitMQ topology checks passed; .NET tests passed (27 Challenge, 24 Habit, 100 Identity; 151 total, 0 failed/skipped). The next consumer/DLQ increment below is not included in that run.
 - Added explicit processing outcomes for `InvalidEvent`, `UnsupportedSchemaVersion`, `InvalidProducer` and `DuplicateEventIntegrityViolation`; missing schemaVersion is distinguished from a present unsupported version.
 - Challenge now publishes those terminal validation/integrity deliveries to the shared Challenge lifecycle DLQ through a dedicated RabbitMQ publisher-confirm channel. Mandatory routing and tracked publisher confirms must succeed before the original source delivery is acknowledged. The DLQ message retains the original body/message metadata and adds `x-teampulse-failure-classification`.
 - If the DLQ exchange/binding is unavailable or the publish is nacked/returned, the consumer does not acknowledge the source delivery; it closes the consumer channel so RabbitMQ can redeliver it.
-- Added deterministic processor classification tests and RabbitMQ Testcontainers cases for the four distinct DLQ classifications and unroutable-DLQ redelivery. CI for this increment is pending.
-- Retry exhaustion still uses the existing broker DLX path without the final explicit classification/confirmed-publish policy; this is the next focused increment. Health/migration/privacy assertions and commit-before-ack/established-session reconnect coverage remain open.
+- Added deterministic processor classification tests and RabbitMQ Testcontainers cases for the four distinct DLQ classifications and unroutable-DLQ redelivery. CI #107 passed with 31 Challenge tests; see the checkpoint above.
+- Retry exhaustion and non-transient terminal failures are addressed in the latest checkpoint above; health/migration/privacy assertions and commit-before-ack/established-session reconnect coverage remain open.
 - No local .NET SDK or Docker CLI is available in this execution environment; no local build/test is claimed.
 - Scope remains projection/inbox reconciliation only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially, with privacy/legal sign-off still a production prerequisite. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup.
 - Branch `feature/backend-foundation` only; `main` untouched.

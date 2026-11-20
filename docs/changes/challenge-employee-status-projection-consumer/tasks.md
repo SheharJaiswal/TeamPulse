@@ -32,8 +32,9 @@
 - [x] Compare fingerprints on duplicate event IDs; distinguish matching Duplicate from conflicting DuplicateEventIntegrityViolation without mutating the original inbox/projection.
 - [x] Ensure fingerprint excludes optional note and unknown additive properties and includes the complete recognized normalized envelope fields.
 - [x] Implement explicit classified publish-confirm handling for invalid events, unsupported schema versions, invalid producers and duplicate-event integrity violations; source acknowledgement follows successful mandatory publish confirmation.
-- [ ] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling in RabbitMQ Testcontainers CI.
-- [ ] Verify bounded exponential full-jitter transient retry, configurable limits and DLQ on exhaustion.
+- [x] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling in RabbitMQ Testcontainers CI #107.
+- [x] Add deterministic bounded exponential full-jitter delay policy tests and explicit `TransientRetryExhausted` / `NonTransientProcessingFailure` DLQ classifications.
+- [ ] Verify transient exhaustion and non-transient processing failures reach the shared lifecycle DLQ, and failed DLQ publication leaves the original delivery unacknowledged, in RabbitMQ Testcontainers CI #108.
 - [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note.
 - [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract.
 
@@ -45,7 +46,7 @@
 - [ ] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation.
 - [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay.
 - [ ] RabbitMQ Testcontainers: invalid event and integrity violation DLQ handling, including DLX failure and redelivery.
-- [ ] RabbitMQ Testcontainers: bounded exponential retry and exhaustion.
+- [ ] RabbitMQ Testcontainers: bounded exponential retry, exhaustion/non-transient classifications and failed-DLQ redelivery for retry exhaustion.
 - [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect; startup-reconnect test passed in CI #105.
 - [ ] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack.
 - [ ] Host health integration tests prove DB readiness is independent of RabbitMQ and consumer health is separately observable.
@@ -54,6 +55,7 @@
 - [x] CI #104 passed: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 10 Python tests and 146 .NET tests.
 - [x] CI #105 passed for `787bf97b1fcd4083eb6c59bc0595363145e3c83e`: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 11 Python tests and 147 .NET tests (23 Challenge, 24 Habit, 100 Identity).
 - [x] CI #106 passed for `98595993774edfd8e6b83028f217dcf3d72377b8`: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 11 Python tests and 151 .NET tests (27 Challenge, 24 Habit, 100 Identity), 0 failed/skipped. [CI run #106](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44792610342).
+- [x] CI #107 passed for `24c13c8c5fc72c4c041be1d862cf203662adddf9`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology, 11 Python topology tests and 155 .NET tests (31 Challenge, 24 Habit, 100 Identity), 0 failed/skipped. [CI run #107](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44795560333).
 - [x] README and communication documentation include Challenge local run/configuration guidance and transport contract.
 
 ## Deferred

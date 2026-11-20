@@ -140,16 +140,10 @@ public sealed class ChallengeRabbitMqConsumer(
                 return;
             }
 
-            var outcome = await ProcessWithRetriesAsync(message, delivery.BasicProperties.MessageId, stoppingToken);
-            var failureClassification = outcome switch
-            {
-                ProjectionProcessingOutcome.Invalid => "InvalidEvent",
-                ProjectionProcessingOutcome.UnsupportedSchemaVersion => "UnsupportedSchemaVersion",
-                ProjectionProcessingOutcome.InvalidProducer => "InvalidProducer",
-                ProjectionProcessingOutcome.DuplicateEventIntegrityViolation => "DuplicateEventIntegrityViolation",
-                _ => null
-            };
+            var processingResult = await ProcessWithRetriesAsync(
+                message, delivery.BasicProperties.MessageId, stoppingToken);
 
+            var failureClassification = processingResult.FailureClassification;
             if (failureClassification is not null)
             {
                 await PublishDeadLetterAndAcknowledgeAsync(
@@ -161,15 +155,27 @@ public sealed class ChallengeRabbitMqConsumer(
                 return;
             }
 
-            if (!outcome.HasValue)
+            var outcome = processingResult.Outcome
+                ?? throw new InvalidOperationException("Challenge processing returned neither an outcome nor a failure classification.");
+
+            failureClassification = outcome switch
             {
-                // Retry exhaustion and unexpected terminal processing failures are handled by
-                // the existing broker DLX path in this increment; the next increment adds
-                // explicit, classified confirmed publishing for those outcomes as well.
-                await channel.BasicNackAsync(delivery.DeliveryTag, false, false, stoppingToken);
+                ProjectionProcessingOutcome.Invalid => "InvalidEvent",
+                ProjectionProcessingOutcome.UnsupportedSchemaVersion => "UnsupportedSchemaVersion",
+                ProjectionProcessingOutcome.InvalidProducer => "InvalidProducer",
+                ProjectionProcessingOutcome.DuplicateEventIntegrityViolation => "DuplicateEventIntegrityViolation",
+                ProjectionProcessingOutcome.Applied or ProjectionProcessingOutcome.Stale or ProjectionProcessingOutcome.Duplicate => null,
+                _ => "NonTransientProcessingFailure"
+            };
+
+            if (failureClassification is not null)
+            {
+                await PublishDeadLetterAndAcknowledgeAsync(
+                    deadLetterChannel, channel, delivery, failureClassification, stoppingToken);
                 logger.LogWarning(
-                    "Challenge rejected lifecycle message {MessageId} after processing failure.",
-                    delivery.BasicProperties.MessageId);
+                    "Challenge dead-lettered lifecycle message {MessageId} with classification {FailureClassification}.",
+                    delivery.BasicProperties.MessageId,
+                    failureClassification);
                 return;
             }
 
@@ -232,7 +238,7 @@ public sealed class ChallengeRabbitMqConsumer(
         await consumerChannel.BasicAckAsync(delivery.DeliveryTag, multiple: false, cancellationToken);
     }
 
-    private async Task<ProjectionProcessingOutcome?> ProcessWithRetriesAsync(
+    private async Task<ProcessingResult> ProcessWithRetriesAsync(
         string message,
         string? messageId,
         CancellationToken stoppingToken)
@@ -243,7 +249,9 @@ public sealed class ChallengeRabbitMqConsumer(
             {
                 await using var scope = scopeFactory.CreateAsyncScope();
                 var processor = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionProcessor>();
-                return await processor.ProcessAsync(message, stoppingToken);
+                return new ProcessingResult(
+                    await processor.ProcessAsync(message, stoppingToken),
+                    null);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -259,22 +267,29 @@ public sealed class ChallengeRabbitMqConsumer(
                     exception.GetType().Name,
                     transient);
 
-                if (!transient || attempt == options.MaxProcessingAttempts)
-                    return null;
+                if (!transient)
+                    return new ProcessingResult(null, "NonTransientProcessingFailure");
+
+                if (attempt == options.MaxProcessingAttempts)
+                    return new ProcessingResult(null, "TransientRetryExhausted");
 
                 await Task.Delay(GetRetryDelay(attempt), stoppingToken);
             }
         }
 
-        return null;
+        return new ProcessingResult(null, "TransientRetryExhausted");
     }
 
-    private TimeSpan GetRetryDelay(int attempt)
-    {
-        var exponentialCeiling = options.RetryBaseDelayMilliseconds * Math.Pow(2, attempt - 1);
-        var boundedCeiling = Math.Min(exponentialCeiling, options.RetryMaxDelayMilliseconds);
-        return TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * boundedCeiling);
-    }
+    private TimeSpan GetRetryDelay(int attempt) =>
+        ChallengeRetryDelayPolicy.GetDelay(
+            attempt,
+            options.RetryBaseDelayMilliseconds,
+            options.RetryMaxDelayMilliseconds,
+            Random.Shared.NextDouble());
+
+    private sealed record ProcessingResult(
+        ProjectionProcessingOutcome? Outcome,
+        string? FailureClassification);
 
     private static bool IsTransient(Exception exception)
     {
