@@ -224,12 +224,10 @@ public sealed class OutboxDispatcherWorker(
         Volatile.Write(ref _oldestPendingAgeSeconds, ageSeconds);
     }
 
-    private TimeSpan NextRetryDelay(int attemptCount)
-    {
-        var exponent = Math.Min(Math.Max(attemptCount - 1, 0), 20);
-        var ceilingSeconds = Math.Min(
-            _options.BaseRetryDelaySeconds * Math.Pow(2, exponent),
-            _options.MaxRetryDelaySeconds);
-        return TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * ceilingSeconds * 1000);
-    }
+    private TimeSpan NextRetryDelay(int attemptCount) =>
+        OutboxRetryDelayPolicy.CalculateDelay(
+            attemptCount,
+            _options.BaseRetryDelaySeconds,
+            _options.MaxRetryDelaySeconds,
+            Random.Shared.NextDouble());
 }

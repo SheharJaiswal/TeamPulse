@@ -19,8 +19,8 @@
 - [x] Add a BackgroundService hosted by Identity API; disabled by default and cancellation-safe.
 - [x] Add checked-in EF migration and model snapshot updates for lease/retry/quarantine fields and dispatch index.
 - [x] Add tests for event mapping, partial failures, lease domain transitions, concurrent claims, lease expiry, stale tokens, acknowledgement, quarantine and queue metrics.
-- [ ] Add focused tests for options validation, retry/backoff boundaries, systemic versus permanent error classification and payload-free log behavior.
-- [ ] Add retry scheduling and ambiguous publish-after-acceptance replay tests proving stable eventId behavior.
+- [x] Add focused tests for options validation, retry/backoff boundaries, systemic versus permanent error classification and payload-free log behavior.
+- [x] Add retry scheduling and ambiguous publish-after-acceptance replay tests proving stable eventId behavior.
 - [x] Run restore, Release build, Compose validation and full tests in CI: run #80 passed 64 tests, 0 failed/skipped, 0 warnings/errors.
 - [x] Update the project checkpoint with the verified code commit and deployment blockers.
 

@@ -83,6 +83,18 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
             return failed;
         }
 
+        var mappedFailureCount = response.Entries.Count(entry =>
+            !string.IsNullOrWhiteSpace(entry.ErrorCode) ||
+            string.IsNullOrWhiteSpace(entry.EventId));
+        if (response.FailedEntryCount != mappedFailureCount)
+        {
+            var inconsistent = messages.Select(message =>
+                new OutboxPublishResult(message.EventId, OutboxPublishOutcome.RetryableFailure,
+                    "InconsistentPutEventsResponse")).ToArray();
+            FailedEntryCounter.Add(inconsistent.Length);
+            return inconsistent;
+        }
+
         var results = new List<OutboxPublishResult>(messages.Count);
         for (var index = 0; index < messages.Count; index++)
         {
@@ -92,6 +104,14 @@ public sealed class EventBridgePublisher(IAmazonEventBridge client, string event
             {
                 results.Add(new OutboxPublishResult(
                     messages[index].EventId, OutboxPublishOutcome.Accepted, string.Empty));
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.ErrorCode))
+            {
+                results.Add(new OutboxPublishResult(
+                    messages[index].EventId, OutboxPublishOutcome.RetryableFailure,
+                    "InvalidPutEventsEntryResponse"));
                 continue;
             }
 
