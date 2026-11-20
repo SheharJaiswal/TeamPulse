@@ -1,7 +1,7 @@
 # Proposal: Lease-Safe Identity Outbox Dispatcher
 
 **Change ID:** identity-outbox-eventbridge-dispatcher  
-**Status:** Ready for implementation; production activation is blocked on deployment infrastructure.  
+**Status:** Core implementation CI-verified; acceptance-test hardening remains and production activation is blocked on deployment infrastructure.  
 **Date:** 2026-11-20
 
 ## Problem
