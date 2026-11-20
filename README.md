@@ -19,6 +19,10 @@ The approved specifications are the source of truth. Before implementing any fea
 
 Do not create a separate Activity Tracking service. Lambda is compute, not a seventh microservice or independent business-data owner.
 
+## Product policy baseline
+
+The accepted MVP product defaults are recorded in [ADR-0002](docs/decisions/0002-product-policy-baseline.md): HR-controlled onboarding, Identity-owned employee records, normalized challenge completion scoring, minimum 10-person insight cohorts, self-reported activity by default, reusable employee-owned habits, privacy-limited manager access, documented retention defaults and HR-controlled account lifecycle. Retention defaults require jurisdiction-specific privacy/legal review before production. ADR-0002 records policy decisions; it does not imply that HRIS integration, lifecycle audit/outbox, retention jobs or downstream revocation are already implemented.
+
 ## Technology
 
 .NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and Docker Compose. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL and DynamoDB. .NET 8 is the initial compatibility baseline.
