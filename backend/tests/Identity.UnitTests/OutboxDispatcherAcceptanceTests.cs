@@ -318,7 +318,7 @@ public sealed class OutboxDispatcherReplayIntegrationTests : IClassFixture<MySql
             var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
             database.OutboxMessages.Add(new OutboxMessage(
                 eventId, "EmployeeDeactivated", 1, DateTime.UtcNow, Guid.NewGuid(),
-                "{\\"eventId\\":\\"retry-test\\"}"));
+                "{\"eventId\":\"retry-test\"}"));
             await database.SaveChangesAsync();
         }
 
