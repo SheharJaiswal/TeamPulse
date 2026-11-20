@@ -1,3 +1,5 @@
+using Identity.API.Security;
+
 namespace Identity.UnitTests;
 
 public sealed class IdentityStartupValidationTests
@@ -6,9 +8,9 @@ public sealed class IdentityStartupValidationTests
         "JWT signing key must be configured and at least 32 UTF-8 bytes.";
 
     [Fact]
-    public void Startup_WhenSigningKeyIsMissing_FailsFastWithConfigurationError()
+    public void Startup_WhenSigningKeyIsNotConfigured_FailsBeforeDatabaseStartup()
     {
-        using var factory = new IdentityStartupValidationFactory(includeSigningKey: false);
+        using var factory = new IdentityStartupValidationFactory(signingKey: null);
 
         var details = CaptureStartupFailure(factory);
 
@@ -16,15 +18,14 @@ public sealed class IdentityStartupValidationTests
     }
 
     [Theory]
+    [InlineData("")]
     [InlineData("short")]
     [InlineData("1234567890123456789012345678901")]
     [InlineData("                                ")]
     public void Startup_WhenSigningKeyIsBlankOrShorterThanThirtyTwoBytes_FailsFast(
         string signingKey)
     {
-        using var factory = new IdentityStartupValidationFactory(
-            includeSigningKey: true,
-            signingKey);
+        using var factory = new IdentityStartupValidationFactory(signingKey);
 
         var details = CaptureStartupFailure(factory);
 
@@ -32,18 +33,24 @@ public sealed class IdentityStartupValidationTests
     }
 
     [Fact]
-    public void Startup_WhenSigningKeyIsExactlyThirtyTwoBytes_PassesKeyValidation()
+    public void SigningKeyValidator_AcceptsExactlyThirtyTwoUtf8Bytes()
     {
-        using var factory = new IdentityStartupValidationFactory(
-            includeSigningKey: true,
-            new string('k', 32));
+        // Sixteen U+00E9 characters occupy 32 bytes in UTF-8.
+        var signingKey = new string('é', 16);
 
-        var details = CaptureStartupFailure(factory);
+        Assert.Equal(32, System.Text.Encoding.UTF8.GetByteCount(signingKey));
+        var exception = Record.Exception(() => JwtSigningKeyValidator.Validate(signingKey));
 
-        // The test intentionally omits the database connection string. Reaching this
-        // later validation proves the 32-byte signing key passed the JWT startup guard.
-        Assert.Contains("IdentityDatabase connection string is missing.", details);
-        Assert.DoesNotContain("JWT signing key", details);
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void SigningKeyValidator_RejectsThirtyOneUtf8Bytes()
+    {
+        var signingKey = string.Concat(new string('é', 15), "a");
+
+        Assert.Equal(31, System.Text.Encoding.UTF8.GetByteCount(signingKey));
+        Assert.Throws<InvalidOperationException>(() => JwtSigningKeyValidator.Validate(signingKey));
     }
 
     private static string CaptureStartupFailure(IdentityStartupValidationFactory factory)

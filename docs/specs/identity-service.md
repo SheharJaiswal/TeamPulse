@@ -14,6 +14,8 @@ Employee persistence; password-based login; short-lived JWT issuance; authentica
 - Receiving services validate issuer, audience, signature and expiry.
 - Authorization is enforced by every receiving service.
 - Public self-registration is not production onboarding.
+- JWT signing keys are supplied through environment/secret-store configuration and are never committed in appsettings or source control.
+- Signing keys must contain at least 32 UTF-8 bytes; missing, blank or weak values prevent startup.
 
 ## Acceptance criteria
 - IA-01: Reject missing required fields and passwords shorter than 12 characters.

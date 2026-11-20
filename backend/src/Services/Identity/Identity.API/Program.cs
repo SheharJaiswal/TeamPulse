@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Identity.Application.Abstractions;
+using Identity.API.Security;
 using Identity.Infrastructure.Persistence;
 using Identity.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,12 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT configuration is missing.");
-if (string.IsNullOrWhiteSpace(jwt.SigningKey) ||
-    Encoding.UTF8.GetByteCount(jwt.SigningKey) < 32)
-{
-    throw new InvalidOperationException(
-        "JWT signing key must be configured and at least 32 UTF-8 bytes.");
-}
+JwtSigningKeyValidator.Validate(jwt.SigningKey);
 
 var connectionString = builder.Configuration.GetConnectionString("IdentityDatabase")
     ?? throw new InvalidOperationException("IdentityDatabase connection string is missing.");

@@ -27,6 +27,19 @@ Do not create a separate Activity Tracking service. Lambda is compute, not a sev
 
 Prerequisites: .NET 8 SDK and Docker Desktop.
 
+Set a local JWT signing key in the process environment before starting the API. Do not commit a signing key to appsettings or source control.
+
+PowerShell:
+```powershell
+$env:Jwt__SigningKey = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+Bash:
+```bash
+export Jwt__SigningKey="$(openssl rand -base64 32)"
+```
+
+Start MySQL and the API:
 ```bash
 docker compose up -d mysql
 dotnet restore backend/TeamPulse.sln
@@ -36,7 +49,7 @@ dotnet run --project backend/src/Services/Identity/Identity.API
 
 The Identity API applies all pending, checked-in EF Core migrations automatically during startup before accepting requests. For local development, the MySQL container creates the `teampulse_identity` database and `teampulse_app` user. The API uses `Server=localhost;Port=3306` when run on the host. If the API is containerized on the Compose network, use `Server=mysql;Port=3306`.
 
-Swagger is enabled in Development; health endpoint is `/health`. Local database credentials and JWT key are development placeholders. Production secrets must come from AWS Secrets Manager or an equivalent secret store. Public registration is only a local bootstrap mechanism and must be replaced with HR provisioning before production.
+Swagger is enabled in Development; health endpoint is `/health`. Local database credentials are development placeholders. The JWT signing key is intentionally absent from checked-in configuration and must be supplied through `Jwt__SigningKey`. Production secrets must come from AWS Secrets Manager or an equivalent secret store. Public registration is only a local bootstrap mechanism and must be replaced with HR provisioning before production.
 
 ### Automated tests
 
