@@ -12,7 +12,7 @@ Employee persistence; HR-controlled provisioning baseline; password-based login;
 - Identity owns canonical TeamPulse employee, organization, team and role records. HRIS is the authoritative upstream employment/membership source when integrated; authorized HR administrators maintain records until then.
 - Production onboarding is HR-controlled provisioning/invitation only. Public self-registration is disabled outside Development.
 - Passwords use ASP.NET Core password hashing.
-- An employee whose IsActive flag is false cannot authenticate. The login response is the same generic 401 used for other invalid credentials. Password verification/rehashing and token issuance are skipped for inactive employees.
+- An employee whose IsActive flag is false cannot authenticate. The login response is the same generic 401 used for other invalid credentials. The submitted password is verified, but inactive employees are rejected before hash upgrade, persistence or token issuance.
 - When password verification reports SuccessRehashNeeded for an active employee, Identity upgrades and persists the password hash before issuing an access token. A failed persistence operation must not result in token issuance.
 - JWT contains sub, email, name, organization_id, team_id and role.
 - Receiving services validate issuer, audience, signature and expiry.
