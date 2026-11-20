@@ -1,19 +1,22 @@
 using System;
 using System.Linq;
 using System.Text;
+using Amazon.EventBridge;
+using Identity.API.BackgroundServices;
+using Identity.API.HealthChecks;
+using Identity.API.Security;
+using Identity.Application.Abstractions;
+using Identity.Infrastructure.Messaging;
+using Identity.Infrastructure.Persistence;
+using Identity.Infrastructure.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Identity.Application.Abstractions;
-using Identity.API.HealthChecks;
-using Identity.API.Security;
-using Identity.Infrastructure.Persistence;
-using Identity.Infrastructure.Security;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,13 +29,37 @@ JwtSigningKeyValidator.Validate(jwt.SigningKey);
 var connectionString = builder.Configuration.GetConnectionString("IdentityDatabase")
     ?? throw new InvalidOperationException("IdentityDatabase connection string is missing.");
 
-builder.Services.AddDbContext<IdentityDbContext>(options =>
+builder.Services.AddDbContextFactory<IdentityDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<Identity.Domain.Entities.Employee>,
     Microsoft.AspNetCore.Identity.PasswordHasher<Identity.Domain.Entities.Employee>>();
+
+var dispatcherOptions = builder.Configuration.GetSection(OutboxDispatcherOptions.SectionName)
+    .Get<OutboxDispatcherOptions>() ?? new OutboxDispatcherOptions();
+if (dispatcherOptions.Enabled)
+{
+    var busName = builder.Configuration["EventBridge:BusName"];
+    var awsRegion = builder.Configuration["AWS:Region"] ??
+        Environment.GetEnvironmentVariable("AWS_REGION");
+    dispatcherOptions.Validate(busName, awsRegion);
+
+    builder.Services.Configure<OutboxDispatcherOptions>(
+        builder.Configuration.GetSection(OutboxDispatcherOptions.SectionName));
+    builder.Services.AddSingleton(TimeProvider.System);
+    builder.Services.AddScoped<IOutboxMessageStore, OutboxMessageStore>();
+    builder.Services.AddSingleton<IAmazonEventBridge>(_ =>
+        new AmazonEventBridgeClient(new AmazonEventBridgeConfig
+        {
+            Timeout = TimeSpan.FromSeconds(20)
+        }));
+    builder.Services.AddSingleton<IEventPublisher>(serviceProvider =>
+        new EventBridgePublisher(
+            serviceProvider.GetRequiredService<IAmazonEventBridge>(), busName!));
+    builder.Services.AddHostedService<OutboxDispatcherWorker>();
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
@@ -68,9 +95,6 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Apply checked-in EF Core migrations before accepting requests.
-// This is appropriate for local development and a single application instance.
-// Production deployments should run migrations as a coordinated deployment step.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
@@ -86,19 +110,14 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// Liveness must not depend on external services. Readiness verifies the owned database.
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live")
 });
-
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
 });
-
-// Preserve the original endpoint and its database-readiness semantics for existing probes.
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")

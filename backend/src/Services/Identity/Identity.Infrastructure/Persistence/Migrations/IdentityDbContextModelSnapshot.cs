@@ -62,13 +62,21 @@ partial class IdentityDbContextModelSnapshot : ModelSnapshot
             b.Property<int>("AttemptCount").HasColumnType("int");
             b.Property<Guid>("CorrelationId").HasColumnType("char(36)");
             b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime(6)");
+            b.Property<DateTime?>("DeadLetteredAtUtc").HasColumnType("datetime(6)");
             b.Property<string>("EventType").IsRequired().HasMaxLength(100).HasColumnType("varchar(100)");
+            b.Property<DateTime?>("LastAttemptAtUtc").HasColumnType("datetime(6)");
+            b.Property<string>("LastErrorCode").HasMaxLength(100).HasColumnType("varchar(100)");
+            b.Property<Guid?>("LeaseToken").IsConcurrencyToken().HasColumnType("char(36)");
+            b.Property<DateTime?>("LeaseExpiresAtUtc").HasColumnType("datetime(6)");
+            b.Property<DateTime?>("NextAttemptAtUtc").HasColumnType("datetime(6)");
             b.Property<DateTime>("OccurredAtUtc").HasColumnType("datetime(6)");
             b.Property<string>("Payload").IsRequired().HasColumnType("longtext");
             b.Property<DateTime?>("PublishedAtUtc").HasColumnType("datetime(6)");
             b.Property<int>("SchemaVersion").HasColumnType("int");
             b.HasKey("EventId");
             b.HasIndex("PublishedAtUtc", "CreatedAtUtc");
+            b.HasIndex("PublishedAtUtc", "DeadLetteredAtUtc", "NextAttemptAtUtc", "LeaseExpiresAtUtc", "CreatedAtUtc")
+                .HasDatabaseName("IX_outbox_dispatch_queue");
             b.ToTable("outbox_messages");
         });
 #pragma warning restore 612, 618
