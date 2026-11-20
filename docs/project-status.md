@@ -4,7 +4,8 @@ Updated: 2026-11-20
 ## Continuation checkpoint
 
 - Active branch: `feature/backend-foundation` only.
-- Live branch HEAD before implementation: `501fc4bad3983978df294051607b0d46e192abd0`.
+- Live branch HEAD before this checkpoint update: `8fed4e9994a73f7be33b3974d6968588e7a0d0cd` (documentation-only commits followed the verified code commit).
+- `feature/backend-foundation` remains ahead of `main` with no commits behind; `main` was not modified.
 - Latest verified code commit: `9b908203b44954b56b8a13b49c96979626be126d` (GitHub Actions run #80).
 - Current SDD increment: `docs/changes/identity-outbox-eventbridge-dispatcher/`; proposal/spec/design/tasks were completed before implementation. Core dispatcher implementation is now committed and CI-verified; additional acceptance-test hardening and production infrastructure remain.
 - Product policy baseline: ADR-0002; all nine initial product open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
