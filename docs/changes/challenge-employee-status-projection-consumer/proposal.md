@@ -1,6 +1,6 @@
 # Proposal: Challenge Employee Status Projection Consumer
 
-**Status:** Revised — awaiting explicit owner approval of this SDD package.
+**Status:** Approved by owner on 2026-11-20.
 
 ## Context
 
@@ -58,4 +58,4 @@ Establish an accurate, approved specification for Challenge's minimal employee-s
 
 Follow AGENTS.md, ADR-0001/0002, service ownership, event envelope and Employee Status Projection Contract v1. Challenge owns programmes, tasks, eligibility, participation and authoritative challenge state. RabbitMQ is local development transport; EventBridge remains intended production fan-out.
 
-The revised package is not yet marked approved. Further Challenge feature implementation must wait for explicit owner approval of this revised SDD. Existing implementation may be tested and reconciled against the approved package once that approval is recorded.
+The owner explicitly approved this revised SDD package on 2026-11-20. It is the implementation baseline. Reconcile the existing implementation against this specification and close the listed acceptance gaps; do not expand into Challenge business workflows.

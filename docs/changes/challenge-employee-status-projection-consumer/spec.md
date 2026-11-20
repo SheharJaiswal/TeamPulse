@@ -1,6 +1,6 @@
 # Specification: Challenge Employee Status Projection Consumer
 
-**Status:** Revised — awaiting explicit owner approval. The implementation already exists on the live branch; this document is the proposed authoritative behavior after approval.  
+**Status:** Approved by owner on 2026-11-20. The implementation already exists on the live branch; this document is the authoritative behavior for reconciliation and acceptance.  
 **Authority:** AGENTS.md, ADR-0001/0002, docs/architecture/service-ownership.md, docs/architecture/communication.md, docs/contracts/event-envelope.md and docs/contracts/employee-status-projection.md.
 
 ## Service boundary

@@ -1,5 +1,7 @@
 # Design: Challenge Employee Status Projection Consumer
 
+**Status:** Approved by owner on 2026-11-20.
+
 ## Existing context and implementation reconciliation
 
 Identity owns employee lifecycle state and publishes the shared schema-v1 envelope through its transactional outbox. The local RabbitMQ topic exchange and service queues already exist; Habit's employee-status projection consumer is complete.

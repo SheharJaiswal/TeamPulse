@@ -9,7 +9,7 @@
 - [x] Keep inactive-employee historical-read versus mutation policy as open question 19.
 - [x] Map acceptance criteria to implementation and verification.
 - [x] Incorporate the 14 owner-selected decisions recorded in the SDD review (minimal projection; initial permanent inbox retention; tolerant additive JSON; exact source; invalid-event DLQ; separate health; strict version ordering; DB atomicity; conflicting duplicate integrity detection; SHA-256; fingerprint field exclusions; RFC 8785 JCS; shared DLQ classifications; bounded exponential full-jitter retry).
-- [ ] Owner explicitly approves this revised proposal/spec/design/tasks package before further Challenge feature implementation.
+- [x] Owner explicitly approved this revised proposal/spec/design/tasks package on 2026-11-20; implementation reconciliation is authorized.
 
 ## Existing implementation already present on the live branch
 
@@ -25,7 +25,7 @@
 - [x] Consumer disabled by default and configuration validated when enabled.
 - [x] Startup-reconnect test and local README/communication documentation; CI #105 passed.
 
-## Reconcile implementation against revised SDD — pending owner approval
+## Reconcile implementation against approved SDD
 
 - [ ] Validate actorEmployeeId UUID, exact case-sensitive `hr-admin-api` source, tolerant unknown properties and all required schema-v1 fields.
 - [ ] Add normalized RFC 8785 JCS + SHA-256 fingerprint and algorithm identifier to inbox persistence.

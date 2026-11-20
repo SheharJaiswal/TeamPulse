@@ -1,6 +1,20 @@
 # Project Status
 Updated: 2026-11-20
 
+## Latest continuation checkpoint — revised Challenge SDD approved
+
+- Owner explicitly approved the revised Challenge employee-status projection SDD on 2026-11-20. The approved baseline is proposal/spec/design/tasks in `docs/changes/challenge-employee-status-projection-consumer/`.
+- Approval authorizes reconciliation of the existing implementation and closing CEPS acceptance gaps only. It does not authorize Challenge programme/task/participation features or resolve open question 19.
+- Starting implementation reconciliation from SDD commit `3df0c32c7d435b8b1386206badec24ebb7b3e053` on `feature/backend-foundation`.
+- First priority: inspect current processor, envelope contract, inbox entity/schema, persistence store and consumer against approved CEPS-05/06/07/12/13. Existing processor currently has no approved content fingerprint or duplicate-conflict distinction; existing store treats event-ID unique conflicts as ordinary duplicates; existing consumer currently nacks poison events directly and needs explicit verification against confirmed dead-letter handling.
+- Fingerprint implementation must follow the approved normalized recognized fields, excluding `note` and unknown properties; RFC 8785 JCS + SHA-256; preserve full int64 lifecycleVersion by encoding as invariant decimal string before canonicalization; use algorithm id `rfc8785-sha256-v1`.
+- Existing baseline CI #105 remains valid only for the pre-reconciliation code. Do not claim revised acceptance criteria pass until new CI runs on the updated commit.
+- No local .NET SDK or Docker CLI is available in this execution environment; use GitHub Actions for build/test verification and do not claim local execution.
+- EventBridge/SQS and CloudWatch remain deferred until owner cloud setup. Keep RabbitMQ as local transport. Inbox retention is permanent initially with no cleanup; privacy/legal sign-off remains a production prerequisite.
+- Automation `6aff6d1c108c8191b181b1108e6f32fd` is paused; resume only after updating its saved prompt to treat this approved SDD as authoritative and to continue from the exact committed checkpoint.
+- Single next task: implement approved schema-v1 normalization + RFC 8785 SHA-256 fingerprinting and duplicate-ID conflict detection, with unit and MySQL integration tests.
+
+
 ## Latest continuation checkpoint — Challenge SDD revised, awaiting approval
 
 - Active branch: `feature/backend-foundation`. Start-of-execution HEAD: `be8bcccd5d0d1ea0ad37800fe58a5f922c4f6855`. All changes remain on this branch; `main` is untouched.
