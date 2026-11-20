@@ -1,6 +1,6 @@
 # Specification: Identity EventBridge Fan-out Infrastructure
 
-**Status:** CloudFormation template and static lint workflow added; AWS deployment and live delivery verification remain blocked on environment access and consumer readiness.  
+**Status:** CloudFormation template, cfn-lint workflow and seven resource/security contract tests are committed and CI-verified; AWS deployment and live delivery verification remain blocked on environment access and consumer readiness.  
 **Authority:** AGENTS.md, ADR-0001, ADR-0002, service ownership, communication conventions, Identity lifecycle event envelope and employee-status projection contract.
 
 ## Resource contract

@@ -20,7 +20,7 @@
 - [x] Add a dedicated GitHub Actions cfn-lint and Python contract-test workflow.
 - [x] Pair outer detail type and inner event type with EventBridge `$or` branches to reject mismatched lifecycle envelopes.
 - [x] Add Python contract tests for exact queue/DLQ counts, event pairing, IAM/queue policy scope, SSE-SQS and alarm coverage.
-- [ ] Confirm cfn-lint and Python contract tests pass in GitHub Actions.
+- [x] Confirm cfn-lint 1.61.0 and all seven Python contract tests pass in GitHub Actions run #2 (44705631530).
 
 ## Live deployment — blocked
 
