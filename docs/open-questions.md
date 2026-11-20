@@ -13,8 +13,8 @@ The initial nine product questions are resolved using the project owner's instru
 9. **Employee lifecycle — RESOLVED:** HR controls activation/deactivation; trusted HRIS feed may act on HR's behalf. Organization Admins may request changes but cannot override HR or reactivate employees. Record actor/source, employee, old/new status, UTC time, reason code, optional note and correlation ID. Publish versioned lifecycle events through the transactional outbox; receiving services maintain local status projections. Until downstream revocation is implemented, already-issued stateless JWTs may remain usable by receiving services until expiry. Login must deny an employee whose Identity record is already inactive.
 
 ## Remaining implementation work (not unresolved product questions)
-- HR provisioning/HRIS integration and authorized lifecycle commands.
-- Lifecycle audit persistence and transactional outbox publication.
+- HR provisioning/invitation and HRIS integration.
+- HR-authorized lifecycle commands, immutable audit persistence and transactional outbox record creation are implemented in Identity (CI run #72). EventBridge dispatch remains pending.
 - Downstream employee-status projections and access revocation.
 - Retention/deletion jobs and privacy/legal sign-off.
 - Insight cohort suppression and anti-differencing controls.
