@@ -23,7 +23,7 @@ public sealed class OutboxDispatcherOptions
     public int MaxRetryDelaySeconds { get; set; } = 300;
     public int SystemicFailurePauseSeconds { get; set; } = 30;
 
-    public void Validate(string? eventBusName, string? awsRegion)
+    public void Validate(string eventBusName, string awsRegion)
     {
         if (!Enabled) return;
         if (string.IsNullOrWhiteSpace(eventBusName))
