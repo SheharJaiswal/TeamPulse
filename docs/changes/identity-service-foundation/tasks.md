@@ -16,6 +16,6 @@
 - [x] Run restore/build/test with .NET 8 SDK and MySQL Testcontainers in GitHub Actions.
 - [x] Record CI evidence: run #27 passed 28 tests, 0 failed, 0 skipped; Release build had 0 warnings and 0 errors; Docker Compose validation passed.
 - [x] Enforce development-only access to the bootstrap registration endpoint; non-Development environments return 404 without mutation, covered by unit and MySQL-backed integration tests.
-- [x] Approve HR-controlled account lifecycle baseline in ADR-0002; deny login for existing inactive employee records with generic 401, no password-hasher calls, no hash upgrade and no token issuance.
+- [x] Approve HR-controlled account lifecycle baseline in ADR-0002; deny login for existing inactive employee records with generic 401 after password verification, without hash upgrade, persistence or token issuance.
 - [ ] Implement HR provisioning/lifecycle commands, transition audit, transactional outbox and downstream status projections as separate SDD increments.
 - [x] Upgrade password hashes on successful login when ASP.NET Core returns SuccessRehashNeeded; persist the replacement before issuing the JWT, with unit and MySQL-backed legacy-hash coverage.
