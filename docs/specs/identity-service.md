@@ -12,7 +12,7 @@ Employee persistence; HR-controlled provisioning baseline; password-based login;
 - Identity owns canonical TeamPulse employee, organization, team and role records. HRIS is the authoritative upstream employment/membership source when integrated; authorized HR administrators maintain records until then.
 - Production onboarding is HR-controlled provisioning/invitation only. Public self-registration is disabled outside Development.
 - Passwords use ASP.NET Core password hashing.
-- An employee whose IsActive flag is false cannot authenticate. The login response is the same generic 401 used for other invalid credentials. The submitted password is verified, but inactive employees are rejected before hash upgrade, persistence or token issuance.
+- An employee whose IsActive flag is false cannot authenticate. The login response is the same generic 401 used for other invalid credentials. Identity verifies the submitted password for an existing account, but does not generate/upgrade a password hash, persist changes or issue a token for an inactive employee.
 - When password verification reports SuccessRehashNeeded for an active employee, Identity upgrades and persists the password hash before issuing an access token. A failed persistence operation must not result in token issuance.
 - JWT contains sub, email, name, organization_id, team_id and role.
 - Receiving services validate issuer, audience, signature and expiry.
@@ -30,7 +30,7 @@ Employee persistence; HR-controlled provisioning baseline; password-based login;
 - IA-06: Anonymous access to /me is denied.
 - IA-07: /me returns claims from validated token.
 - IA-08: Missing, blank, whitespace-only or fewer than 32 UTF-8 bytes signing key prevents startup with an actionable configuration error.
-- IA-09: Inactive employees receive the generic login 401; password hashing/rehashing, persistence writes and token issuance are skipped.
+- IA-09: Inactive employees receive the generic login 401; submitted password verification is performed, but hash generation/rehashing, persistence writes and token issuance are skipped.
 - IA-10: POST /api/identity/register is available only when the API host environment is Development; in all other environments it returns HTTP 404 and performs no persistence.
 - IA-11: When the password hasher returns SuccessRehashNeeded for valid active credentials, the service stores a replacement hash before issuing a token; Success does not rewrite the hash, Failed remains a generic 401, and persistence failure prevents token issuance.
 
