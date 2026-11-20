@@ -3,12 +3,14 @@ Updated: 2026-11-20
 
 ## Continuation checkpoint
 - Active branch: feature/backend-foundation.
-- Previous checkpoint: 436f4ad2e28f9fec6f2a566c2c5611fddb9d7e5f.
-- Current live HEAD before this checkpoint update: 71e2208442ec0224726185f8cae1a15da9767135.
+- Previous checkpoint: 8277b642608651f517f1ff7479fa7aa842c60a6d.
+- Current live HEAD before this checkpoint update: c71fe14349537eebc288330eefbd7e7fdbf13663.
 - Latest code commit covered by CI: 71e2208442ec0224726185f8cae1a15da9767135.
+- Latest completed documentation increment: c71fe14349537eebc288330eefbd7e7fdbf13663.
 - Product policy baseline: ADR-0002; all nine initial open questions are resolved using the project owner's instruction to apply recommended MVP defaults.
 - Completed SDD increment: docs/changes/identity-inactive-login-guard/.
 - Completed SDD increment: docs/changes/identity-hr-admin-bootstrap/.
+- Completed SDD increment: docs/changes/identity-hr-employee-lifecycle/ (approved contract and design; implementation pending).
 - Resume rule: fetch live branch HEAD, inspect recent commits/tree and read this checkpoint before choosing work. Continue the single next task; do not recreate completed work.
 
 ## Completed
@@ -36,14 +38,17 @@ Updated: 2026-11-20
 - [x] Added docs/runbooks/identity-hr-admin-bootstrap.md.
 
 ## In progress
-- [ ] Create the next SDD change for HR-authorized employee provisioning and lifecycle commands, including transition audit and transactional outbox semantics.
+- [ ] Implement the approved HR-only employee lifecycle command slice: JWT role authorization, idempotent activate/deactivate transitions, lifecycle version, atomic audit and outbox persistence, EF migration, and unit/MySQL integration tests.
 
 ## Blockers / decisions
-- No unresolved product questions remain for MVP design.
+- The nine initial MVP product questions remain resolved by ADR-0002. Additional implementation decisions discovered during the lifecycle SDD are tracked in docs/open-questions.md.
 - Retention defaults (90-day evidence, 12-month identifiable activity/participation, 24-month security/admin audit, up to 5-year anonymized aggregates) require jurisdiction-specific privacy/legal sign-off before production.
-- HRIS integration, HR provisioning/lifecycle commands, lifecycle audit persistence, transactional outbox publication and downstream employee-status projections remain future implementation work, not completed capabilities.
+- HR lifecycle commands, audit/outbox persistence and downstream employee-status projections are specified but not implemented. The outbox is a durable hand-off only; no EventBridge delivery is claimed.
 - The bootstrap utility is implemented but has not been executed against a production database; no claim is made that a production HR administrator account exists.
-- The bootstrap utility does not implement employee invitations, password reset/change, HTTP provisioning endpoints, HRIS integration or lifecycle audit/outbox publication.
+- Employee invitation/provisioning is deferred pending invitation delivery, token expiry, initial credential activation and password setup decisions. The bootstrap utility creates only the first HrAdmin.
+- Organization Admins have no direct employee profile/lifecycle write access. Their HR request-intake workflow is not yet defined. HR role catalogue/elevated-role assignment and HRIS service authentication are also open.
+- EventBridge bus name, dispatcher lease/retry/DLQ and delivery monitoring are not configured; the current SDD increment intentionally stops at transactional outbox persistence. Receiving-service projections and global revocation remain future work.
+- Retention defaults (90-day evidence, 12-month identifiable activity/participation, 24-month security/admin audit, up to 5-year anonymized aggregates) still require jurisdiction-specific privacy/legal sign-off before production.
 - This automation environment has no .NET SDK or Docker CLI; local restore/build/test/Compose execution is unavailable. GitHub Actions is the Docker-capable verification environment.
 
 ## Verification evidence
@@ -59,6 +64,11 @@ Updated: 2026-11-20
 - MySQL 8.4 Testcontainers integration tests, including concurrent bootstrap invocations, ran successfully.
 - Test artifact: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44680155186/artifacts/14603449182.
 - The initial implementation run #48 passed all 49 tests but exposed three warnings; run #51 is the clean verification after aligning EF Core package versions and correcting xUnit analyzer usage.
+
+### Current documentation-only increment
+- SDD commit: c71fe14349537eebc288330eefbd7e7fdbf13663.
+- Added proposal/spec/design/tasks for HR-authorized lifecycle commands; updated Identity specification, API contract, event envelope/catalog and open questions; added the downstream employee-status projection contract.
+- No source code or migrations changed in this increment. The GitHub Actions workflow ignores docs/**, so no CI run was triggered. No build, test or Compose command was executed in this environment.
 
 ### Prior verified baseline
 - CI run #31: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44675962776.
@@ -83,15 +93,23 @@ Updated: 2026-11-20
 - docs/changes/identity-hr-admin-bootstrap/{proposal,spec,design,tasks}.md
 - docs/runbooks/identity-hr-admin-bootstrap.md
 
+## Changed files in the HR lifecycle SDD increment
+- docs/changes/identity-hr-employee-lifecycle/{proposal,spec,design,tasks}.md
+- docs/contracts/employee-status-projection.md
+- docs/contracts/identity-api.md
+- docs/contracts/event-envelope.md
+- docs/events/initial-event-catalog.md
+- docs/specs/identity-service.md
+- docs/open-questions.md
+
 ## Latest run record
-- Reconciled live branch at 436f4ad2e28f9fec6f2a566c2c5611fddb9d7e5f and read the engineering instructions, status, Identity specs/contracts, project/solution structure, persistence model and Testcontainers fixture.
-- Created the HR administrator bootstrap SDD before implementation.
-- Implemented a dedicated console utility; no new microservice or public HTTP endpoint was added.
-- Used a MySQL named advisory lock on the same open connection, then a ReadCommitted transaction, to serialize first-admin creation. Existing active or inactive HrAdmin records block another bootstrap. Duplicate normalized email is rejected.
-- Added a runbook that requires protected environment injection, an already-migrated Identity database, explicit operator invocation and removal/rotation of the one-time secret.
-- First CI run #48 completed with 49 passing tests but 3 warnings (EF Core Relational version conflict and two xUnit analyzer warnings). Fixed by aligning EF Core/Relational package references to 8.0.11, avoiding a record-generated password ToString, and using Count assertions in the concurrency test.
-- Final CI run #51 completed successfully on 71e2208442ec0224726185f8cae1a15da9767135: restore passed; Release build had 0 warnings/0 errors; Compose validation passed; 49 tests passed, 0 failed, 0 skipped.
-- The only subsequent commits in this checkpoint are documentation updates; the workflow ignores docs-only changes.
+- Reconciled the live branch at 8277b642608651f517f1ff7479fa7aa842c60a6d, inspected recent commits and the recursive repository tree, and read AGENTS.md, README.md, project status, open questions, ADR-0002, Identity service specification, service ownership, communication conventions, API/event contracts, Identity persistence/security code and existing tests.
+- Confirmed the HR administrator bootstrap SDD and implementation are complete; CI run #51 passed 49 tests with a clean Release build and Compose validation.
+- Created the HR lifecycle SDD before changing any source code. The approved implementation scope is the HR-only status transition command plus atomic audit/outbox persistence in Identity.
+- Documented field ownership: HR owns canonical employee identity fields; Organization Admins cannot directly write employee profile or lifecycle state and may only request HR changes through a workflow that remains undefined.
+- Added event schema v1 and a monotonic lifecycle-version projection contract to protect consumers against duplicate/out-of-order delivery.
+- Explicitly deferred employee invitation/provisioning, role catalogue/elevation, HRIS authentication, Organization Admin request intake, EventBridge dispatch and downstream consumer implementation because their required product/deployment decisions or service code are not yet available.
+- SDD files committed as c71fe14349537eebc288330eefbd7e7fdbf13663. This was a documentation-only increment; no CI run was triggered and no new checks are claimed.
 
 ## Single next task
-Create an SDD proposal/spec/design/tasks for HR-authorized employee provisioning and lifecycle commands. Define how the bootstrapped HrAdmin role is authorized, which fields can be changed by HR versus Organization Admin, atomic lifecycle audit persistence and outbox publication, event schema/versioning, idempotency and failure behavior, and the contract for downstream employee-status projections. Then implement only the approved scoped increment on feature/backend-foundation, add unit and MySQL integration tests, run GitHub Actions, and update this checkpoint with exact evidence. Keep main untouched.
+Implement the approved HR-only lifecycle command slice on feature/backend-foundation. Add role-protected deactivate/reactivate endpoints, validated actor attribution, idempotency and concurrency guards, lifecycle version, immutable audit and transactional outbox records in one EF Core transaction, plus a checked-in migration. Add unit, API authorization and MySQL Testcontainers tests; run GitHub Actions and record exact results. Do not implement employee invitations, role/profile mutation, Organization Admin request intake, HRIS or EventBridge dispatch in this slice. Keep main untouched.
