@@ -147,12 +147,11 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         Assert.Null(redelivered);
     }
 
-
     [Fact]
     public async Task Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck()
     {
-        const string committedBody = "{\\"eventId\\":\\"commit-before-ack\\"}";
-        const string sentinelBody = "{\\"eventId\\":\\"after-replay\\"}";
+        const string committedBody = "{\"eventId\":\"commit-before-ack\"}";
+        const string sentinelBody = "{\"eventId\":\"after-replay\"}";
         var processor = new CommitBeforeAckReplayProcessor(committedBody, sentinelBody);
         var status = await StartConsumerAsync(processor, reconnectDelayMilliseconds: 250);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
