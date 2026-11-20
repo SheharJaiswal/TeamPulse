@@ -240,7 +240,7 @@ public sealed class OutboxDispatcherLoggingAcceptanceTests
     private sealed class SingleMessageOutboxStore(OutboxDispatchMessage message) : IOutboxMessageStore
     {
         private int _claimCount;
-        public TaskCompletionSource SnapshotObserved { get; } =
+        public TaskCompletionSource<bool> SnapshotObserved { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<IReadOnlyList<OutboxDispatchMessage>> ClaimBatchAsync(
@@ -269,7 +269,7 @@ public sealed class OutboxDispatcherLoggingAcceptanceTests
 
         public Task<OutboxQueueSnapshot> GetQueueSnapshotAsync(CancellationToken cancellationToken)
         {
-            SnapshotObserved.TrySetResult();
+            SnapshotObserved.TrySetResult(true);
             return Task.FromResult(new OutboxQueueSnapshot(0, null, 0, 0, 1));
         }
     }
@@ -376,17 +376,13 @@ public sealed class OutboxDispatcherReplayIntegrationTests : IClassFixture<MySql
             1, TimeSpan.FromMilliseconds(200), CancellationToken.None));
 
         var requests = new List<PutEventsRequest>();
-        var publishCount = 0;
         var eventBridge = new Mock<IAmazonEventBridge>();
         eventBridge.Setup(service => service.PutEventsAsync(
                 It.IsAny<PutEventsRequest>(), It.IsAny<CancellationToken>()))
             .Callback<PutEventsRequest, CancellationToken>((request, _) => requests.Add(request))
-            .ReturnsAsync(() => new PutEventsResponse
+            .ReturnsAsync(new PutEventsResponse
             {
-                Entries = new List<PutEventsResultEntry>
-                {
-                    new() { EventId = "accepted-" + Interlocked.Increment(ref publishCount) }
-                }
+                Entries = new List<PutEventsResultEntry> { new() { EventId = "accepted" } }
             });
 
         var publisher = new EventBridgePublisher(eventBridge.Object, "teampulse-nonprod");
