@@ -211,3 +211,21 @@ Updated: 2026-11-20
 ## Single next task
 
 Implement the Habit Employee Status Projection consumer exactly as specified in `docs/changes/habit-employee-status-projection-consumer/`: create the Habit Clean Architecture projects; add the Habit-owned MySQL database and checked-in EF migration applied at startup; implement atomic eventId inbox/projection persistence with strictly newer lifecycleVersion handling; add the local RabbitMQ manual-ack consumer, bounded retry and Habit DLQ; and cover the behavior with unit, MySQL 8.4 and RabbitMQ Testcontainers tests. Do not add Habit product features, AWS/SQS dependencies or global token-revocation claims.
+
+
+### Final CI verification — Habit projection core
+
+- Final verified implementation commit: `16f498a69840d107944cc77a24e27137684583d5`.
+- GitHub Actions .NET 8 CI run #93: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44731041383 — success.
+- Exact executed commands and results:
+  - `dotnet restore backend/TeamPulse.sln` — passed.
+  - `dotnet build backend/TeamPulse.sln --configuration Release --no-restore` — passed; 0 warnings, 0 errors.
+  - `docker compose config --quiet` — passed.
+  - `docker compose up -d --wait --wait-timeout 90 rabbitmq` — passed; broker health check succeeded.
+  - `docker compose exec -T rabbitmq rabbitmqctl list_queues name --no-table-headers` — executed; workflow asserted all five existing service queues.
+  - `docker compose exec -T rabbitmq rabbitmqctl list_exchanges name type --no-table-headers` — executed; workflow asserted `teampulse.domain.events`.
+  - `python -m unittest discover -s infra/rabbitmq/tests -v` — 4 passed.
+  - `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"` — 112 passed, 0 failed, 0 skipped (12 Habit, 100 Identity). Habit MySQL 8.4 Testcontainers migration/repeat, rollback, eventId duplicate, stale/equal and concurrent N/N+1 tests passed.
+- CI correction history: initial core commit `a17bae7` failed build because Habit.API lacked the configuration namespace for `GetConnectionString`; fixed in `2e7b96d`. The next successful build exposed one MSB3277 EF Relational 8.0.2/8.0.11 assembly conflict; aligned the direct relational dependency to 8.0.11 in `97ae87c`. Final run #93 passed with zero warnings/errors. Added rollback test and projection-reader assertion in `16f498a`, verified by the final run.
+- Local execution environment: `dotnet --info` — exit 127 (dotnet not installed); `docker --version` — exit 127 (Docker CLI not installed); `git --version` — 2.47.3. CI is the source of build/test/Compose evidence for this run.
+- No Habit RabbitMQ consumer, Habit DLQ, SQS/EventBridge adapter or AWS deployment is claimed complete. Those remain the single next implementation increment and deferred cloud work respectively.

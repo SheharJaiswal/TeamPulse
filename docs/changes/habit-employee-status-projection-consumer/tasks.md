@@ -17,18 +17,19 @@
 - [x] Add checked-in EF Core/Pomelo migration and model snapshot; apply migrations at Habit host startup.
 - [ ] Add RabbitMQ consumer with manual acknowledgements, one in-flight delivery per channel and reconnect behavior.
 - [ ] Add bounded retry handling and Habit-owned quorum queue/DLX/DLQ local topology.
-- [ ] Add safe structured logs, configuration validation and health endpoints.
+- [x] Add Habit database liveness/readiness endpoints; readiness checks only the Habit-owned database.
+- [ ] Add consumer-specific configuration validation and safe delivery logging with the RabbitMQ adapter.
 
 ## Verification
 
 - [x] Add unit tests for envelope validation and transition mapping; MySQL integration tests for eventId deduplication and strict lifecycleVersion ordering (CI execution pending).
 - [ ] Run MySQL 8.4 Testcontainers migration, duplicate and concurrent-version tests (CI execution pending).
 - [ ] Run RabbitMQ Testcontainers acknowledgement, redelivery, DLQ and reconnect tests.
-- [ ] Validate Compose configuration and actual local Habit queue/DLQ topology.
-- [ ] Run full solution restore, Release build and test workflow.
+- [x] Validate Docker Compose configuration and the existing shared RabbitMQ exchange/five-queue topology; Habit-owned quorum queue/DLQ topology remains part of the consumer increment.
+- [x] Run full solution restore, Release build and test workflow (CI run #93: 112 passed, 0 failed, 0 skipped; 0 build warnings/errors).
 - [x] Review project references and EF model: Habit references no Identity project and has no cross-service foreign key.
 - [x] Update README and project checkpoint; no new business questions were introduced.
-- [ ] Commit the coherent implementation to feature/backend-foundation only.
+- [x] Commit the coherent persistence/application increment to feature/backend-foundation only.
 
 ## Acceptance mapping
 
@@ -55,3 +56,15 @@
 - The atomic MySQL upsert compares the incoming lifecycleVersion against the stored version in the database; the inbox marker is inserted in the same transaction. Duplicate eventId conflicts are isolated to the inbox insert and returned as Duplicate.
 - Added processor unit tests, MySQL 8.4 Testcontainers tests for startup/repeated migration, duplicate event IDs, stale events and concurrent N/N+1 processing. Full CI execution is pending.
 - Remaining implementation is the RabbitMQ consumer, acknowledgement/reconnect behavior, bounded retries and Habit-owned quorum DLQ topology.
+
+
+## Verification result — Habit projection core
+
+- GitHub Actions .NET CI run #93: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44731041383
+- `dotnet restore backend/TeamPulse.sln`: passed.
+- `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: passed, 0 warnings and 0 errors.
+- `docker compose config --quiet`: passed.
+- `docker compose up -d --wait --wait-timeout 90 rabbitmq`: passed; existing exchange and five service queues verified.
+- `python -m unittest discover -s infra/rabbitmq/tests -v`: 4 passed.
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 112 passed (12 Habit, 100 Identity), 0 failed, 0 skipped. Habit MySQL 8.4 Testcontainers migration/repeat, inbox rollback, duplicate, stale and concurrent-version tests passed.
+- Remaining unchecked implementation and verification tasks are specifically the Habit RabbitMQ consumer, manual acknowledgement/reconnect, bounded retry and Habit-owned quorum DLQ topology/tests.
