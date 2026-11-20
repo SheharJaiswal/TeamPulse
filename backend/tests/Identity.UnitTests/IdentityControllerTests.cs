@@ -136,6 +136,31 @@ public sealed class IdentityControllerTests
     }
 
     [Fact]
+    public async Task Login_WhenEmployeeIsInactive_ReturnsGenericUnauthorizedWithoutHashingOrToken()
+    {
+        var repository = new FakeEmployeeRepository();
+        var employee = CreateEmployee("employee@example.test", "legacy-password-hash");
+        typeof(Employee).GetProperty(nameof(Employee.IsActive))!.SetValue(employee, false);
+        repository.Seed(employee);
+        var hasher = new ConfigurablePasswordHasher(
+            PasswordVerificationResult.SuccessRehashNeeded, "must-not-be-used");
+        var tokenService = new FakeTokenService(() => repository.SaveChangesCalls);
+        var controller = CreateController(repository, hasher, tokenService: tokenService);
+
+        var result = await controller.Login(
+            new LoginRequest("employee@example.test", ValidPassword),
+            CancellationToken.None);
+
+        var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result.Result);
+        Assert.Equal("Invalid email or password.", GetMessage(unauthorized));
+        Assert.Equal(0, hasher.VerifyCalls);
+        Assert.Equal(0, hasher.HashCalls);
+        Assert.Equal(0, repository.SaveChangesCalls);
+        Assert.Equal(0, tokenService.Calls);
+        Assert.Equal("legacy-password-hash", employee.PasswordHash);
+    }
+
+    [Fact]
     public async Task Login_WhenCredentialsAreValid_NormalizesEmailAndReturnsToken()
     {
         var repository = new FakeEmployeeRepository();
@@ -333,6 +358,7 @@ public sealed class IdentityControllerTests
         }
 
         public int HashCalls { get; private set; }
+        public int VerifyCalls { get; private set; }
 
         public string HashPassword(Employee user, string password)
         {
@@ -343,7 +369,11 @@ public sealed class IdentityControllerTests
         public PasswordVerificationResult VerifyHashedPassword(
             Employee user,
             string hashedPassword,
-            string providedPassword) => _verificationResult;
+            string providedPassword)
+        {
+            VerifyCalls++;
+            return _verificationResult;
+        }
     }
 
     private sealed class FakeTokenService : ITokenService
