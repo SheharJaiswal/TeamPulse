@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Identity.Application.Contracts;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Identity.Domain.Entities;
 using Identity.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -123,6 +125,59 @@ public sealed class IdentityApiIntegrationTests : IClassFixture<MySqlIntegration
         Assert.Equal("org-integration", me.GetProperty("organizationId").GetString());
         Assert.Equal("team-integration", me.GetProperty("teamId").GetString());
         Assert.Equal("Employee", me.GetProperty("role").GetString());
+    }
+
+    [Fact]
+    public async Task Login_WhenLegacyPasswordHashIsVerified_UpgradesAndPersistsCurrentHashBeforeReturningToken()
+    {
+        var email = $"legacy-{Guid.NewGuid():N}@teampulse.test";
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+
+        var legacyHasher = new PasswordHasher<Employee>(Options.Create(new PasswordHasherOptions
+        {
+            CompatibilityMode = PasswordHasherCompatibilityMode.IdentityV2
+        }));
+
+        var originalEmployee = new Employee(
+            Guid.NewGuid(), email, email.ToUpperInvariant(), "Legacy Employee",
+            "placeholder", "org-integration", "team-integration", "Employee");
+        var legacyHash = legacyHasher.HashPassword(originalEmployee, Password);
+        var legacyEmployee = new Employee(
+            originalEmployee.Id, originalEmployee.Email, originalEmployee.NormalizedEmail,
+            originalEmployee.DisplayName, legacyHash, originalEmployee.OrganizationId,
+            originalEmployee.TeamId, originalEmployee.Role);
+
+        await using (var seedScope = factory.Services.CreateAsyncScope())
+        {
+            var database = seedScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            database.Employees.Add(legacyEmployee);
+            await database.SaveChangesAsync();
+        }
+
+        var currentHasher = new PasswordHasher<Employee>();
+        Assert.Equal(
+            PasswordVerificationResult.SuccessRehashNeeded,
+            currentHasher.VerifyHashedPassword(legacyEmployee, legacyHash, Password));
+
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/identity/login", new LoginRequest(email, Password));
+
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var auth = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.NotNull(auth);
+        Assert.False(string.IsNullOrWhiteSpace(auth.AccessToken));
+
+        await using var verifyScope = factory.Services.CreateAsyncScope();
+        var verifyDatabase = verifyScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var persistedEmployee = await verifyDatabase.Employees.SingleAsync(
+            x => x.NormalizedEmail == email.ToUpperInvariant());
+
+        Assert.NotEqual(legacyHash, persistedEmployee.PasswordHash);
+        Assert.Equal(
+            PasswordVerificationResult.Success,
+            currentHasher.VerifyHashedPassword(
+                persistedEmployee, persistedEmployee.PasswordHash, Password));
     }
 
     private static Task<HttpResponseMessage> RegisterAsync(HttpClient client, string email)

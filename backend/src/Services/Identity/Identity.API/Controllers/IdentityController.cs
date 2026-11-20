@@ -60,9 +60,23 @@ public sealed class IdentityController(
             return BadRequest(new{message="Email and password are required."});
         var employee=await employees.GetByNormalizedEmailAsync(request.Email.Trim().ToUpperInvariant(),ct);
         if(employee is null)return Unauthorized(new{message="Invalid email or password."});
-        var result=passwordHasher.VerifyHashedPassword(employee,employee.PasswordHash,request.Password);
-        if(result==PasswordVerificationResult.Failed)
-            return Unauthorized(new{message="Invalid email or password."});
+        var result = passwordHasher.VerifyHashedPassword(employee, employee.PasswordHash, request.Password);
+        if (result == PasswordVerificationResult.Failed)
+            return Unauthorized(new { message = "Invalid email or password." });
+
+        if (result == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            // Persist the upgraded hash before issuing a token. If persistence fails, login fails closed.
+            var upgradedHash = passwordHasher.HashPassword(employee, request.Password);
+            employee.UpdatePasswordHash(upgradedHash);
+            await employees.SaveChangesAsync(ct);
+        }
+        else if (result != PasswordVerificationResult.Success)
+        {
+            // Treat unknown hasher results as authentication failures.
+            return Unauthorized(new { message = "Invalid email or password." });
+        }
+
         return Ok(CreateResponse(employee));
     }
 

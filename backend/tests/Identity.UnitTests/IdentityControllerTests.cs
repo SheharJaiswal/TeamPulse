@@ -132,6 +132,7 @@ public sealed class IdentityControllerTests
 
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result.Result);
         Assert.Equal("Invalid email or password.", GetMessage(unauthorized));
+        Assert.Equal(0, repository.SaveChangesCalls);
     }
 
     [Fact]
@@ -153,6 +154,71 @@ public sealed class IdentityControllerTests
         Assert.Equal(TestToken, auth.AccessToken);
         Assert.Equal("Bearer", auth.TokenType);
         Assert.Equal(employee.Id, auth.Employee.EmployeeId);
+    }
+
+    [Fact]
+    public async Task Login_WhenHasherRequestsRehash_PersistsUpgradedHashBeforeIssuingToken()
+    {
+        var repository = new FakeEmployeeRepository();
+        var employee = CreateEmployee("employee@example.test", "legacy-password-hash");
+        repository.Seed(employee);
+        var hasher = new ConfigurablePasswordHasher(
+            PasswordVerificationResult.SuccessRehashNeeded, "upgraded-password-hash");
+        var tokenService = new FakeTokenService(() => repository.SaveChangesCalls);
+        var controller = CreateController(repository, hasher, tokenService: tokenService);
+
+        var result = await controller.Login(
+            new LoginRequest("employee@example.test", ValidPassword),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("upgraded-password-hash", employee.PasswordHash);
+        Assert.Equal(1, hasher.HashCalls);
+        Assert.Equal(1, repository.SaveChangesCalls);
+        Assert.Equal(1, tokenService.Calls);
+        Assert.True(tokenService.WasCalledAfterPersistence);
+    }
+
+    [Fact]
+    public async Task Login_WhenHasherReportsSuccess_DoesNotRewritePasswordHash()
+    {
+        var repository = new FakeEmployeeRepository();
+        var employee = CreateEmployee("employee@example.test", "current-password-hash");
+        repository.Seed(employee);
+        var hasher = new ConfigurablePasswordHasher(
+            PasswordVerificationResult.Success, "unexpected-replacement-hash");
+        var tokenService = new FakeTokenService(() => repository.SaveChangesCalls);
+        var controller = CreateController(repository, hasher, tokenService: tokenService);
+
+        var result = await controller.Login(
+            new LoginRequest("employee@example.test", ValidPassword),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("current-password-hash", employee.PasswordHash);
+        Assert.Equal(0, hasher.HashCalls);
+        Assert.Equal(0, repository.SaveChangesCalls);
+        Assert.Equal(1, tokenService.Calls);
+        Assert.False(tokenService.WasCalledAfterPersistence);
+    }
+
+    [Fact]
+    public async Task Login_WhenPasswordHashUpgradeCannotBePersisted_DoesNotIssueToken()
+    {
+        var repository = new FakeEmployeeRepository { ThrowOnSaveChanges = true };
+        var employee = CreateEmployee("employee@example.test", "legacy-password-hash");
+        repository.Seed(employee);
+        var hasher = new ConfigurablePasswordHasher(
+            PasswordVerificationResult.SuccessRehashNeeded, "upgraded-password-hash");
+        var tokenService = new FakeTokenService(() => repository.SaveChangesCalls);
+        var controller = CreateController(repository, hasher, tokenService: tokenService);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.Login(
+            new LoginRequest("employee@example.test", ValidPassword),
+            CancellationToken.None));
+
+        Assert.Equal(1, repository.SaveChangesCalls);
+        Assert.Equal(0, tokenService.Calls);
     }
 
     [Theory]
@@ -177,13 +243,14 @@ public sealed class IdentityControllerTests
 
     private static IdentityController CreateController(
         FakeEmployeeRepository repository,
-        PasswordHasher<Employee>? hasher = null,
-        string environmentName = "Development")
+        IPasswordHasher<Employee>? hasher = null,
+        string environmentName = "Development",
+        FakeTokenService? tokenService = null)
     {
         return new IdentityController(
             repository,
             hasher ?? new PasswordHasher<Employee>(),
-            new FakeTokenService(),
+            tokenService ?? new FakeTokenService(),
             new FakeHostEnvironment(environmentName),
             Options.Create(new JwtOptions
             {
@@ -221,6 +288,7 @@ public sealed class IdentityControllerTests
         public List<Employee> Employees { get; } = [];
         public int AddCalls { get; private set; }
         public int SaveChangesCalls { get; private set; }
+        public bool ThrowOnSaveChanges { get; set; }
 
         public void Seed(Employee employee) => Employees.Add(employee);
 
@@ -244,13 +312,60 @@ public sealed class IdentityControllerTests
         public Task SaveChangesAsync(CancellationToken cancellationToken)
         {
             SaveChangesCalls++;
+            if (ThrowOnSaveChanges)
+                throw new InvalidOperationException("Simulated persistence failure.");
+
             return Task.CompletedTask;
         }
     }
 
+    private sealed class ConfigurablePasswordHasher : IPasswordHasher<Employee>
+    {
+        private readonly PasswordVerificationResult _verificationResult;
+        private readonly string _replacementHash;
+
+        public ConfigurablePasswordHasher(
+            PasswordVerificationResult verificationResult,
+            string replacementHash)
+        {
+            _verificationResult = verificationResult;
+            _replacementHash = replacementHash;
+        }
+
+        public int HashCalls { get; private set; }
+
+        public string HashPassword(Employee user, string password)
+        {
+            HashCalls++;
+            return _replacementHash;
+        }
+
+        public PasswordVerificationResult VerifyHashedPassword(
+            Employee user,
+            string hashedPassword,
+            string providedPassword) => _verificationResult;
+    }
+
     private sealed class FakeTokenService : ITokenService
     {
-        public string CreateAccessToken(Employee employee) => TestToken;
+        private readonly Func<int>? _saveChangesCount;
+
+        public FakeTokenService(Func<int>? saveChangesCount = null)
+        {
+            _saveChangesCount = saveChangesCount;
+        }
+
+        public int Calls { get; private set; }
+        public bool WasCalledAfterPersistence { get; private set; }
+
+        public string CreateAccessToken(Employee employee)
+        {
+            Calls++;
+            if (_saveChangesCount is not null)
+                WasCalledAfterPersistence = _saveChangesCount() > 0;
+
+            return TestToken;
+        }
     }
 }
 

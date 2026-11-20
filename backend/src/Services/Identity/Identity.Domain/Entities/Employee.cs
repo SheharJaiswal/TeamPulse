@@ -22,4 +22,12 @@ public sealed class Employee
     public string Role { get; private set; } = "Employee";
     public bool IsActive { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
+
+    public void UpdatePasswordHash(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required.", nameof(passwordHash));
+
+        PasswordHash = passwordHash;
+    }
 }
