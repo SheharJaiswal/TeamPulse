@@ -46,7 +46,10 @@ jobs:
       - name: Validate Docker Compose configuration
         run: docker compose config --quiet
 
-      - name: Test (includes MySQL 8.4 Testcontainers integration tests)
+      - name: Validate local RabbitMQ topology
+        run: python -m unittest discover -s infra/rabbitmq/tests -v
+
+      - name: Test (includes MySQL 8.4 and RabbitMQ Testcontainers integration tests)
         run: dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"
 
       - name: Upload test results

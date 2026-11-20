@@ -41,23 +41,42 @@ var dispatcherOptions = builder.Configuration.GetSection(OutboxDispatcherOptions
     .Get<OutboxDispatcherOptions>() ?? new OutboxDispatcherOptions();
 if (dispatcherOptions.Enabled)
 {
-    var busName = builder.Configuration["EventBridge:BusName"];
-    var awsRegion = builder.Configuration["AWS:Region"] ??
-        Environment.GetEnvironmentVariable("AWS_REGION");
-    dispatcherOptions.Validate(busName, awsRegion);
-
+    dispatcherOptions.ValidateGeneral();
     builder.Services.Configure<OutboxDispatcherOptions>(
         builder.Configuration.GetSection(OutboxDispatcherOptions.SectionName));
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddScoped<IOutboxMessageStore, OutboxMessageStore>();
-    builder.Services.AddSingleton<IAmazonEventBridge>(_ =>
-        new AmazonEventBridgeClient(new AmazonEventBridgeConfig
-        {
-            Timeout = TimeSpan.FromSeconds(20)
-        }));
-    builder.Services.AddSingleton<IEventPublisher>(serviceProvider =>
-        new EventBridgePublisher(
-            serviceProvider.GetRequiredService<IAmazonEventBridge>(), busName!));
+
+    switch (dispatcherOptions.Transport.Trim().ToLowerInvariant())
+    {
+        case "rabbitmq":
+            var rabbitMqOptions = builder.Configuration.GetSection(RabbitMqOptions.SectionName)
+                .Get<RabbitMqOptions>() ?? new RabbitMqOptions();
+            rabbitMqOptions.Validate();
+            builder.Services.AddSingleton(rabbitMqOptions);
+            builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+            break;
+
+        case "eventbridge":
+            var busName = builder.Configuration["EventBridge:BusName"];
+            var awsRegion = builder.Configuration["AWS:Region"] ??
+                Environment.GetEnvironmentVariable("AWS_REGION");
+            dispatcherOptions.Validate(busName ?? string.Empty, awsRegion ?? string.Empty);
+            builder.Services.AddSingleton<IAmazonEventBridge>(_ =>
+                new AmazonEventBridgeClient(new AmazonEventBridgeConfig
+                {
+                    Timeout = TimeSpan.FromSeconds(20)
+                }));
+            builder.Services.AddSingleton<IEventPublisher>(serviceProvider =>
+                new EventBridgePublisher(
+                    serviceProvider.GetRequiredService<IAmazonEventBridge>(), busName!));
+            break;
+
+        default:
+            throw new InvalidOperationException(
+                "OutboxDispatcher:Transport must be either RabbitMq or EventBridge.");
+    }
+
     builder.Services.AddHostedService<OutboxDispatcherWorker>();
 }
 

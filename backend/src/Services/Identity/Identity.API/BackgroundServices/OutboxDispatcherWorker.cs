@@ -16,6 +16,7 @@ public sealed class OutboxDispatcherOptions
 {
     public const string SectionName = "OutboxDispatcher";
     public bool Enabled { get; set; }
+    public string Transport { get; set; } = "EventBridge";
     public int PollIntervalSeconds { get; set; } = 2;
     public int BatchSize { get; set; } = 10;
     public int LeaseDurationSeconds { get; set; } = 60;
@@ -24,19 +25,25 @@ public sealed class OutboxDispatcherOptions
     public int MaxRetryDelaySeconds { get; set; } = 300;
     public int SystemicFailurePauseSeconds { get; set; } = 30;
 
-    public void Validate(string eventBusName, string awsRegion)
+    public void ValidateGeneral()
     {
         if (!Enabled) return;
-        if (string.IsNullOrWhiteSpace(eventBusName))
-            throw new InvalidOperationException("EventBridge:BusName is required when the outbox dispatcher is enabled.");
-        if (string.IsNullOrWhiteSpace(awsRegion))
-            throw new InvalidOperationException("AWS_REGION (or AWS:Region) is required when the outbox dispatcher is enabled.");
         if (PollIntervalSeconds is < 1 or > 300 || BatchSize is < 1 or > 10 ||
             LeaseDurationSeconds is < 30 or > 600 || MaxAttempts is < 1 or > 100 ||
             BaseRetryDelaySeconds is < 1 or > 300 ||
             MaxRetryDelaySeconds < BaseRetryDelaySeconds || MaxRetryDelaySeconds > 3600 ||
             SystemicFailurePauseSeconds is < 5 or > 900)
             throw new InvalidOperationException("Outbox dispatcher configuration contains an out-of-range value.");
+    }
+
+    public void Validate(string eventBusName, string awsRegion)
+    {
+        ValidateGeneral();
+        if (!Enabled) return;
+        if (string.IsNullOrWhiteSpace(eventBusName))
+            throw new InvalidOperationException("EventBridge:BusName is required when the EventBridge outbox transport is enabled.");
+        if (string.IsNullOrWhiteSpace(awsRegion))
+            throw new InvalidOperationException("AWS_REGION (or AWS:Region) is required when the EventBridge outbox transport is enabled.");
     }
 }
 

@@ -1,0 +1,98 @@
+{
+  "rabbit_version": "4.1.0",
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "teampulse.domain.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": []
+    }
+  ],
+  "queues": [
+    {
+      "name": "teampulse.habit.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": []
+    },
+    {
+      "name": "teampulse.challenge.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": []
+    },
+    {
+      "name": "teampulse.event-tracking.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": []
+    },
+    {
+      "name": "teampulse.insight.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": []
+    },
+    {
+      "name": "teampulse.notification.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": []
+    }
+  ],
+  "bindings": [
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.habit.events",
+      "destination_type": "queue",
+      "routing_key": "identity.employee.lifecycle",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.challenge.events",
+      "destination_type": "queue",
+      "routing_key": "identity.employee.lifecycle",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.event-tracking.events",
+      "destination_type": "queue",
+      "routing_key": "identity.employee.lifecycle",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.insight.events",
+      "destination_type": "queue",
+      "routing_key": "identity.employee.lifecycle",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.notification.events",
+      "destination_type": "queue",
+      "routing_key": "identity.employee.lifecycle",
+      "arguments": []
+    }
+  ]
+}
