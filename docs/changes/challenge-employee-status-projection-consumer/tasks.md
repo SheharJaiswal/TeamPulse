@@ -8,7 +8,11 @@
 - [x] Record inactive employee historical-read versus mutation policy as an open question for later Challenge API work.
 - [x] Map CEPS-01 through CEPS-15 to implementation and verification.
 
-## Implementation — complete
+## Approval gate — blocked
+- [ ] Owner reviews and explicitly approves or requests changes to this SDD package. The proposal requires approval before implementation; no approval record is present in the repository or prior continuation context.
+- Existing Challenge implementation was found on the live branch. Treat it as existing repository state, not evidence that the SDD was approved. Do not add further Challenge feature scope until approval is recorded.
+
+## Implementation already present on the live branch — approval gate pending
 - [x] Add Challenge.API, Challenge.Application, Challenge.Domain and Challenge.Infrastructure with inward-only references.
 - [x] Add Challenge.UnitTests and register all projects in backend/TeamPulse.sln.
 - [x] Add Challenge-owned MySQL database initialization/grant and connection configuration.
@@ -26,11 +30,13 @@
 - [ ] MySQL 8.4 Testcontainers: clean and repeated host-startup migration, exact schema/model assertions and projection reader.
 - [x] RabbitMQ Testcontainers: processor-completion acknowledgement boundary, poison-message DLQ, transient retry success and retry exhaustion.
 - [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay.
-- [ ] RabbitMQ Testcontainers: broker unavailable at startup and established-session loss/reconnect. A startup-reconnect test has been authored and is included in the next CI run; established-session loss/redelivery remains outstanding.
+- [ ] RabbitMQ Testcontainers: broker unavailable at startup and established-session loss/reconnect. Startup-reconnect coverage is authored in `ChallengeRabbitMqConsumerReconnectTests.cs` and awaits CI #105; established-session loss/redelivery remains outstanding.
 - [ ] Verify database readiness is independent of RabbitMQ and consumer health is separately observable through host integration tests.
 - [x] Review project references, database ownership, minimal projection/inbox fields and absence of Challenge business-state mutation.
 - [x] Extend RabbitMQ topology contract tests for Challenge quorum queue, delivery limit and dedicated DLQ binding.
-- [x] Baseline CI run #103 passed for commit `121bba186bb46df139f7e49def8082ab9d541afa`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 144 .NET tests (20 Challenge, 24 Habit, 100 Identity). Re-run after the persistence hardening commit.
+- [x] Baseline CI run #103 passed for commit `121bba186bb46df139f7e49def8082ab9d541afa`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 144 .NET tests (20 Challenge, 24 Habit, 100 Identity).
+- [x] CI run #104 passed for `65d4a3bd82294f484dd136f4788975f26da85651`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology checks, 10 Python topology tests and 146 .NET tests (22 Challenge, 24 Habit, 100 Identity).
+- [ ] CI run #105 is verifying `787bf97b1fcd4083eb6c59bc0595363145e3c83e`. Restore, Release build, Compose validation and RabbitMQ startup/topology checks passed; the full test step is still running. Do not mark the startup-reconnect test verified until this run completes.
 - [x] Update README and communication documentation with Challenge local run/configuration guidance and the consumer transport contract.
 
 ## Deferred

@@ -1,6 +1,6 @@
 # Specification: Challenge Employee Status Projection Consumer
 
-**Status:** Proposed; implementation not started.  
+**Status:** Proposed; explicit owner approval is not recorded. An initial implementation is already present on the live branch; further implementation remains paused until this SDD package is reviewed and approved.  
 **Authority:** AGENTS.md, ADR-0001/0002, docs/architecture/service-ownership.md, docs/architecture/communication.md, docs/contracts/event-envelope.md and docs/contracts/employee-status-projection.md.
 
 ## Service boundary

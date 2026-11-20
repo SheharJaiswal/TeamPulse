@@ -1,5 +1,7 @@
 # Proposal: Challenge Employee Status Projection Consumer
 
+**Status:** Proposed — awaiting explicit owner approval.
+
 ## Context
 Identity owns employee lifecycle state and publishes schema-v1 EmployeeDeactivated and EmployeeReactivated events through its transactional outbox. The shared Employee Status Projection Contract v1 requires each receiving service to maintain a minimal, version-aware local projection and deduplicate at-least-once delivery. Habit is the first completed consumer. Challenge is the next receiving service in the six-service architecture; its local RabbitMQ queue exists, but no Challenge service project exists on this branch.
 
