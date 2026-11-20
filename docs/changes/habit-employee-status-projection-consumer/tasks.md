@@ -24,9 +24,9 @@
 
 - [x] Add unit tests for envelope validation/transition mapping and MySQL integration tests for duplicate eventId, stale/equal and strict lifecycleVersion ordering.
 - [x] Run MySQL 8.4 Testcontainers migration/repeated startup, inbox rollback, duplicate, stale/equal and concurrent N/N+1 version tests (CI run #93).
-- [ ] Run a broker-connection-loss redelivery test after an established session; verify the first MySQL inbox/projection transaction commits before broker loss, the unacknowledged message is redelivered after reconnect, the replay is deduplicated by the same eventId, and the projection remains unchanged.
+- [x] Run a broker-connection-loss redelivery test after an established session; verify the first MySQL inbox/projection transaction commits before broker loss, the unacknowledged message is redelivered after reconnect, the replay is deduplicated by the same eventId, and the projection remains unchanged (CI run #100).
 - [x] Validate Docker Compose configuration and shared RabbitMQ exchange/five service queues plus Habit quorum queue/DLX/DLQ definitions; actual Compose startup is covered by CI.
-- [x] Run full solution restore, Release build and test workflow (CI run #93: 112 passed, 0 failed, 0 skipped; 0 build warnings/errors).
+- [x] Run full solution restore, Release build and test workflow (CI run #100: 124 passed, 0 failed, 0 skipped; 0 build warnings/errors).
 - [x] Review project references and EF model: Habit references no Identity project and has no cross-service foreign key.
 - [x] Update README and project checkpoint; no new business questions were introduced.
 - [x] Commit the coherent persistence/application increment to feature/backend-foundation only.
@@ -55,7 +55,7 @@
 - Implemented the Habit Clean Architecture projects, application envelope validator/processor, minimal projection and inbox entities, EF Core/Pomelo context, transactional store, initial migration/model snapshot, startup migration and database-only health checks.
 - The atomic MySQL upsert compares the incoming lifecycleVersion against the stored version in the database; the inbox marker is inserted in the same transaction. Duplicate eventId conflicts are isolated to the inbox insert and returned as Duplicate.
 - Added processor unit tests, MySQL 8.4 Testcontainers tests for startup/repeated migration, inbox rollback, duplicate event IDs, stale/equal events and concurrent N/N+1 processing. GitHub Actions run #93 passed all 12 Habit tests.
-- RabbitMQ consumer, manual acknowledgement, bounded retry, startup reconnect and Habit-owned quorum DLQ topology are implemented and verified; only established-session broker-loss redelivery remains unchecked.
+- RabbitMQ consumer, manual acknowledgement, bounded retry, startup reconnect, Habit-owned quorum DLQ topology and established-session broker-loss redelivery are implemented and verified (CI run #100).
 
 
 ## Verification result — Habit projection core
@@ -77,7 +77,7 @@
 - Added a separate `/health/consumer` signal; database readiness remains independent of broker availability.
 - Updated only Habit's local queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; added a Habit-owned quorum DLQ and direct DLX. Other service queues remain unchanged.
 - Added RabbitMQ Testcontainers tests for ack-after-processor-completion, invalid-envelope DLQ routing, transient retry success, retry exhaustion and startup reconnect; added eight Python topology contract tests and extended CI to assert the Habit DLQ and DLX exist.
-- Broker-connection-loss redelivery after an established consumer session is not yet covered by a dedicated Testcontainers test and remains unchecked. Existing MySQL tests continue to verify the processor's atomic inbox/projection commit.
+- Established-session broker-loss redelivery is covered by `HabitRabbitMqBrokerLossIntegrationTests`; the test gates acknowledgement after the real MySQL transaction, restarts RabbitMQ on the same host port, verifies the same eventId is redelivered and deduplicated, and checks that one inbox row and the version-1 inactive projection remain.
 
 
 ## Verification result — Habit RabbitMQ consumer
@@ -89,4 +89,4 @@
 - `python -m unittest discover -s infra/rabbitmq/tests -v`: 8 passed.
 - `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 123 passed (23 Habit, 100 Identity), 0 failed, 0 skipped.
 - The transient retry integration test wraps a `TimeoutException` in an `InvalidOperationException`, verifying the classifier walks inner exceptions as EF Core does.
-- Remaining unchecked verification: broker connection loss after an established session with an unacknowledged message, followed by redelivery and idempotent processing.
+- Established-session broker-loss redelivery and idempotent replay are verified by CI run #100; no Habit consumer verification item remains unchecked.

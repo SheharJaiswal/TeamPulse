@@ -284,3 +284,27 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - Restore passed. Release build failed before Compose/tests because the test refactor changed from a primary constructor to an explicit constructor but one `mysqlFixture` reference was not changed to the stored `_mysqlFixture` field (CS0103 at line 69). This is a test-only compile error and does not indicate a production code failure.
 - Corrective action: use the stored fixture field consistently, then rerun the full workflow. The stable host-port binding and nullable-warning fix remain in place; HESP-11 remains unchecked.
 - The single next task remains to obtain a clean build and successful established-session broker-loss redelivery test before marking Habit complete.
+
+
+## Final verification result — established-session Habit broker-loss redelivery
+
+- GitHub Actions .NET CI run #100: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44747812182 (completed successfully for commit `520e277fdc66161f982c86cd70144499abc59172`).
+- `dotnet restore backend/TeamPulse.sln`: passed.
+- `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: passed; 0 warnings and 0 errors.
+- `docker compose config --quiet`: passed.
+- `docker compose up -d --wait --wait-timeout 90 rabbitmq`: passed; shared local RabbitMQ started and required service queues/exchanges were verified.
+- `python -m unittest discover -s infra/rabbitmq/tests -v`: 8 passed.
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 124 passed (24 Habit, 100 Identity), 0 failed, 0 skipped. MySQL 8.4 and RabbitMQ Testcontainers scenarios passed.
+- The new broker-loss test uses a fixed host port so the consumer retains the same endpoint through stop/start. It commits the real Habit inbox/projection transaction, pauses before acknowledgement, stops RabbitMQ, releases the first delivery after session loss, restarts the broker, and verifies a second invocation of the same message returns Duplicate. The final MySQL assertions confirm one inbox row and the unchanged inactive/version-1 projection.
+- CI history: run #98 first exposed a dynamic-endpoint reconnect-test issue and a nullable warning; run #99 exposed a test-only fixture field compile error; run #100 passed after fixing the test endpoint and fixture reference. No production consumer change was required.
+- Local execution limitation: `dotnet --info` and `docker --version` are unavailable in this execution environment (exit 127); all commands above were executed by GitHub Actions, not locally.
+
+## Current continuation checkpoint — Habit consumer complete
+
+- Completed: Habit projection SDD, service projects, MySQL/Pomelo schema and checked-in migration, startup migration, transactional inbox/projection, RabbitMQ consumer, manual ack, bounded retries, DLQ, startup reconnect, established-session broker-loss redelivery and idempotent replay.
+- In progress: none.
+- Blocked/deferred: AWS EventBridge/SQS provisioning, workload IAM and CloudWatch remain deferred until the owner configures cloud infrastructure. This does not block local RabbitMQ development. No credentials or AWS resources are required for current development.
+- Changed files in the final acceptance increment: `backend/tests/Habit.UnitTests/HabitRabbitMqBrokerLossIntegrationTests.cs`, `README.md`, `docs/changes/habit-employee-status-projection-consumer/tasks.md`, `docs/changes/habit-employee-status-projection-consumer/spec.md` and `docs/project-status.md`.
+- Relevant commits: `c2ed3a2` (initial broker-loss test), `92c2a37` (stable broker endpoint and README correction), `520e277` (fixture reference correction). Final documentation checkpoint commit is recorded below after this update is committed.
+- Exact verification and CI evidence are recorded above. The latest code CI is run #100, 124/124 .NET tests plus 8/8 RabbitMQ topology tests, zero build warnings/errors.
+- Single next task: create the SDD package for the Challenge service's employee-status projection consumer using the existing employee-status contract and Challenge service ownership. Do not copy Habit's schema blindly or invent Challenge-specific eligibility/business rules; record any contract gaps in `docs/open-questions.md` before implementation.

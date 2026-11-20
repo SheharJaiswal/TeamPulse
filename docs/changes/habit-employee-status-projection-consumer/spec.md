@@ -1,6 +1,6 @@
 # Specification: Habit Employee Status Projection Consumer
 
-**Status:** Ready for implementation under the existing approved contract.  
+**Status:** Implemented and CI-verified (GitHub Actions run #100); acceptance criteria HESP-01–14 have corresponding implementation and verification evidence.  
 **Authority:** AGENTS.md, docs/architecture/service-ownership.md, docs/architecture/communication.md, docs/contracts/event-envelope.md and docs/contracts/employee-status-projection.md.
 
 ## Service and persistence boundary
