@@ -221,6 +221,29 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Consumer_ReconnectsAndDeadLettersRedeliveryAfterDeadLetterRouteIsRestored()
+    {
+        const string body = "{\\"eventId\\":\\"dlq-route-restored\\"}";
+        var status = await StartConsumerAsync(
+            new FixedOutcomeProcessor(ProjectionProcessingOutcome.Invalid),
+            reconnectDelayMilliseconds: 1000);
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+
+        await _channel!.QueueUnbindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
+        await PublishAsync(body);
+
+        // A mandatory unroutable DLQ publish must end the session without acknowledging
+        // the original. Restore the route before the bounded reconnect attempt.
+        await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
+        await _channel.QueueBindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+
+        var deadLetter = await WaitForDeadLetterAsync();
+        Assert.Equal(body, deadLetter.Body);
+        Assert.Equal("InvalidEvent", deadLetter.Classification);
+    }
+
+    [Fact]
     public async Task Consumer_RetriesTransientFailureThenAcknowledges()
     {
         var processor = new TransientThenSuccessProcessor();

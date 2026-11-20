@@ -1,6 +1,20 @@
 # Project Status
 Updated: 2026-11-21
 
+## Latest continuation checkpoint — session-owned teardown after DLQ/connection failure (CI pending)
+
+- CI #112 for `acd34c9fa35fa34c77be4bcdfd8aac150e2c98fd` failed. Restore and Release build passed; Release build had 0 warnings/errors. Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. The .NET suite had 162/165 tests pass (38/41 Challenge, 24 Habit, 100 Identity). Two Challenge tests for failed mandatory DLQ publication timed out waiting for consumer disconnection; the commit-before-ack replay test timed out waiting for reconnect after broker restart. [CI run #112](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44831788475).
+- The failing DLQ path awaited `channel.CloseAsync` from inside its own `ReceivedAsync` callback. This couples callback completion to channel shutdown. The focused correction hands the failure to the session owner instead: the callback returns without ack, the session cancels/drains the callback, and session-owned channel/connection disposal causes broker redelivery.
+- Added explicit RabbitMQ connection/channel shutdown notifications to end a session promptly while retaining channel-state polling as a fallback. New callbacks are refused once the session-end signal is set.
+- Added a Testcontainers scenario that removes the DLQ binding, verifies the session ends on mandatory publish failure, restores the binding, and verifies the original message is redelivered and dead-lettered after reconnect.
+- The existing commit-before-ack broker-stop/restart test remains the acceptance test for established-session cancellation, replay as Duplicate and prefetch release. No CEPS-11 or CEPS-14 checkbox is closed; all changed behavior awaits CI.
+- Updated the approved SDD design/tasks with session-owned teardown ordering and CI #112 evidence. The current increment is limited to the Challenge lifecycle projection transport.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+- Scope remains projection-only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially; privacy/legal sign-off remains a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
 ## Latest continuation checkpoint — drain in-flight callback before broker-session reconnect (CI pending)
 
 - CI #111 for `8c975629dfb8dcba5f324c0bf90a7d532c0eb738` failed: restore, Release build, Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; the .NET suite had 164/165 tests pass (40/41 Challenge, 24 Habit, 100 Identity). `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck` timed out at the post-restart connected-state wait (test line 172). [CI run #111](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44822510001).

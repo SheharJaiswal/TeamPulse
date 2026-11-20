@@ -83,6 +83,25 @@ public sealed class ChallengeRabbitMqConsumer(
                 publisherConfirmationTrackingEnabled: true),
             stoppingToken);
 
+        // Shutdown notifications and callback failures are handed back to the session owner.
+        // The ReceivedAsync callback must never await closing its own consumer channel.
+        var sessionEnded = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.ConnectionShutdownAsync += (_, _) =>
+        {
+            sessionEnded.TrySetResult(true);
+            return Task.CompletedTask;
+        };
+        channel.ChannelShutdownAsync += (_, _) =>
+        {
+            sessionEnded.TrySetResult(true);
+            return Task.CompletedTask;
+        };
+        deadLetterChannel.ChannelShutdownAsync += (_, _) =>
+        {
+            sessionEnded.TrySetResult(true);
+            return Task.CompletedTask;
+        };
+
         // A broker-session loss must cancel in-flight callbacks as well as end the
         // connection loop. This releases the old session so the hosted service can reconnect.
         using var sessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
@@ -102,7 +121,7 @@ public sealed class ChallengeRabbitMqConsumer(
             {
                 // Do not begin new work once this broker session is ending. The delivery
                 // remains unacknowledged and is recovered when the channel closes.
-                if (sessionEnding)
+                if (sessionEnding || sessionEnded.Task.IsCompleted)
                     return;
 
                 callbackCompletion = new TaskCompletionSource<bool>(
@@ -112,7 +131,20 @@ public sealed class ChallengeRabbitMqConsumer(
 
             try
             {
-                await HandleDeliveryAsync(channel, deadLetterChannel, delivery, sessionToken);
+                try
+                {
+                    await HandleDeliveryAsync(channel, deadLetterChannel, delivery, sessionToken, sessionEnded);
+                }
+                catch (Exception exception)
+                {
+                    // Any unexpected callback failure is escalated to the session owner.
+                    // Channel disposal happens only after this callback has unwound.
+                    logger.LogWarning(
+                        "Challenge delivery callback failed for message {MessageId} ({ErrorType}); ending the broker session.",
+                        delivery.BasicProperties.MessageId,
+                        exception.GetType().Name);
+                    sessionEnded.TrySetResult(true);
+                }
             }
             finally
             {
@@ -142,7 +174,8 @@ public sealed class ChallengeRabbitMqConsumer(
             while (!stoppingToken.IsCancellationRequested &&
                    connection.IsOpen &&
                    channel.IsOpen &&
-                   deadLetterChannel.IsOpen)
+                   deadLetterChannel.IsOpen &&
+                   !sessionEnded.Task.IsCompleted)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(250), stoppingToken);
             }
@@ -183,7 +216,8 @@ public sealed class ChallengeRabbitMqConsumer(
         IChannel channel,
         IChannel deadLetterChannel,
         BasicDeliverEventArgs delivery,
-        CancellationToken sessionToken)
+        CancellationToken sessionToken,
+        TaskCompletionSource<bool> sessionEnded)
     {
         try
         {
@@ -251,20 +285,14 @@ public sealed class ChallengeRabbitMqConsumer(
         }
         catch (Exception exception)
         {
-            // If DLQ publication/confirmation or the source acknowledgement fails, close the
-            // consumer channel so the original delivery remains eligible for redelivery.
+            // If DLQ publication/confirmation or source acknowledgement fails, ask the
+            // session owner to tear down this channel after the callback returns. Awaiting
+            // CloseAsync here would make the ReceivedAsync callback wait on its own shutdown.
             logger.LogWarning(
-                "Challenge could not complete delivery handling for message {MessageId} ({ErrorType}); closing the channel for redelivery.",
+                "Challenge could not complete delivery handling for message {MessageId} ({ErrorType}); ending the broker session for redelivery.",
                 delivery.BasicProperties.MessageId,
                 exception.GetType().Name);
-            try
-            {
-                await channel.CloseAsync(cancellationToken: CancellationToken.None);
-            }
-            catch
-            {
-                // The connection may already be closed; broker-side unacked delivery recovery applies.
-            }
+            sessionEnded.TrySetResult(true);
         }
     }
 
