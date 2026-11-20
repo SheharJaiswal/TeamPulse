@@ -67,8 +67,8 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
 
-        var first = SendDeactivateAsync(client, employeeId, "same-reason", "same-key");
-        var second = SendDeactivateAsync(client, employeeId, "  same-reason  ", "same-key");
+        var first = SendDeactivateAsync(client, employeeId, "same-key", "same-reason");
+        var second = SendDeactivateAsync(client, employeeId, "same-key", "  same-reason  ");
         var responses = await Task.WhenAll(first, second);
 
         Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
