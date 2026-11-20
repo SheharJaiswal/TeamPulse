@@ -276,3 +276,11 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 123 passed, 1 failed, 0 skipped (Identity 100/100; Habit 23/24). The new established-session test failed only at the post-restart reconnect wait; the first database commit, broker-loss detection and acknowledgement gate were reached.
 - Corrective attempt: bind the RabbitMQ test container to a stable host port (following the existing startup-reconnect test pattern), reuse the same URI across stop/start, and assert the mapped URI remains stable. Keep HESP-11 unchecked until the corrected workflow passes. This is a test-harness correction; no production consumer behavior is changed without evidence.
 - The test is not considered complete yet. The single next task remains to pass the established-session broker-loss test and full CI, then record the verified result.
+
+
+### CI correction — stable broker endpoint compile attempt
+
+- GitHub Actions run #99: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44747658220.
+- Restore passed. Release build failed before Compose/tests because the test refactor changed from a primary constructor to an explicit constructor but one `mysqlFixture` reference was not changed to the stored `_mysqlFixture` field (CS0103 at line 69). This is a test-only compile error and does not indicate a production code failure.
+- Corrective action: use the stored fixture field consistently, then rerun the full workflow. The stable host-port binding and nullable-warning fix remain in place; HESP-11 remains unchecked.
+- The single next task remains to obtain a clean build and successful established-session broker-loss redelivery test before marking Habit complete.

@@ -66,7 +66,7 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests
         await OpenPublisherChannelAsync();
         await DeclareTopologyAsync();
 
-        _apiFactory = mysqlFixture.CreateFactory();
+        _apiFactory = _mysqlFixture.CreateFactory();
         _apiClient = _apiFactory.CreateClient();
     }
 
