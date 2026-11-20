@@ -1,6 +1,17 @@
 # Project Status
 Updated: 2026-11-21
 
+## Latest continuation checkpoint — commit-before-ack replay scenario added (CI pending)
+
+- Verified CI #108 for `3702c9a04186d304ca8b6ae0e5244cdfe262a105`: Release build passed with 0 warnings/errors; Docker Compose validation and RabbitMQ startup/topology passed; all 11 Python topology tests passed; all 164 .NET tests passed (40 Challenge, 24 Habit, 100 Identity), with 0 failures and 0 skipped. [CI run #108](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44805490633).
+- Added a RabbitMQ Testcontainers commit-before-ack scenario. Its processor test double records the first event as committed, pauses before returning to the consumer, and the test stops/restarts the durable broker during that window. The same delivery must be replayed and return `Duplicate`; a subsequent sentinel delivery proves the prefetch slot was released after the replay acknowledgement.
+- This is transport/idempotent-replay coverage only; the test double models the committed store result, while MySQL duplicate fingerprint behavior remains covered by the existing persistence integration tests. The new scenario is authored but not yet CI-verified; CEPS-11 remains unchecked until CI succeeds.
+- Next: verify CI #109 for this test. After it passes, address established-session broker-loss/reconnect and unacknowledged-delivery recovery without duplicating the startup-reconnect test.
+- Local .NET SDK and Docker CLI remain unavailable in this execution environment; no local build/test is claimed.
+- Scope remains the owner-approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially, with privacy/legal sign-off still a production prerequisite. AWS/EventBridge/SQS/CloudWatch remain deferred until owner cloud setup.
+- Branch `feature/backend-foundation` only; `main` untouched.
+
+
 ## Latest continuation checkpoint — classified retry-exhaustion and terminal failures implemented (CI pending)
 
 - CI #107 passed for implementation commit `24c13c8c5fc72c4c041be1d862cf203662adddf9`: Release build passed with 0 warnings/errors; Docker Compose validation and RabbitMQ startup/topology checks passed; all 11 Python topology tests passed; all 155 .NET tests passed (31 Challenge, 24 Habit, 100 Identity), with 0 failures and 0 skipped. [CI run #107](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44795560333).

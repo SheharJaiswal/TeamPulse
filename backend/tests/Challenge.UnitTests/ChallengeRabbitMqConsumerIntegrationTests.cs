@@ -147,6 +147,40 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         Assert.Null(redelivered);
     }
 
+
+    [Fact]
+    public async Task Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck()
+    {
+        const string committedBody = "{\\"eventId\\":\\"commit-before-ack\\"}";
+        const string sentinelBody = "{\\"eventId\\":\\"after-replay\\"}";
+        var processor = new CommitBeforeAckReplayProcessor(committedBody, sentinelBody);
+        var status = await StartConsumerAsync(processor, reconnectDelayMilliseconds: 250);
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+
+        await PublishAsync(committedBody);
+        await processor.FirstCommitCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // The processor has recorded its inbox/projection commit but deliberately has not
+        // returned, so the consumer cannot yet acknowledge the source delivery.
+        await _container.StopAsync();
+        await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
+        processor.AllowFirstAttemptToReturn.TrySetResult(true);
+
+        // Restart the same durable broker. The unacknowledged delivery must be redelivered.
+        await _container.StartAsync();
+        await OpenTestChannelAsync();
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+        await processor.DuplicateReplayObserved.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+        // With prefetch=1, this sentinel can be processed only after the duplicate replay
+        // completed and its source delivery was acknowledged.
+        await PublishAsync(sentinelBody);
+        await processor.SentinelProcessed.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+        Assert.Equal(2, processor.CommittedMessageCalls);
+        Assert.Null(await _channel!.BasicGetAsync(DeadLetterQueueName, autoAck: false));
+    }
+
     [Theory]
     [InlineData(ProjectionProcessingOutcome.Invalid, "InvalidEvent")]
     [InlineData(ProjectionProcessingOutcome.UnsupportedSchemaVersion, "UnsupportedSchemaVersion")]
@@ -350,6 +384,51 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         }
 
         throw new TimeoutException("The expected consumer state was not reached.");
+    }
+
+    private sealed class CommitBeforeAckReplayProcessor(string committedBody, string sentinelBody)
+        : IEmployeeStatusProjectionProcessor
+    {
+        private int _committedMessageCalls;
+
+        public TaskCompletionSource<bool> FirstCommitCompleted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> AllowFirstAttemptToReturn { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> DuplicateReplayObserved { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> SentinelProcessed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int CommittedMessageCalls => Volatile.Read(ref _committedMessageCalls);
+
+        public async Task<ProjectionProcessingOutcome> ProcessAsync(
+            string message, CancellationToken cancellationToken)
+        {
+            if (message == committedBody)
+            {
+                var attempt = Interlocked.Increment(ref _committedMessageCalls);
+                if (attempt == 1)
+                {
+                    // Model the durable inbox/projection transaction committing before the
+                    // consumer callback is allowed to return to its BasicAck call.
+                    FirstCommitCompleted.TrySetResult(true);
+                    await AllowFirstAttemptToReturn.Task.WaitAsync(cancellationToken);
+                    return ProjectionProcessingOutcome.Applied;
+                }
+
+                DuplicateReplayObserved.TrySetResult(true);
+                return ProjectionProcessingOutcome.Duplicate;
+            }
+
+            if (message == sentinelBody)
+            {
+                SentinelProcessed.TrySetResult(true);
+                return ProjectionProcessingOutcome.Applied;
+            }
+
+            throw new InvalidOperationException("Unexpected message in commit-before-ack replay test.");
+        }
     }
 
     private sealed class FixedOutcomeProcessor(ProjectionProcessingOutcome outcome)
