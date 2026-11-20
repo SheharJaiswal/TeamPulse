@@ -5,6 +5,8 @@ using Identity.Domain.Entities;
 using Identity.Infrastructure.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Identity.UnitTests;
@@ -153,14 +155,36 @@ public sealed class IdentityControllerTests
         Assert.Equal(employee.Id, auth.Employee.EmployeeId);
     }
 
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    [InlineData("Testing")]
+    public async Task Register_WhenEnvironmentIsNotDevelopment_ReturnsNotFoundWithoutMutation(
+        string environmentName)
+    {
+        var repository = new FakeEmployeeRepository();
+        var controller = CreateController(repository, environmentName: environmentName);
+
+        var result = await controller.Register(
+            new RegisterRequest("employee@example.test", ValidPassword, "Employee", "org-1", "team-1"),
+            CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Empty(repository.Employees);
+        Assert.Equal(0, repository.AddCalls);
+        Assert.Equal(0, repository.SaveChangesCalls);
+    }
+
     private static IdentityController CreateController(
         FakeEmployeeRepository repository,
-        PasswordHasher<Employee>? hasher = null)
+        PasswordHasher<Employee>? hasher = null,
+        string environmentName = "Development")
     {
         return new IdentityController(
             repository,
             hasher ?? new PasswordHasher<Employee>(),
             new FakeTokenService(),
+            new FakeHostEnvironment(environmentName),
             Options.Create(new JwtOptions
             {
                 Issuer = "TeamPulse.Identity.Tests",
@@ -182,6 +206,14 @@ public sealed class IdentityControllerTests
     {
         var message = result.Value?.GetType().GetProperty("message")?.GetValue(result.Value);
         return Assert.IsType<string>(message);
+    }
+
+    private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+        public string ApplicationName { get; set; } = "Identity.UnitTests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private sealed class FakeEmployeeRepository : IEmployeeRepository

@@ -21,6 +21,25 @@ public sealed class IdentityApiIntegrationTests : IClassFixture<MySqlIntegration
         _fixture = fixture;
     }
 
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Testing")]
+    public async Task Registration_IsUnavailableOutsideDevelopment(string environmentName)
+    {
+        var email = $"disabled-{Guid.NewGuid():N}@teampulse.test";
+        using var factory = _fixture.CreateFactory(environmentName);
+        using var client = factory.CreateClient();
+
+        var response = await RegisterAsync(client, email);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        Assert.False(await database.Employees.AnyAsync(
+            x => x.NormalizedEmail == email.ToUpperInvariant()));
+    }
+
     [Fact]
     public async Task Registration_PersistsHash_AndRejectsDuplicateNormalizedEmail()
     {

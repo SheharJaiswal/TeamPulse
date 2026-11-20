@@ -20,5 +20,6 @@ public sealed class MySqlIntegrationFixture : IAsyncLifetime
         await _database.DisposeAsync();
     }
 
-    public IdentityApiFactory CreateFactory() => new(ConnectionString);
+    public IdentityApiFactory CreateFactory(string environmentName = "Development") =>
+        new(ConnectionString, environmentName);
 }

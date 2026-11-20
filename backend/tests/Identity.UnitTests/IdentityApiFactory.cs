@@ -7,15 +7,17 @@ namespace Identity.UnitTests;
 public sealed class IdentityApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
+    private readonly string _environmentName;
 
-    public IdentityApiFactory(string connectionString)
+    public IdentityApiFactory(string connectionString, string environmentName = "Development")
     {
         _connectionString = connectionString;
+        _environmentName = environmentName;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environmentName);
         builder.UseSetting("ConnectionStrings:IdentityDatabase", _connectionString);
         builder.UseSetting("Jwt:Issuer", "TeamPulse.Identity.IntegrationTests");
         builder.UseSetting("Jwt:Audience", "TeamPulse.Services.IntegrationTests");

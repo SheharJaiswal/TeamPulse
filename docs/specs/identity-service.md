@@ -16,6 +16,7 @@ Employee persistence; password-based login; short-lived JWT issuance; authentica
 - Public self-registration is not production onboarding.
 - JWT signing keys are supplied through environment/secret-store configuration and are never committed in appsettings or source control.
 - Signing keys must contain at least 32 UTF-8 bytes; missing, blank or weak values prevent startup.
+- The bootstrap registration endpoint is enabled only in the Development host environment; it returns 404 in all other environments.
 
 ## Acceptance criteria
 - IA-01: Reject missing required fields and passwords shorter than 12 characters.
@@ -27,3 +28,4 @@ Employee persistence; password-based login; short-lived JWT issuance; authentica
 - IA-07: /me returns claims from validated token.
 - IA-08: Missing, blank, whitespace-only or fewer than 32 UTF-8 bytes signing key prevents startup with an actionable configuration error.
 - IA-09: Inactive employees cannot authenticate (when account status management is implemented).
+- IA-10: POST /api/identity/register is available only when the API host environment is Development; in all other environments it returns HTTP 404 and performs no persistence.

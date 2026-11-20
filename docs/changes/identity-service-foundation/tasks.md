@@ -15,5 +15,5 @@
 - [x] Remove the committed JWT signing-key fallback from appsettings and document environment/secret-store configuration.
 - [x] Run restore/build/test with .NET 8 SDK and MySQL Testcontainers in GitHub Actions.
 - [x] Record CI evidence: run #27 passed 28 tests, 0 failed, 0 skipped; Release build had 0 warnings and 0 errors; Docker Compose validation passed.
-- [ ] Enforce development-only access to the bootstrap registration endpoint, per the existing Identity spec and API contract.
+- [x] Enforce development-only access to the bootstrap registration endpoint; non-Development environments return 404 without mutation, covered by unit and MySQL-backed integration tests.
 - [ ] Resolve account lifecycle requirements before implementing IA-09 inactive-employee enforcement.

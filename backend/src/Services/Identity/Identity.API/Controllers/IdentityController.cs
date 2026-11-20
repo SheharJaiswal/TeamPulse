@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 
 namespace Identity.API.Controllers;
 
@@ -18,6 +19,7 @@ public sealed class IdentityController(
     IEmployeeRepository employees,
     IPasswordHasher<Employee> passwordHasher,
     ITokenService tokenService,
+    IHostEnvironment hostEnvironment,
     IOptions<JwtOptions> jwtOptions):ControllerBase
 {
     // Development bootstrap only; replace with HR invitation/provisioning before production.
@@ -25,6 +27,10 @@ public sealed class IdentityController(
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request,CancellationToken ct)
     {
+        // This endpoint is a local bootstrap only; never expose self-registration in hosted environments.
+        if (!hostEnvironment.IsDevelopment())
+            return NotFound();
+
         if(string.IsNullOrWhiteSpace(request.Email)||string.IsNullOrWhiteSpace(request.DisplayName)||
            string.IsNullOrWhiteSpace(request.OrganizationId)||string.IsNullOrWhiteSpace(request.TeamId)||
            string.IsNullOrWhiteSpace(request.Password)||request.Password.Length<12)
