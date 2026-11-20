@@ -104,8 +104,8 @@ public sealed class HrAdminBootstrapperIntegrationTests : IClassFixture<MySqlInt
 
         var results = await Task.WhenAll(first, second);
 
-        Assert.Single(results.Where(result => result == BootstrapResult.Created));
-        Assert.Single(results.Where(result => result == BootstrapResult.AdministratorAlreadyExists));
+        Assert.Equal(1, results.Count(result => result == BootstrapResult.Created));
+        Assert.Equal(1, results.Count(result => result == BootstrapResult.AdministratorAlreadyExists));
 
         await using var database = CreateDatabase();
         Assert.Equal(1, await database.Employees.CountAsync(
