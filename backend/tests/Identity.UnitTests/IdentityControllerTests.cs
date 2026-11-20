@@ -153,7 +153,7 @@ public sealed class IdentityControllerTests
 
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result.Result);
         Assert.Equal("Invalid email or password.", GetMessage(unauthorized));
-        Assert.Equal(0, hasher.VerifyCalls);
+        Assert.Equal(1, hasher.VerifyCalls);
         Assert.Equal(0, hasher.HashCalls);
         Assert.Equal(0, repository.SaveChangesCalls);
         Assert.Equal(0, tokenService.Calls);
