@@ -3,13 +3,28 @@ using Microsoft.Extensions.Configuration;
 
 namespace Identity.AdminBootstrap;
 
-public sealed record BootstrapOptions(
-    string Email,
-    string DisplayName,
-    string OrganizationId,
-    string TeamId,
-    string Password)
+public sealed class BootstrapOptions
 {
+    public BootstrapOptions(
+        string email,
+        string displayName,
+        string organizationId,
+        string teamId,
+        string password)
+    {
+        Email = email;
+        DisplayName = displayName;
+        OrganizationId = organizationId;
+        TeamId = teamId;
+        Password = password;
+    }
+
+    public string Email { get; }
+    public string DisplayName { get; }
+    public string OrganizationId { get; }
+    public string TeamId { get; }
+    public string Password { get; }
+
     public static bool TryLoad(
         IConfiguration configuration,
         out BootstrapOptions? options,
