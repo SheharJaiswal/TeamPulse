@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -18,7 +20,7 @@ using Xunit;
 
 namespace Habit.UnitTests;
 
-public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture mysqlFixture)
+public sealed class HabitRabbitMqBrokerLossIntegrationTests
     : IClassFixture<HabitMySqlFixture>, IAsyncLifetime
 {
     private const string ExchangeName = "teampulse.domain.events";
@@ -28,11 +30,26 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture my
     private const string QueueName = "teampulse.habit.events";
     private const string DeadLetterQueueName = "teampulse.habit.events.dlq";
 
-    private readonly RabbitMqContainer _rabbitMq = new RabbitMqBuilder()
-        .WithImage("rabbitmq:4.1-management")
-        .WithUsername("teampulse")
-        .WithPassword("local_rabbitmq_password")
-        .Build();
+    private readonly HabitMySqlFixture _mysqlFixture;
+    private readonly RabbitMqContainer _rabbitMq;
+    private string? _brokerUri;
+
+    public HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture mysqlFixture)
+    {
+        _mysqlFixture = mysqlFixture;
+
+        using var portListener = new TcpListener(IPAddress.Loopback, 0);
+        portListener.Start();
+        var brokerPort = ((IPEndPoint)portListener.LocalEndpoint).Port;
+        portListener.Stop();
+
+        _rabbitMq = new RabbitMqBuilder()
+            .WithImage("rabbitmq:4.1-management")
+            .WithUsername("teampulse")
+            .WithPassword("local_rabbitmq_password")
+            .WithPortBinding(brokerPort, 5672)
+            .Build();
+    }
 
     private HabitApiFactory? _apiFactory;
     private HttpClient? _apiClient;
@@ -45,6 +62,7 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture my
     public async Task InitializeAsync()
     {
         await _rabbitMq.StartAsync();
+        _brokerUri = _rabbitMq.GetConnectionString();
         await OpenPublisherChannelAsync();
         await DeclareTopologyAsync();
 
@@ -106,6 +124,7 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture my
             await Task.Delay(150);
 
             await _rabbitMq.StartAsync();
+            Assert.Equal(_brokerUri, _rabbitMq.GetConnectionString());
             await OpenPublisherChannelAsync();
             await DeclareTopologyAsync();
 
@@ -120,7 +139,7 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture my
             Assert.Equal(2, processor.CallCount);
             Assert.Equal(message, processor.FirstMessage);
             Assert.Equal(message, processor.SecondMessage);
-            Assert.True(_consumerStatus.IsConnected);
+            Assert.True(_consumerStatus!.IsConnected);
 
             var contextFactory = _apiFactory!.Services.GetRequiredService<IDbContextFactory<HabitDbContext>>();
             await using var database = await contextFactory.CreateDbContextAsync();
@@ -146,7 +165,7 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture my
         _consumerProvider = services.BuildServiceProvider();
 
         var options = HabitRabbitMqConsumerOptionsTests.ValidOptions();
-        options.Uri = _rabbitMq.GetConnectionString();
+        options.Uri = _brokerUri!;
         options.ReconnectDelayMilliseconds = 250;
         options.RetryBaseDelayMilliseconds = 1;
         options.RetryMaxDelayMilliseconds = 5;
@@ -167,7 +186,7 @@ public sealed class HabitRabbitMqBrokerLossIntegrationTests(HabitMySqlFixture my
     {
         await DisposePublisherChannelAsync();
 
-        var factory = new ConnectionFactory { Uri = new Uri(_rabbitMq.GetConnectionString()) };
+        var factory = new ConnectionFactory { Uri = new Uri(_brokerUri ?? _rabbitMq.GetConnectionString()) };
         _publisherConnection = await factory.CreateConnectionAsync("TeamPulse.Habit.BrokerLossTests");
         _publisherChannel = await _publisherConnection.CreateChannelAsync();
     }

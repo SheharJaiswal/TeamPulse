@@ -91,7 +91,7 @@ $env:ConnectionStrings__HabitDatabase = "Server=localhost;Port=3306;Database=tea
 dotnet run --project backend/src/Services/Habit/Habit.API
 ```
 
-The Habit host exposes `/health/live` and `/health/ready`; readiness checks only the Habit database. The employee-status projection processor validates schema-v1 Identity lifecycle envelopes and atomically records the minimal event inbox marker with a strictly version-increasing projection. The RabbitMQ consumer adapter is the next implementation increment; this persistence foundation does not yet consume the queue.
+The Habit host exposes `/health/live`, `/health/ready` and `/health/consumer`; database readiness checks only the Habit database. The employee-status projection processor validates schema-v1 Identity lifecycle envelopes and atomically records the minimal event inbox marker with a strictly version-increasing projection. The RabbitMQ consumer adapter is implemented with manual acknowledgements, prefetch 1, bounded transient retries, poison/exhaustion dead-lettering and reconnect handling. It remains disabled by default and must be enabled explicitly for local development as shown below.
 
 ### Automated tests
 

@@ -263,3 +263,16 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - Blockers: none for local RabbitMQ/MySQL development. AWS EventBridge/SQS and CloudWatch remain deferred until the owner configures cloud infrastructure; they are not prerequisites for this work.
 - Next task while verification is pending: complete the CI run for this exact commit, fix only any failure revealed by that run, and record the final result. Once verified, the next development task is the Challenge employee-status projection SDD.
 - Local execution limitation remains: this environment has no `.NET` SDK or Docker CLI; do not claim local build/test/Compose results. Use the Docker-capable GitHub Actions workflow as the verification source.
+
+
+### CI correction — first established-session broker-loss attempt
+
+- GitHub Actions run #98: https://github.com/SheharJaiswal/TeamPulse/actions/runs/44747085459.
+- `dotnet restore backend/TeamPulse.sln`: passed.
+- `dotnet build backend/TeamPulse.sln --configuration Release --no-restore`: build succeeded but emitted one nullable warning (CS8602) in the new test at the post-replay consumer-status assertion; the next increment removes it.
+- `docker compose config --quiet`: passed.
+- `docker compose up -d --wait --wait-timeout 90 rabbitmq`: passed; the shared local broker started and all required queues/exchanges were present.
+- `python -m unittest discover -s infra/rabbitmq/tests -v`: 8 passed.
+- `dotnet test backend/TeamPulse.sln --configuration Release --no-build --logger "trx;LogFileName=teampulse-tests.trx"`: 123 passed, 1 failed, 0 skipped (Identity 100/100; Habit 23/24). The new established-session test failed only at the post-restart reconnect wait; the first database commit, broker-loss detection and acknowledgement gate were reached.
+- Corrective attempt: bind the RabbitMQ test container to a stable host port (following the existing startup-reconnect test pattern), reuse the same URI across stop/start, and assert the mapped URI remains stable. Keep HESP-11 unchecked until the corrected workflow passes. This is a test-harness correction; no production consumer behavior is changed without evidence.
+- The test is not considered complete yet. The single next task remains to pass the established-session broker-loss test and full CI, then record the verified result.
