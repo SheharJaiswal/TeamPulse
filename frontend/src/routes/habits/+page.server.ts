@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad, Cookies } from '@sveltejs/kit';
+import type { Actions, Cookies } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 import { habitApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
 
 interface Habit {
