@@ -19,4 +19,4 @@
 - [x] Add activity history habit/date filters and a preselected habit action from habit cards.
 - [x] Preserve the same idempotency key when a submission response is ambiguous or retryable; rotate it only after acceptance.
 - [x] Verify concurrent submissions with the same employee-scoped idempotency key commit one submission and one outbox event.
-- [ ] Decide downstream event consumer and progress projection scope separately; do not infer streak/target semantics.
+- [ ] Decide downstream event consumer and progress projection scope separately; do not infer streak/target semantics. This remains a separate product/design decision and is not a blocker for the completed activity-submission vertical slice.
