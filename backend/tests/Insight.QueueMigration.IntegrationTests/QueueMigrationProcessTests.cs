@@ -81,9 +81,13 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
             Priority = 3,
             CorrelationId = "correlation-123",
             ReplyTo = "reply-queue",
+            Expiration = "60000",
             MessageId = "message-123",
+            Timestamp = new AmqpTimestamp(1_700_000_000),
             Type = "employee.lifecycle",
+            UserId = "publisher-user",
             AppId = "teampulse-tests",
+            ClusterId = "cluster-a",
             Headers = new Dictionary<string, object?> { ["x-contract-version"] = "1" }
         };
         await channel.BasicPublishAsync(string.Empty, source, true, properties, payload);
@@ -105,9 +109,13 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         Assert.Equal((byte)3, copied.BasicProperties.Priority);
         Assert.Equal("correlation-123", copied.BasicProperties.CorrelationId);
         Assert.Equal("reply-queue", copied.BasicProperties.ReplyTo);
+        Assert.Equal("60000", copied.BasicProperties.Expiration);
         Assert.Equal("message-123", copied.BasicProperties.MessageId);
+        Assert.Equal(new AmqpTimestamp(1_700_000_000), copied.BasicProperties.Timestamp);
         Assert.Equal("employee.lifecycle", copied.BasicProperties.Type);
+        Assert.Equal("publisher-user", copied.BasicProperties.UserId);
         Assert.Equal("teampulse-tests", copied.BasicProperties.AppId);
+        Assert.Equal("cluster-a", copied.BasicProperties.ClusterId);
         Assert.Equal("1", copied.BasicProperties.Headers!["x-contract-version"]);
 
         var ledgerLines = await File.ReadAllLinesAsync(ledger);
