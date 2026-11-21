@@ -2,6 +2,7 @@
 
 - Extracted mandatory publication and broker-return detection into the production `MandatoryPublisher` component; the migration copy loop now calls this component before it appends the digest ledger or acknowledges the source delivery.
 - Added a Testcontainers integration test that invokes this exact production component against a disposable RabbitMQ broker and publishes with `mandatory=true` to a non-existent destination routing key. The test asserts that the broker's Basic.Return is surfaced as a failure, without a timing-sensitive queue deletion race.
+- The same test then publishes successfully to a valid queue using the same publisher instance, confirming that a previous returned publication does not poison subsequent copy attempts.
 - Expanded successful-copy property assertions to include expiration, timestamp, user ID and cluster ID in addition to the previously covered AMQP properties, headers and body.
 - These are committed tests but remain uncompiled/unexecuted until CI runs; the local environment has no .NET SDK. No persistent/shared broker was accessed.
 
