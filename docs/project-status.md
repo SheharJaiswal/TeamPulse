@@ -1,3 +1,13 @@
+## Insight queue migration — Release build and runbook reconciliation
+
+- GitHub Actions run #222 for code commit `607ed2f64be41a3fa295045c2177c4519027fa2a` has successfully completed the Release solution build, Docker Compose validation, local RabbitMQ startup/topology verification, all Python RabbitMQ topology contract tests, and the pinned DynamoDB Local image pull.
+- The .NET test step (including the new RabbitMQ Testcontainers queue-migration tests) is still running; overall workflow status remains in progress. Do not record the full suite as passed until the job completes successfully.
+- Reviewed the runbook against the actual definitions and topology tests. Clarified at-least-once reconciliation: a crash between confirmed destination publish and source acknowledgement can create extra destination copies without a matching digest record, so exact equality between original source count, destination count and ledger digest count is not a valid invariant. The runbook now requires documenting and reconciling the duplicate window before deleting staging data.
+- The committed Insight source queue remains durable classic with no arguments and its existing lifecycle binding; the Insight DLQ remains absent in repository definitions pending approved maintenance.
+- No persistent/shared broker, MySQL, DynamoDB Local or AWS resources were changed.
+
+Updated: 2026-11-21
+
 ## Insight queue migration — CI compile correction
 
 - Inspected GitHub Actions runs #217 and #218. Both failed during the solution Release build before tests ran, with the same two RabbitMQ.Client 7.2.2 compile errors: the publish helper accepted `IReadOnlyBasicProperties` although `BasicPublishAsync` requires its generic properties type to implement `IAmqpHeader`, and the delivery-mode property requires the `DeliveryModes` enum rather than an integer.
