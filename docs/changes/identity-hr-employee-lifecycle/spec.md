@@ -114,6 +114,8 @@ The projection is a status signal, not a replacement for each service's resource
 | ILC-15 | One-character and 128-character visible-ASCII idempotency keys are accepted; control, DEL and non-ASCII characters return 400 before mutation. | MySQL API-host integration test verifies accepted boundary transitions and no mutation for rejected character classes. |
 
 | ILC-16 | Missing or non-GUID JWT `sub` claims on otherwise correctly signed HrAdmin tokens return 401 before any lifecycle mutation. | MySQL API-host integration test verifies employee status/version, lifecycle audit and correlation-scoped outbox remain unchanged. |
+| ILC-17 | A supplied X-Correlation-ID UUID is returned unchanged and persisted identically in the lifecycle audit, outbox row and event envelope. | MySQL API-host integration test compares the supplied UUID across all four representations. |
+| ILC-18 | When X-Correlation-ID is omitted, Identity generates one UUID and returns/persists that same value in the lifecycle audit, outbox row and event envelope. | MySQL API-host integration test verifies the generated UUID is non-empty and identical across all four representations. |
 
 ## Deferred work (not acceptance criteria for this increment)
 
