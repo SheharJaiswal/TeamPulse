@@ -9,11 +9,11 @@ namespace Insight.UnitTests;
 
 public sealed class DynamoDbLocalFixture : IAsyncLifetime
 {
-    private readonly DockerContainer _container = new TestcontainersBuilder<DockerContainer>()
+    private readonly IContainer _container = new ContainerBuilder()
         .WithImage("amazon/dynamodb-local:2.5.2")
         .WithPortBinding(8000, true)
         .WithCommand("-inMemory", "-sharedDb")
-        .WithWaitStrategy(Wait.ForUnixContainer().UntilExternalTcpPortIsAvailable(8000))
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(8000))
         .Build();
 
     public string ServiceUrl => $"http://{_container.Hostname}:{_container.GetMappedPublicPort(8000)}";

@@ -98,7 +98,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStoreIntegrationTests(Dynamo
 
     private static Dictionary<string, AttributeValue> ProjectionKey(Guid employeeId) => new()
     {
-        ["PK"] = new() { S = $"EMPLOYEE#{employeeId:D}".ToLowerInvariant() },
+        ["PK"] = new() { S = $"EMPLOYEE#{employeeId.ToString("D").ToLowerInvariant()}" },
         ["SK"] = new() { S = "STATUS" }
     };
 
