@@ -72,7 +72,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
   let activitiesResponse: Response;
   let employeeResponse: Response;
   try {
-    [habitsResponse, activitiesResponse] = await Promise.all([
+    [habitsResponse, activitiesResponse, employeeResponse] = await Promise.all([
       fetch(`${habitApiUrl()}/api/habits`, { headers }),
       fetch(historyUrl, { headers }),
       fetch(`${identityApiUrl()}/api/identity/me`, { headers })
