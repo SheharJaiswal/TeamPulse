@@ -62,18 +62,27 @@ public sealed class EventTrackingOutboxDispatcher(
                             result = new EventTrackingPublishResult(message.EventId, EventTrackingPublishOutcome.RetryableFailure, "MissingPublishResult");
                         var now = timeProvider.GetUtcNow().UtcDateTime;
                         if (result.Outcome == EventTrackingPublishOutcome.Accepted)
-                            await store.MarkPublishedAsync(message.EventId, message.LeaseToken, now, stoppingToken);
+                        {
+                            var marked = await store.MarkPublishedAsync(message.EventId, message.LeaseToken, now, stoppingToken);
+                            if (!marked)
+                                logger.LogWarning("Event Tracking outbox publish was accepted but its lease acknowledgement was rejected. A later retry may deliver the same EventId again. EventId={EventId}", message.EventId);
+                        }
                         else if (message.AttemptCount >= _options.MaxAttempts)
                         {
-                            await store.QuarantineAsync(message.EventId, message.LeaseToken, now, result.ErrorCode, stoppingToken);
-                            logger.LogError("Event Tracking outbox message quarantined. EventId={EventId} ErrorCode={ErrorCode}", message.EventId, result.ErrorCode);
+                            var quarantined = await store.QuarantineAsync(message.EventId, message.LeaseToken, now, result.ErrorCode, stoppingToken);
+                            if (quarantined)
+                                logger.LogError("Event Tracking outbox message quarantined. EventId={EventId} ErrorCode={ErrorCode}", message.EventId, result.ErrorCode);
+                            else
+                                logger.LogWarning("Event Tracking outbox quarantine transition was rejected. EventId={EventId}", message.EventId);
                         }
                         else
                         {
                             var exponent = Math.Min(message.AttemptCount - 1, 20);
                             var ceiling = Math.Min(_options.BaseRetryDelaySeconds * Math.Pow(2, exponent), _options.MaxRetryDelaySeconds);
                             var multiplier = result.Outcome == EventTrackingPublishOutcome.SystemicFailure ? 1d : Random.Shared.NextDouble();
-                            await store.ScheduleRetryAsync(message.EventId, message.LeaseToken, now, now.AddSeconds(Math.Max(1, ceiling * multiplier)), result.ErrorCode, stoppingToken);
+                            var retryScheduled = await store.ScheduleRetryAsync(message.EventId, message.LeaseToken, now, now.AddSeconds(Math.Max(1, ceiling * multiplier)), result.ErrorCode, stoppingToken);
+                            if (!retryScheduled)
+                                logger.LogWarning("Event Tracking outbox retry transition was rejected. EventId={EventId}", message.EventId);
                             if (result.Outcome == EventTrackingPublishOutcome.SystemicFailure)
                                 delay = TimeSpan.FromSeconds(Math.Min(_options.MaxRetryDelaySeconds, _options.BaseRetryDelaySeconds * 2));
                         }
