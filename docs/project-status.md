@@ -548,3 +548,15 @@ Updated: 2026-11-21
 - This is a test-only compile correction. The test suite did not execute in CI #138; do not treat the new RabbitMQ integration tests as verified until the next CI run succeeds.
 
 Updated: 2026-11-21
+
+## Identity lifecycle API regression checkpoint — 2026-11-21
+
+- CI #237 completed successfully against workflow/code commit `819242fe43a446fe1574e3025458d12a14331188`. The explicit pre-pull of `rabbitmq:4.0-alpine` fixed the Testcontainers image setup issue observed in CI #236.
+- Full suite: Identity 105, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **264 passed, 0 failed, 0 skipped**. The 19 Python RabbitMQ topology contract tests, Compose validation, broker startup/topology and image pulls passed. Release build: 3 warnings, 0 errors.
+- [CI #237](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902295123); [test artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902295123/artifacts/14705604839).
+- ILC-16 (missing/non-GUID JWT subject rejected before mutation) is verified by Identity 105/105.
+- Added ILC-17/18 tests for supplied and generated correlation UUID propagation across API response, lifecycle audit, outbox row and serialized event envelope. Test commit: `ff9c87b53c8943ed0719528b280304ac2e5199db`. Their CI verification is pending.
+- Next action: wait for CI on the correlation propagation test commit before adding another code increment. Preserve the existing deferrals: invitations/activation design approval, role catalogue, Organization Admin request intake, HRIS, retention/legal sign-off, EventBridge cloud provisioning and Insight queue migration operational approval.
+
+Updated: 2026-11-21
+
