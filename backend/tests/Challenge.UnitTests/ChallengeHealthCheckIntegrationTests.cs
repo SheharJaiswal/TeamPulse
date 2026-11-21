@@ -21,11 +21,6 @@ public sealed class ChallengeHealthCheckIntegrationTests(ChallengeMySqlFixture f
         services.AddDbContextFactory<ChallengeDbContext>(options =>
             options.UseMySql(fixture.ConnectionString, ServerVersion.AutoDetect(fixture.ConnectionString)));
 
-        var databaseFactoryProvider = services.BuildServiceProvider();
-        var databaseFactory = databaseFactoryProvider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
-        await using (var database = await databaseFactory.CreateDbContextAsync())
-            await database.Database.MigrateAsync();
-
         var consumerStatus = new ChallengeRabbitMqConsumerStatus();
         var consumerOptions = new ChallengeRabbitMqConsumerOptions { Enabled = true };
 
@@ -33,7 +28,8 @@ public sealed class ChallengeHealthCheckIntegrationTests(ChallengeMySqlFixture f
             .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
             .Add(new HealthCheckRegistration(
                 "challenge-database",
-                _ => new ChallengeDatabaseHealthCheck(databaseFactory),
+                sp => new ChallengeDatabaseHealthCheck(
+                    sp.GetRequiredService<IDbContextFactory<ChallengeDbContext>>()),
                 HealthStatus.Unhealthy,
                 new[] { "ready" }))
             .Add(new HealthCheckRegistration(
@@ -43,6 +39,10 @@ public sealed class ChallengeHealthCheckIntegrationTests(ChallengeMySqlFixture f
                 new[] { "consumer" }));
 
         using var provider = services.BuildServiceProvider();
+        var databaseFactory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        await using (var database = await databaseFactory.CreateDbContextAsync())
+            await database.Database.MigrateAsync();
+
         var healthChecks = provider.GetRequiredService<HealthCheckService>();
 
         var liveness = await healthChecks.CheckHealthAsync(check => check.Tags.Contains("live"));
