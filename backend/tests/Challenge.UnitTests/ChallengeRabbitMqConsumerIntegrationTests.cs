@@ -125,7 +125,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     private const string FailureClassificationHeader = "x-teampulse-failure-classification";
 
     private readonly RabbitMqContainer _container;
-    private readonly string _brokerUri;
+    private string? _brokerUri;
     private readonly List<(ChallengeRabbitMqConsumer Consumer, ServiceProvider Provider)> _consumers = new();
     private IConnection? _connection;
     private IChannel? _channel;
@@ -153,7 +153,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
-        Assert.Equal(_brokerUri, _container.GetConnectionString());
+        _brokerUri = _container.GetConnectionString();
         await OpenTestChannelAsync();
 
         await _channel!.ExchangeDeclareAsync(ExchangeName, ExchangeType.Topic, durable: true, autoDelete: false);
@@ -248,6 +248,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         // The completed-session signal is raised only after the old channels and connection
         // have been disposed. Restarting now cannot race the previous session's teardown.
         await _container.StartAsync();
+        Assert.Equal(_brokerUri, _container.GetConnectionString());
         await OpenTestChannelAsync();
         // The duplicate outcome proves a new broker session has re-established a usable consumer
         // channel. Avoid polling IsConnected here: it is a point-in-time health signal, while replay
@@ -423,7 +424,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         var provider = services.BuildServiceProvider();
 
         var options = ChallengeRabbitMqConsumerOptionsTests.ValidOptions();
-        options.Uri = _brokerUri;
+        options.Uri = _brokerUri!;
         options.MaxProcessingAttempts = maxAttempts;
         options.RetryBaseDelayMilliseconds = 1;
         options.RetryMaxDelayMilliseconds = 5;
@@ -450,7 +451,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         if (_connection is not null)
             await _connection.DisposeAsync();
 
-        var factory = new ConnectionFactory { Uri = new Uri(_brokerUri) };
+        var factory = new ConnectionFactory { Uri = new Uri(_brokerUri!) };
         _connection = await factory.CreateConnectionAsync("TeamPulse.Challenge.ConsumerTests");
         _channel = await _connection.CreateChannelAsync();
     }
