@@ -1,3 +1,16 @@
+## Latest continuation checkpoint — CI #127 passed; MySQL duplicate-race tests added
+
+- CI #127 passed for `50e844e0f01290e393187801d1391d9ec189b878`: Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology, 11 Python topology tests and all 173 .NET tests (Challenge 49, Habit 24, Identity 100), with zero failures/skips. [CI #127](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44874735877).
+- The DLQ mandatory-publish failure test now waits for `CompletedSessionCount` to advance from a baseline captured before publishing. This proves RabbitMQ channel/connection disposal has completed before checking source-queue redelivery; the corrected test passed.
+- CI #127 also passed the MySQL inbox schema/no-scheduled-cleanup assertion and the production health-check integration test proving MySQL readiness remains healthy while the RabbitMQ consumer is disconnected.
+- Added MySQL 8.4 Testcontainers coverage for concurrent same-event-ID/same-fingerprint submissions (one Applied, one Duplicate), concurrent conflicting fingerprints (one winner, one integrity violation, no overwrite), and repeated migration application/history stability. These new tests are awaiting CI verification.
+- Existing concurrent N/N+1 version ordering and transaction rollback tests passed CI #127.
+- Scope remains projection-only. Open question 19 remains unresolved. AWS EventBridge/SQS and provisioning remain deferred until owner cloud setup. No local build/test claim is made.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — CI #125 found test timing race; corrected wait added
 
 - CI #125 for code commit `7f226457ba604848a143062e2d9cb78ebb36d09a` failed only one test: `Consumer_LeavesOriginalUnacknowledgedWhenDeadLetterPublishCannotBeConfirmed`. Release build passed with 0 warnings/errors, Docker Compose validation and RabbitMQ topology passed, all 11 Python topology tests passed; .NET totals were Challenge 48/49, Habit 24/24 and Identity 100/100. [CI #125](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44874441259).

@@ -67,6 +67,73 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
     }
 
     [Fact]
+    public async Task ProcessAsync_ConcurrentSameEventIdAndFingerprint_CommitsOneInboxRecord()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        var store = new EmployeeStatusProjectionStore(factory);
+        var lifecycleEvent = CreateEvent(Guid.NewGuid(), Guid.NewGuid(), 1, false);
+
+        var results = await Task.WhenAll(
+            Task.Run(() => store.ProcessAsync(lifecycleEvent, DateTime.UtcNow, CancellationToken.None)),
+            Task.Run(() => store.ProcessAsync(lifecycleEvent, DateTime.UtcNow, CancellationToken.None)));
+
+        Assert.Equal(1, results.Count(result => result == ProjectionProcessingOutcome.Applied));
+        Assert.Equal(1, results.Count(result => result == ProjectionProcessingOutcome.Duplicate));
+
+        await using var database = await factory.CreateDbContextAsync();
+        Assert.Equal(1, await database.ProcessedDomainEvents.CountAsync(x => x.EventId == lifecycleEvent.EventId));
+        var projection = await database.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == lifecycleEvent.EmployeeId);
+        Assert.Equal(1, projection.LifecycleVersion);
+        Assert.False(projection.IsActive);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ConcurrentConflictingEventId_PreservesOnlyWinningFingerprintAndProjection()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        var store = new EmployeeStatusProjectionStore(factory);
+        var eventId = Guid.NewGuid();
+        var employeeId = Guid.NewGuid();
+        var original = CreateEvent(eventId, employeeId, 1, false, new string('a', 64));
+        var conflicting = CreateEvent(eventId, employeeId, 99, true, new string('b', 64));
+
+        var results = await Task.WhenAll(
+            Task.Run(() => store.ProcessAsync(original, DateTime.UtcNow, CancellationToken.None)),
+            Task.Run(() => store.ProcessAsync(conflicting, DateTime.UtcNow, CancellationToken.None)));
+
+        Assert.Equal(1, results.Count(result => result == ProjectionProcessingOutcome.Applied));
+        Assert.Equal(1, results.Count(result => result == ProjectionProcessingOutcome.DuplicateEventIntegrityViolation));
+        var winner = results[0] == ProjectionProcessingOutcome.Applied ? original : conflicting;
+
+        await using var database = await factory.CreateDbContextAsync();
+        var inbox = await database.ProcessedDomainEvents.SingleAsync(x => x.EventId == eventId);
+        var projection = await database.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.Equal(winner.ContentFingerprint, inbox.ContentFingerprint);
+        Assert.Equal(winner.LifecycleVersion, projection.LifecycleVersion);
+        Assert.Equal(winner.IsActive, projection.IsActive);
+        Assert.Equal(1, await database.ProcessedDomainEvents.CountAsync(x => x.EventId == eventId));
+    }
+
+    [Fact]
+    public async Task MigrateAsync_CanBeAppliedRepeatedlyWithoutChangingMigrationHistory()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        await using var database = await factory.CreateDbContextAsync();
+
+        await database.Database.MigrateAsync();
+        var appliedMigrations = await database.Database.GetAppliedMigrationsAsync();
+
+        Assert.Equal(new[]
+        {
+            "20261120190000_InitialChallengeProjection",
+            "20261120200000_AddInboxContentFingerprint"
+        }, appliedMigrations);
+    }
+
+    [Fact]
     public async Task ProcessAsync_QuarantinesSameEventIdWithDifferentFingerprintWithoutMutation()
     {
         using var provider = await CreateProviderAsync();

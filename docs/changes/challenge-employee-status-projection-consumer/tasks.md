@@ -35,8 +35,8 @@
 - [x] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling in RabbitMQ Testcontainers CI #107.
 - [x] Add deterministic bounded exponential full-jitter delay policy tests and explicit `TransientRetryExhausted` / `NonTransientProcessingFailure` DLQ classifications.
 - [x] Verify transient exhaustion and non-transient processing failures reach the shared lifecycle DLQ, and failed DLQ publication leaves the original delivery unacknowledged, in RabbitMQ Testcontainers CI #108 (40 Challenge tests; full run 164/164 passed).
-- [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note (schema/metadata integration test added; CI #125 reached this test successfully, but full workflow failed in a separate RabbitMQ DLQ-redelivery timing test; await clean rerun).
-- [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract (integration test passed within CI #125's 48/49 Challenge tests; full workflow awaits clean rerun).
+- [x] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note: CI #127 passed the MySQL schema assertion for exactly the eight approved metadata/fingerprint columns and no scheduled cleanup events.
+- [x] Align health response states with separate liveness, MySQL readiness and RabbitMQ consumer-health contract: CI #127 passed the production health-check integration test with healthy MySQL and disconnected RabbitMQ.
 
 
 - [x] Diagnose CI #120 reconnect failure: the last failure stage was `connection` with `BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`; the source queue retained one message and had zero consumers. The Challenge Testcontainers fixture used a dynamically mapped host port, while the consumer retained its original URI across container restart.
@@ -44,10 +44,10 @@
 
 ## Verification gaps
 
-- [ ] MySQL 8.4 Testcontainers: clean and repeated host-startup migration, exact schema/model assertions and projection reader.
-- [ ] MySQL 8.4 Testcontainers: same event ID/same fingerprint and same event ID/different fingerprint.
-- [ ] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert.
-- [ ] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation.
+- [ ] MySQL 8.4 Testcontainers: clean host-startup migration and projection reader. A repeated `MigrateAsync` migration-history test has now been added; awaiting CI verification.
+- [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
+- [ ] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert (concurrent integration tests added; awaiting CI verification).
+- [x] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation (existing integration tests passed CI #127).
 - [x] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay; verified by CI #122 after stable endpoint correction (47 Challenge tests passed).
 - [ ] RabbitMQ Testcontainers: invalid event and integrity violation DLQ handling, including DLX failure and redelivery.
 - [ ] RabbitMQ Testcontainers: bounded exponential retry, exhaustion/non-transient classifications and failed-DLQ redelivery for retry exhaustion.
@@ -93,3 +93,5 @@
 - [ ] Add and verify MySQL inbox schema/privacy assertion: only the eight approved metadata/fingerprint columns exist and no MySQL scheduled events are defined; no raw payload, note, TTL or cleanup process is introduced. Test authored in the next commit; CI pending.
 
 - [ ] Add and verify health-check integration coverage proving liveness, MySQL readiness and RabbitMQ consumer health are independently selectable; a healthy database remains ready while the enabled RabbitMQ consumer is disconnected. Test authored; CI pending.
+
+- [x] CI #127 passed for `50e844e0f01290e393187801d1391d9ec189b878`: Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology, 11 Python topology tests and all 173 .NET tests (Challenge 49, Habit 24, Identity 100), 0 failed/skipped. This verifies the completed-session synchronization correction and the inbox schema/privacy and health-check integration tests. [CI run #127](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44874735877).
