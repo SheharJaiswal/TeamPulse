@@ -35,6 +35,9 @@ public sealed class HabitActivitiesController(
         var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
         if (employeeStatus is { IsActive: false }) return Unauthorized();
 
+        var existing = await submissions.GetByIdempotencyKeyAsync(employeeId, request.IdempotencyKey, cancellationToken);
+        if (existing is not null) return ExistingResult(existing, request);
+
         HabitEligibilityResponse? habit;
         try { habit = await GetHabitAsync(request.HabitId, cancellationToken); }
         catch (UnauthorizedAccessException) { return Unauthorized(); }
@@ -43,11 +46,9 @@ public sealed class HabitActivitiesController(
         { return StatusCode(503, new { message = "Habit service timed out. Please retry." }); }
 
         if (habit is null) return NotFound();
+        if (habit.Status != 1) return Conflict(new { message = "Only active habits accept activity submissions." });
         if (request.ActivityDate < habit.StartDate || (habit.EndDate.HasValue && request.ActivityDate > habit.EndDate.Value))
             return BadRequest(new { message = "Activity date must be within the habit's configured date range." });
-
-        var existing = await submissions.GetByIdempotencyKeyAsync(employeeId, request.IdempotencyKey, cancellationToken);
-        if (existing is not null) return ExistingResult(existing, request);
 
         var created = new HabitActivitySubmission(Guid.NewGuid(), employeeId, request.HabitId,
             request.ActivityDate, request.Quantity, request.IdempotencyKey, timeProvider.GetUtcNow().UtcDateTime);

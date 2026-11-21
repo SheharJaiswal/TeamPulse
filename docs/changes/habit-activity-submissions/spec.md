@@ -13,7 +13,7 @@ Approved by the project owner on 2026-11-21. See ADR-0003. The first implementat
 
 ## Functional requirements
 
-- HAS-01: An authenticated employee can submit a self-reported activity against an active habit they own.
+- HAS-01: An authenticated employee can submit a self-reported activity against an active habit they own; archived habits reject new submissions.
 - HAS-02: Employee identity is derived from validated JWT `sub`; request data cannot select an employee.
 - HAS-03: Event Tracking validates the referenced habit through the Habit API using the caller's bearer token and never accesses the Habit database directly.
 - HAS-04: Inaccessible habits return a non-disclosing not-found response.
