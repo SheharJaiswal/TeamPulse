@@ -9,7 +9,7 @@ namespace Insight.UnitTests;
 
 public sealed class DynamoDbLocalFixture : IAsyncLifetime
 {
-    private readonly TestcontainersContainer _container = new TestcontainersBuilder<TestcontainersContainer>()
+    private readonly DockerContainer _container = new TestcontainersBuilder<DockerContainer>()
         .WithImage("amazon/dynamodb-local:2.5.2")
         .WithPortBinding(8000, true)
         .WithCommand("-inMemory", "-sharedDb")

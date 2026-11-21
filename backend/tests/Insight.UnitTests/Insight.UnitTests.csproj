@@ -9,5 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Services/Insight/Insight.Application/Insight.Application.csproj" />
     <ProjectReference Include="../../src/Services/Insight/Insight.Domain/Insight.Domain.csproj" />
+    <ProjectReference Include="../../src/Services/Insight/Insight.Infrastructure/Insight.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

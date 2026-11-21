@@ -42,7 +42,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStoreIntegrationTests(Dynamo
         });
         Assert.Equal(new[] { "PK", "SK", "employeeId", "eventId", "eventType", "lifecycleVersion", "processedAtUtc", "schemaVersion" },
             inbox.Item.Keys.OrderBy(x => x).ToArray());
-        Assert.Equal(1, inbox.Item.Count);
+        Assert.Equal(8, inbox.Item.Count);
     }
 
     [Fact]

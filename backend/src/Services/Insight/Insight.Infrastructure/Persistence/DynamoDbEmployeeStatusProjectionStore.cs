@@ -88,7 +88,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStore : IEmployeeStatusProje
                         Key = employeeKey,
                         UpdateExpression = "SET #employeeId = :employeeId, #isActive = :isActive, #version = :version, #updatedAtUtc = :updatedAtUtc",
                         ConditionExpression = condition,
-                        ExpressionAttributeNames = ProjectionNames(),
+                        ExpressionAttributeNames = ProjectionNames(!hasProjection),
                         ExpressionAttributeValues = values
                     }
                 });
@@ -164,9 +164,17 @@ public sealed class DynamoDbEmployeeStatusProjectionStore : IEmployeeStatusProje
         ["SK"] = new() { S = "INBOX" }
     };
 
-    private static Dictionary<string, string> ProjectionNames() => new()
+    private static Dictionary<string, string> ProjectionNames(bool projectionMissing)
     {
-        ["#pk"] = "PK", ["#sk"] = "SK", ["#employeeId"] = "employeeId",
-        ["#isActive"] = "isActive", ["#version"] = "lifecycleVersion", ["#updatedAtUtc"] = "updatedAtUtc"
-    };
+        var names = new Dictionary<string, string>
+        {
+            ["#employeeId"] = "employeeId",
+            ["#isActive"] = "isActive",
+            ["#version"] = "lifecycleVersion",
+            ["#updatedAtUtc"] = "updatedAtUtc"
+        };
+        if (projectionMissing)
+            names["#pk"] = "PK";
+        return names;
+    }
 }
