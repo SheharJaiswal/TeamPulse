@@ -52,13 +52,12 @@ public sealed class EmployeeLifecycleController(IEmployeeLifecycleService lifecy
         if (correlationValues.Count > 1)
             return BadRequest(new { message = "X-Correlation-ID must be supplied at most once." });
 
-        var correlationHeader = correlationValues.Count == 1 ? correlationValues[0] ?? string.Empty : string.Empty;
         Guid correlationId;
-        if (string.IsNullOrEmpty(correlationHeader))
+        if (correlationValues.Count == 0)
         {
             correlationId = Guid.NewGuid();
         }
-        else if (!Guid.TryParse(correlationHeader, out correlationId))
+        else if (!Guid.TryParse(correlationValues[0], out correlationId))
         {
             return BadRequest(new { message = "X-Correlation-ID must be a UUID." });
         }
