@@ -98,7 +98,9 @@ public sealed class HabitActivitiesController(
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Parameter);
         using var response = await httpClientFactory.CreateClient("HabitApi").SendAsync(request, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) throw new UnauthorizedAccessException();
+        // Habit deliberately returns 401 for an inaccessible employee-owned habit. The
+        // Event Tracking contract must not disclose whether another employee owns its ID.
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) return null;
         if (!response.IsSuccessStatusCode) throw new HttpRequestException("Habit service validation failed.");
         return await response.Content.ReadFromJsonAsync<HabitEligibilityResponse>(
             new JsonSerializerOptions(JsonSerializerDefaults.Web), cancellationToken);
