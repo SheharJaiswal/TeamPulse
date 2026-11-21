@@ -2,6 +2,14 @@
 
 **Status:** Approved by project owner on 2026-11-21.
 
+## Latest verification checkpoint — CI #223
+
+- CI #223 compiled the full Release solution and passed Docker Compose validation, RabbitMQ startup/topology checks, all 19 Python topology contract tests and the pinned DynamoDB Local image pull.
+- Existing service suites passed: Identity 100/100, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28 and Insight 15/15 (251/251 total).
+- The new queue-migration integration suite ran 8 tests: 6 passed and 2 failed. One failure showed RabbitMQ.Client 7.2.2 throws `PublishReturnException` directly from mandatory `BasicPublishAsync`; the production helper now normalizes that to its documented `InvalidOperationException`. The other exposed RabbitMQ's broker-side `user_id` validation; the fixture now uses the authenticated Testcontainers username while still asserting the property is preserved.
+- Also isolated the bounded-resume test's digest ledger in a temporary file to avoid leaving an artifact in the repository workspace.
+- These fixes are committed in `e806e899c33018cdc9161f8707ccae589c8150ab` and `ca88300cf2d85fc47512489dc37a66fcd778d6fd`. CI verification of these fixes is pending. Do not mark full migration acceptance complete or execute the utility against the persistent broker.
+
 ## SDD and contract review
 - [x] Read AGENTS.md, ADR-0001, service ownership, communication conventions and shared event/projection contracts.
 - [x] Confirm Insight is one of the six services and owns aggregated/derived read models only.
