@@ -1,4 +1,4 @@
-## SvelteKit shared accessibility baseline — implementation committed; CI pending
+## SvelteKit shared accessibility baseline — implementation and CI verified
 
 - Added a shared keyboard-visible focus indicator for links, buttons and form controls in `frontend/src/routes/app.css`. Existing input focus border and shadow styling remains in place.
 - Added a `prefers-reduced-motion: reduce` media query to disable smooth scrolling and minimize CSS animation/transition duration when requested by the operating system.
