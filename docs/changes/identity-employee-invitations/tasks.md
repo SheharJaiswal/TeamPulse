@@ -35,7 +35,8 @@
 - [x] Add a Mailpit Testcontainers end-to-end test covering HR invitation creation, real SMTP delivery, resend generation rotation, rejection of the old link, activation through the anonymous API and successful Employee login.
 - [x] Capture the hosted worker's existing safe warning diagnostics in the Mailpit test timeout (exception types, SMTP status and configured endpoint only); do not capture exception messages, email bodies, tokens or URLs.
 - [x] Re-run backend CI #44927041146: Restore, Release build, Compose validation and RabbitMQ topology checks passed; 131/132 Identity tests passed. Safe diagnostics narrowed the worker failure to SmtpException with an inner SocketException and SMTP GeneralFailure; no socket error code was captured yet.
-- [ ] Capture the socket error code and identify the underlying endpoint/connectivity failure before changing delivery behavior.
+- [x] Capture the hosted-worker socket error: CI #44927595688 reports ConnectionRefused (native code 111) on all three SMTP attempts, while the direct SMTP probe succeeds; add a post-timeout TCP reachability check to distinguish a stopped listener from worker-only connection behavior.
+- [ ] Identify the underlying endpoint/connectivity failure before changing delivery behavior.
 - [x] Update the broader Identity API contract and add the local Mailpit invitation-delivery runbook; document that hosted-worker SMTP delivery remains unverified.
 - [ ] Add operational verification for application restart during a leased delivery and SMTP outage recovery.
 - [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits after the SMTP failure is diagnosed and corrected.

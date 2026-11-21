@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Net.Sockets;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.IdentityModel.Tokens;
@@ -134,10 +135,11 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
             var mailpitStatus = await mailpitClient.GetStringAsync("/api/v1/messages");
             var messageCount = JsonDocument.Parse(mailpitStatus).RootElement
                 .GetProperty("total").GetInt32();
+            var smtpEndpointAfterTimeout = await CheckSmtpEndpointAsync(smtpPort);
             throw new Xunit.Sdk.XunitException(
                 $"Invitation delivery did not reach Mailpit. Attempts={secret?.AttemptCount}, " +
                 $"LastErrorCode={secret?.LastErrorCode ?? "none"}, LeaseActive={secret?.LeaseExpiresAtUtc > DateTime.UtcNow}, " +
-                $"MailpitMessageCount={messageCount}, " +
+                $"MailpitMessageCount={messageCount}, SmtpEndpointAfterTimeout={smtpEndpointAfterTimeout}, " +
                 $"WorkerDiagnostics={string.Join(" || ", workerLogCapture.Messages)}.");
         }
         Assert.Matches("^[A-Za-z0-9_-]{43}$", firstToken);
@@ -169,6 +171,20 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         using var loginDocument = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         Assert.Equal("Employee",
             loginDocument.RootElement.GetProperty("employee").GetProperty("role").GetString());
+    }
+
+    private static async Task<string> CheckSmtpEndpointAsync(int smtpPort)
+    {
+        using var client = new TcpClient();
+        try
+        {
+            await client.ConnectAsync("127.0.0.1", smtpPort);
+            return "Connected";
+        }
+        catch (SocketException exception)
+        {
+            return exception.SocketErrorCode.ToString();
+        }
     }
 
     private static async Task<string> WaitForInvitationTokenAsync(
