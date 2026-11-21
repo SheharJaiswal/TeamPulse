@@ -86,7 +86,7 @@ public sealed class EventTrackingRabbitMqPublisherIntegrationTests : IAsyncLifet
     {
         var eventId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        const string envelope = "{\\"eventId\\":\\"stable\\",\\"eventType\\":\\"HabitActivityRecorded\\",\\"schemaVersion\\":1,\\"payload\\":{}}";
+        const string envelope = "{\"eventId\":\"stable\",\"eventType\":\"HabitActivityRecorded\",\"schemaVersion\":1,\"payload\":{}}";
         var message = new EventTrackingOutboxDispatchMessage(eventId, "HabitActivityRecorded", 1,
             DateTime.UtcNow, correlationId, envelope, Guid.NewGuid(), 1);
         await using var publisher = CreatePublisher(RoutingKey);
