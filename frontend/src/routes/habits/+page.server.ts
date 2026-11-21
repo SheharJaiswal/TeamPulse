@@ -2,7 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { habitApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
-import { isGuid } from '$lib/validation.js';
+import { isCalendarDate, isGuid } from '$lib/validation.js';
 
 interface Habit {
   id: string;
@@ -74,7 +74,7 @@ function parseHabitForm(formData: FormData): { request: HabitWriteRequest | null
   if (![1, 2].includes(frequency) || !Number.isInteger(targetCount) || targetCount < 1 || targetCount > 1000) {
     return { request: null, message: 'Choose a valid frequency and a target between 1 and 1,000.' };
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate))) {
+  if (!isCalendarDate(startDate) || (endDate && !isCalendarDate(endDate))) {
     return { request: null, message: 'Choose a valid start date and optional end date.' };
   }
   if (endDate && endDate < startDate) {
