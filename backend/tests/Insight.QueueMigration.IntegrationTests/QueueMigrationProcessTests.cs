@@ -177,7 +177,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         // A failed returned publication must not poison the next confirmed publication.
         await publisher.PublishAsync(
             validDestination,
-            new BasicProperties { DeliveryMode = 2 },
+            new BasicProperties { DeliveryMode = DeliveryModes.Persistent },
             Encoding.UTF8.GetBytes("valid-copy"));
         Assert.Equal(1u, (await channel.QueueDeclarePassiveAsync(validDestination)).MessageCount);
     }
@@ -282,7 +282,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
             string.Empty,
             queue,
             true,
-            new BasicProperties { DeliveryMode = 2 },
+            new BasicProperties { DeliveryMode = DeliveryModes.Persistent },
             Encoding.UTF8.GetBytes(value));
     }
 
