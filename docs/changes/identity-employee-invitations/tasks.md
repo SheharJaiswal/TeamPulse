@@ -1,6 +1,6 @@
 # Tasks: HR-Controlled Employee Invitations and Credential Activation
 
-**Status:** SDD drafted for owner review; no implementation authorization yet.
+**Status:** Implementation in progress; initial domain, persistence, token-protection foundation and local Mailpit service are committed.
 
 ## Reconciliation
 - [x] Read AGENTS.md, Identity service specification, API contract, ADR-0002, HR lifecycle SDD and HR administrator bootstrap SDD.
@@ -22,12 +22,14 @@
 
 ## Implementation — authorized
 - [x] Add initial invitation domain entities, EF mappings and MySQL migration for invitation records and the separate protected delivery-secret store.
+- [x] Clear token digests to SQL NULL on accepted, cancelled and expired terminal states so the unique digest index does not collide on consumed invitations.
 - [x] Add 256-bit cryptographic token generation, SHA-256 digest derivation, purpose-scoped Data Protection wrapping and a persistent local key-ring configuration. Digest lookup and atomic redemption remain pending.
 - [ ] Implement HrAdmin create/get/resend/cancel endpoints and anonymous activation endpoint.
 - [ ] Implement Employee-only role assignment and atomic Employee creation/password hashing.
 - [ ] Implement the owner-approved secure delivery hand-off with no plaintext token in ordinary outbox/logs.
 - [ ] Add activation rate limiting and generic invalid-token responses.
-- [ ] Add MySQL 8.4 Testcontainers, API-host and delivery failure/concurrency/security tests. Initial domain and token-protection unit tests have been added; CI verification is pending.
+- [ ] Add MySQL 8.4 Testcontainers, API-host and delivery failure/concurrency/security tests. Initial domain and token-protection unit tests are committed; CI verification is pending.
+- [x] Add Mailpit to the root local Docker Compose profile (SMTP 1025, web UI 8025).
 - [ ] Update Identity API contract, service spec, runbooks and project status.
 - [ ] Verify Release build, full solution tests, Compose and topology tests in CI.
 
