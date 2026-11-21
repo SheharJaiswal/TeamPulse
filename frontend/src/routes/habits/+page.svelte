@@ -5,6 +5,8 @@
   export let data: PageData;
   export let form: ActionData;
 
+  let editingHabitId: string | null = null;
+
   $: activeHabits = data.habits.filter((habit) => habit.status === 1);
   $: archivedHabits = data.habits.filter((habit) => habit.status === 2);
   $: formMessage = form && 'message' in form ? form.message : undefined;
@@ -119,25 +121,69 @@
                 <span class="category-pill">{habit.category || 'Personal'}</span>
                 <span class="active-indicator"><i></i> Active</span>
               </div>
-              <h3>{habit.name}</h3>
-              <p class="habit-description">{habit.description || 'A small step towards a healthier routine.'}</p>
-              <div class="habit-details">
-                <div>
-                  <span class="detail-label">FREQUENCY</span>
-                  <strong>{habit.frequency === 1 ? 'Daily' : 'Weekly'}</strong>
-                </div>
-                <div>
-                  <span class="detail-label">TARGET</span>
-                  <strong>{habit.targetCount} {habit.frequency === 1 ? 'times / day' : 'times / week'}</strong>
-                </div>
-              </div>
-              <div class="habit-footer">
-                <span>Started {dateLabel(habit.startDate)}</span>
-                <form method="POST" action="?/archive" use:enhance>
+              {#if editingHabitId === habit.id}
+                <form class="edit-form" method="POST" action="?/update" use:enhance>
                   <input type="hidden" name="habitId" value={habit.id} />
-                  <button class="subtle-button" type="submit">Archive</button>
+                  <div class="form-field full">
+                    <label for={`edit-name-${habit.id}`}>Habit name</label>
+                    <input id={`edit-name-${habit.id}`} name="name" maxlength="100" value={habit.name} required />
+                  </div>
+                  <div class="form-field full">
+                    <label for={`edit-description-${habit.id}`}>Description</label>
+                    <textarea id={`edit-description-${habit.id}`} name="description" maxlength="500" rows="2">{habit.description || ''}</textarea>
+                  </div>
+                  <div class="form-field">
+                    <label for={`edit-category-${habit.id}`}>Category</label>
+                    <input id={`edit-category-${habit.id}`} name="category" maxlength="50" value={habit.category || ''} />
+                  </div>
+                  <div class="form-field">
+                    <label for={`edit-frequency-${habit.id}`}>Frequency</label>
+                    <select id={`edit-frequency-${habit.id}`} name="frequency">
+                      <option value="1" selected={habit.frequency === 1}>Daily</option>
+                      <option value="2" selected={habit.frequency === 2}>Weekly</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label for={`edit-target-${habit.id}`}>Target count</label>
+                    <input id={`edit-target-${habit.id}`} name="targetCount" type="number" min="1" max="1000" value={habit.targetCount} required />
+                  </div>
+                  <div class="form-field">
+                    <label for={`edit-start-${habit.id}`}>Start date</label>
+                    <input id={`edit-start-${habit.id}`} name="startDate" type="date" value={habit.startDate} required />
+                  </div>
+                  <div class="form-field full">
+                    <label for={`edit-end-${habit.id}`}>End date</label>
+                    <input id={`edit-end-${habit.id}`} name="endDate" type="date" value={habit.endDate || ''} />
+                  </div>
+                  <div class="edit-actions full">
+                    <button class="primary-button" type="submit">Save changes</button>
+                    <button class="subtle-button" type="button" onclick={() => editingHabitId = null}>Cancel</button>
+                  </div>
                 </form>
-              </div>
+              {:else}
+                <h3>{habit.name}</h3>
+                <p class="habit-description">{habit.description || 'A small step towards a healthier routine.'}</p>
+                <div class="habit-details">
+                  <div>
+                    <span class="detail-label">FREQUENCY</span>
+                    <strong>{habit.frequency === 1 ? 'Daily' : 'Weekly'}</strong>
+                  </div>
+                  <div>
+                    <span class="detail-label">TARGET</span>
+                    <strong>{habit.targetCount} {habit.frequency === 1 ? 'times / day' : 'times / week'}</strong>
+                  </div>
+                </div>
+                <div class="habit-footer">
+                  <span>Started {dateLabel(habit.startDate)}</span>
+                  <div class="card-actions">
+                    <button class="subtle-button" type="button" onclick={() => editingHabitId = habit.id}>Edit</button>
+                    <form method="POST" action="?/archive" use:enhance>
+                      <input type="hidden" name="habitId" value={habit.id} />
+                      <button class="subtle-button" type="submit">Archive</button>
+                    </form>
+                  </div>
+                </div>
+              {/if}
             </article>
           {/each}
         </div>

@@ -16,11 +16,11 @@ Private server configuration:
 - `IDENTITY_API_BASE_URL`, default `http://localhost:5101`
 - `HABIT_API_BASE_URL`, default `http://localhost:5102`
 
-Identity supplies login and `/api/identity/me`. Habit supplies list/create/archive. Habit owns validation and employee isolation; the frontend performs usability validation only.
+Identity supplies login and `/api/identity/me`. Habit supplies list/create/update/archive. Habit owns validation and employee isolation; the frontend performs usability validation only.
 
 ## Screens
 - Sign-in: email/password, generic API errors, HR-provisioned account notice.
-- My habits: profile greeting, active/archived summaries, active habit cards, create form and archived history.
+- My habits: profile greeting, active/archived summaries, active habit cards, create/edit forms and archived history.
 - Sign-out: clear the HTTP-only session cookie.
 
 ## Deferred

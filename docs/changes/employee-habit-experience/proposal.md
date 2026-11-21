@@ -1,15 +1,15 @@
 # Employee Habit Experience
 
 ## Problem
-The Habit API now supports employee-owned habit definitions, but employees do not yet have a usable web interface.
+The Habit API supports employee-owned habit definitions, but employees need a usable web interface to manage them.
 
 ## Outcome
-Provide a SvelteKit employee workspace that authenticates through Identity and lets an employee view, create and archive personal habits.
+Provide a SvelteKit employee workspace that authenticates through Identity and lets an employee view, create, update and archive personal habits.
 
 ## Scope
 - Sign in using the existing Identity login endpoint.
 - Show the authenticated employee identity and personal habits.
-- Create daily and weekly habits with target, dates, optional description and category.
+- Create and update daily and weekly habits with target, dates, optional description and category.
 - Archive habits and retain archived items in the personal list.
 - Keep JWTs in HTTP-only cookies and make backend requests from SvelteKit server code.
 
