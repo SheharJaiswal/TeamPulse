@@ -45,6 +45,23 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Preflight_WhenDestinationDoesNotExist_FailsWithoutConsumingSource()
+    {
+        var source = QueueName();
+        var missingDestination = QueueName();
+        await using var connection = await CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueueDeclareAsync(source, durable: true, exclusive: false, autoDelete: false);
+        await PublishAsync(channel, source, "must-remain-on-source");
+
+        var result = await RunUtilityAsync(source, missingDestination, "--execute", "--confirm-quiesced");
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("Migration copy failed", result.Output);
+        Assert.Equal(1u, (await channel.QueueDeclarePassiveAsync(source)).MessageCount);
+    }
+
+    [Fact]
     public async Task Execute_CopiesBodyHeadersAndProperties_AndAcknowledgesOnlyAfterCopy()
     {
         var source = QueueName();
