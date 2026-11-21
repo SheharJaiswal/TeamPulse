@@ -22,8 +22,10 @@
 - [x] Add retry/options unit tests and topology contract tests.
 - [x] Verify consumer/topology increment with GitHub Actions CI #136: Release build, Compose validation, RabbitMQ startup/topology and 194 .NET tests plus 14 Python topology tests passed.
 - [x] Add production API-host startup integration test against fresh MySQL 8.4, proving startup migration and production reader registration.
-- [x] Add RabbitMQ Testcontainers coverage for post-processing acknowledgement, terminal-outcome DLQ confirmation, transient retry success/exhaustion, failed DLQ route redelivery and log privacy (CI verification pending).
+- [x] Add RabbitMQ Testcontainers coverage for post-processing acknowledgement, terminal-outcome DLQ confirmation, transient retry success/exhaustion, failed DLQ route redelivery and log privacy.
 - [x] Verify API-host startup with GitHub Actions CI #137: all 17 EventTracking tests passed, including the fresh MySQL 8.4 API-host migration/readback test; total solution tests 195 passed.
+- [x] Verify RabbitMQ consumer integration suite with GitHub Actions CI #140 attempt 2: EventTracking 24, Habit 24, Identity 100 and Challenge 54 tests passed; 14 Python topology tests passed.
+- [x] Add production processor replay integration test against MySQL 8.4 inbox, including a conflicting duplicate payload proving duplicate delivery does not mutate projection state (CI #141 pending).
 - [ ] Add commit-before-ack broker interruption/replay integration test using the actual persistent inbox.
 - [ ] Add actual-host consumer health isolation test.
 - [ ] Review full CI test output and acceptance matrix before marking this SDD complete.
@@ -51,7 +53,5 @@
 - AWS EventBridge/SQS and cloud provisioning remain deferred until owner cloud setup.
 - Inbox retention is initially permanent and requires privacy/legal review before production.
 - Never log raw event bodies, optional notes, credentials or broker URIs.
-
-- [ ] Resolve and verify the first RabbitMQ integration-test compile failure (CI #138 exposed unsigned queue-count assertion overloads); corrected assertions use explicit uint expected values.
 
 Updated: 2026-11-21
