@@ -186,6 +186,86 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         Assert.Equal(HttpStatusCode.BadRequest, invalidCorrelation.StatusCode);
     }
 
+    [Fact]
+    public async Task LifecycleEndpoint_RejectsInvalidReasonAndNoteWithoutMutation()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        var invalidRequests = new[]
+        {
+            new { ReasonCode = "   ", Note = (string?)null },
+            new { ReasonCode = new string('r', 101), Note = (string?)null },
+            new { ReasonCode = "valid-reason", Note = new string('n', 1001) }
+        };
+
+        for (var index = 0; index < invalidRequests.Length; index++)
+        {
+            var request = invalidRequests[index];
+            using var message = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+            {
+                Content = JsonContent.Create(new
+                {
+                    reasonCode = request.ReasonCode,
+                    note = request.Note
+                })
+            };
+            message.Headers.Add("Idempotency-Key", $"invalid-lifecycle-{index}");
+
+            using var response = await client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var employee = await database.Employees.SingleAsync(x => x.Id == employeeId);
+
+        Assert.True(employee.IsActive);
+        Assert.Equal(0, employee.LifecycleVersion);
+        Assert.False(await database.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
+        Assert.Empty(await database.OutboxMessages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task LifecycleEndpoint_AcceptsMaximumReasonAndNoteLengthsAndTrimsValues()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        var reason = new string('r', 100);
+        var note = new string('n', 1000);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+        {
+            Content = JsonContent.Create(new
+            {
+                reasonCode = $"  {reason}  ",
+                note = $"  {note}  "
+            })
+        };
+        request.Headers.Add("Idempotency-Key", "maximum-lifecycle-fields");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var audit = await database.EmployeeLifecycleAudits.SingleAsync(x => x.EmployeeId == employeeId);
+
+        Assert.Equal(reason, audit.ReasonCode);
+        Assert.Equal(note, audit.Note);
+    }
+
     private async Task EnsureDatabaseAsync(HttpClient client)
     {
         var response = await client.GetAsync("/health/ready");
