@@ -60,7 +60,7 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
             throw new Xunit.Sdk.XunitException(
                 $"Mailpit SMTP endpoint rejected a direct probe. ErrorType={exception.GetType().Name}, " +
                 $"InnerErrorType={exception.InnerException?.GetType().Name ?? "none"}, " +
-                $"SmtpStatus={(exception is System.Net.Mail.SmtpException smtp ? smtp.StatusCode : "not-smtp")}.");
+                $"SmtpStatus={(exception is System.Net.Mail.SmtpException smtp ? smtp.StatusCode.ToString() : "not-smtp")}.");
         }
 
         var settings = new Dictionary<string, string?>
