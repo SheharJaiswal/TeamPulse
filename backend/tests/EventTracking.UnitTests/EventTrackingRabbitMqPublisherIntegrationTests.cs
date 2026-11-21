@@ -80,6 +80,34 @@ public sealed class EventTrackingRabbitMqPublisherIntegrationTests : IAsyncLifet
         Assert.Equal("RabbitMqPublishFailed", result.ErrorCode);
     }
 
+
+    [Fact]
+    public async Task PublishBatch_WhenSameEventIsRetried_PreservesStableMessageId()
+    {
+        var eventId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid();
+        const string envelope = "{\\"eventId\\":\\"stable\\",\\"eventType\\":\\"HabitActivityRecorded\\",\\"schemaVersion\\":1,\\"payload\\":{}}";
+        var message = new EventTrackingOutboxDispatchMessage(eventId, "HabitActivityRecorded", 1,
+            DateTime.UtcNow, correlationId, envelope, Guid.NewGuid(), 1);
+        await using var publisher = CreatePublisher(RoutingKey);
+
+        var first = Assert.Single(await publisher.PublishBatchAsync(new[] { message }, CancellationToken.None));
+        var retry = Assert.Single(await publisher.PublishBatchAsync(new[] { message with { LeaseToken = Guid.NewGuid(), AttemptCount = 2 } }, CancellationToken.None));
+
+        Assert.Equal(EventTrackingPublishOutcome.Accepted, first.Outcome);
+        Assert.Equal(EventTrackingPublishOutcome.Accepted, retry.Outcome);
+        var firstDelivery = await _channel!.BasicGetAsync(QueueName, autoAck: false);
+        var retryDelivery = await _channel.BasicGetAsync(QueueName, autoAck: false);
+        Assert.NotNull(firstDelivery);
+        Assert.NotNull(retryDelivery);
+        Assert.Equal(eventId.ToString("D"), firstDelivery!.BasicProperties.MessageId);
+        Assert.Equal(firstDelivery.BasicProperties.MessageId, retryDelivery!.BasicProperties.MessageId);
+        Assert.Equal(envelope, Encoding.UTF8.GetString(firstDelivery.Body.ToArray()));
+        Assert.Equal(envelope, Encoding.UTF8.GetString(retryDelivery.Body.ToArray()));
+        await _channel.BasicAckAsync(firstDelivery.DeliveryTag, multiple: false);
+        await _channel.BasicAckAsync(retryDelivery.DeliveryTag, multiple: false);
+    }
+
     private EventTrackingRabbitMqPublisher CreatePublisher(string routingKey) =>
         new(new EventTrackingRabbitMqPublisherOptions
         {
