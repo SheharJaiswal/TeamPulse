@@ -46,6 +46,7 @@ After the new source queue is recreated and its bindings are verified, run the s
 
 ## Important limitations
 
+- AMQP `user_id` is broker-validated on publish: if a message has this property, RabbitMQ requires it to match the authenticated user on the migration connection. Because the utility preserves supported basic properties, a message whose `user_id` differs from the migration account will fail publication and remain unacknowledged at the source. Before any execution, inventory the non-null `user_id` values without exposing message bodies or other sensitive properties and verify they are compatible with the migration account. If they are not, stop; do not silently strip or rewrite `user_id`. Any alternative property-handling policy requires explicit owner approval and a separately reviewed change.
 - The utility does not create the temporary queue, recreate the source queue, create the DLQ or change bindings.
 - It does not prove that producers are paused. The explicit `--confirm-quiesced` flag is an operator attestation, not a broker-enforced lock.
 - A ledger digest is a per-message payload fingerprint, not a cryptographic signature or a globally unique message identifier. Duplicate deliveries can create repeated digest lines.
