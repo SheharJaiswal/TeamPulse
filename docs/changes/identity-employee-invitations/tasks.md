@@ -32,9 +32,11 @@
 - [x] Add activation rate limiting and generic invalid-token responses.
 - [x] Add MySQL integration coverage for delivery retry scheduling, resend generation rotation, stale-lease acknowledgement rejection, expiry cleanup and recovery of an expired delivery lease through a fresh queue instance after simulated worker termination. Activation API-host coverage includes successful activation/login, duplicate redemption race, generic failures for invalid/expired/cancelled/used tokens, weak-password rejection and rate limiting.
 - [x] Add Mailpit to the root local Docker Compose profile (SMTP 1025, web UI 8025).
-- [x] Add a Mailpit Testcontainers end-to-end test covering HR invitation creation, real SMTP delivery, resend generation rotation, rejection of the old link, activation through the anonymous API and successful Employee login. CI verification is pending.
+- [x] Add a Mailpit Testcontainers end-to-end test covering HR invitation creation, real SMTP delivery, resend generation rotation, rejection of the old link, activation through the anonymous API and successful Employee login.
+- [x] Capture the hosted worker's existing safe warning diagnostics in the Mailpit test timeout (exception types, SMTP status and configured endpoint only); do not capture exception messages, email bodies, tokens or URLs.
+- [ ] Re-run backend CI and use the captured worker diagnostics to identify the SMTP failure before changing delivery behavior.
 - [ ] Update the broader Identity API contract and runbooks; invitation SDD design/spec and project status reflect the implemented API and delivery worker. Add operational verification for application restart during a leased delivery and SMTP outage recovery.
-- [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits.
+- [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits after the SMTP failure is diagnosed and corrected.
 
 ## Deferred
 - [ ] Production email provider selection and deployment configuration.

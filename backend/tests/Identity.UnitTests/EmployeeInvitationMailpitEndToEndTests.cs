@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -9,6 +10,8 @@ using System.Text.RegularExpressions;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Identity.API.BackgroundServices;
 using Identity.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,7 +81,10 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
             ["InvitationEmail:MaxRetryDelaySeconds"] = "30"
         };
 
-        using var factory = new IdentityApiFactory(_fixture.ConnectionString, "Development", settings);
+        var workerLogCapture = new CapturingLoggerProvider();
+        using var baseFactory = new IdentityApiFactory(_fixture.ConnectionString, "Development", settings);
+        using var factory = baseFactory.WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.AddProvider(workerLogCapture)));
         using var client = factory.CreateClient();
         var ready = await client.GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
@@ -131,7 +137,8 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
             throw new Xunit.Sdk.XunitException(
                 $"Invitation delivery did not reach Mailpit. Attempts={secret?.AttemptCount}, " +
                 $"LastErrorCode={secret?.LastErrorCode ?? "none"}, LeaseActive={secret?.LeaseExpiresAtUtc > DateTime.UtcNow}, " +
-                $"MailpitMessageCount={messageCount}.");
+                $"MailpitMessageCount={messageCount}, " +
+                $"WorkerDiagnostics={string.Join(" || ", workerLogCapture.Messages)}.");
         }
         Assert.Matches("^[A-Za-z0-9_-]{43}$", firstToken);
 
@@ -223,6 +230,40 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         }
 
         return recipients.ToString().Contains(recipient, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly ConcurrentQueue<string> _messages = new();
+
+        public IReadOnlyCollection<string> Messages => _messages.ToArray();
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, _messages);
+
+        public void Dispose() { }
+
+        private sealed class CapturingLogger(
+            string categoryName,
+            ConcurrentQueue<string> messages) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (IsEnabled(logLevel))
+                {
+                    messages.Enqueue(
+                        $"{categoryName}: {formatter(state, null)} ExceptionType={exception?.GetType().Name ?? "none"}");
+                }
+            }
+        }
     }
 
     private static string CreateToken(Guid subject, string role)
