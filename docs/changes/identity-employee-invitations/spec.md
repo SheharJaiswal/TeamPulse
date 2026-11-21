@@ -17,7 +17,7 @@ All paths are under `/api/identity`.
 - `POST /invitations/{invitationId}/cancel` — HrAdmin cancels a pending invitation.
 - `POST /invitations/activate` — anonymous invitee redeems token and sets password.
 
-The activation request contains only the opaque token and new password. Raw tokens and activation URLs are never returned by HR APIs; they are delivered through the configured mail adapter. Responses do not expose token digests or secrets.
+The activation request contains only the opaque token and new password. Raw tokens and activation URLs are never returned by HR APIs; they are delivered through the configured mail adapter. Responses do not expose token digests or secrets. The HR create, inspect, resend and cancel endpoints are now implemented; activation remains pending.
 
 ## Invitation data and state
 Proposed states: `Pending`, `Accepted`, `Cancelled`, `Expired`. Expiry may be computed from `ExpiresAtUtc`; a background cleanup job is not required for correctness.
