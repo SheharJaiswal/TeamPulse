@@ -200,7 +200,7 @@ static BasicProperties CopyProperties(IReadOnlyBasicProperties source)
         ContentType = source.ContentType,
         ContentEncoding = source.ContentEncoding,
         // Queue migration always republishes durably; all other supported message properties are preserved.
-        DeliveryMode = 2,
+        DeliveryMode = DeliveryModes.Persistent,
         Priority = source.Priority,
         CorrelationId = source.CorrelationId,
         ReplyTo = source.ReplyTo,
