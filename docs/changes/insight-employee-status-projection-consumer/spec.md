@@ -41,7 +41,7 @@ Validate all recognized required fields before persistence:
 - Payload: UUID employeeId and actorEmployeeId; exact case-sensitive source=hr-admin-api; valid previousStatus/newStatus; positive signed 64-bit lifecycleVersion; trimmed non-empty reasonCode within Identity's 1–100 character bound.
 - EmployeeDeactivated requires active -> inactive and results in isActive=false.
 - EmployeeReactivated requires inactive -> active and results in isActive=true.
-- Optional note may be accepted as a string but must never be persisted or logged.
+- Optional note, when present, must be a string of at most 1000 characters (matching Identity's contract); it must never be persisted or logged. Reject a non-string or over-limit note before invoking persistence.
 - Unknown additive JSON properties are tolerated and ignored.
 - Reject malformed JSON, missing/invalid recognized fields, unsupported schema/event types and inconsistent transitions before invoking persistence.
 - Never silently truncate recognized fields.

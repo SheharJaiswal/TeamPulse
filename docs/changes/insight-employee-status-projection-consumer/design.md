@@ -85,7 +85,7 @@ The current local definitions show Insight's source queue is durable classic top
 - No API readiness dependency on RabbitMQ.
 
 ## Test strategy
-- Unit: schema/event validation, transition mapping, unknown additive fields, note exclusion, duplicate/stale outcomes, retry classification and options.
+- Unit: schema/event validation, transition mapping, unknown additive fields, optional note type and 1000-character limit, note exclusion, duplicate/stale outcomes, retry classification and options.
 - DynamoDB Local: table bootstrap/idempotency, exact keys/attributes, transaction atomicity, duplicate eventId, stale/equal/newer versions, cancellation classification and concurrent maximum-version preservation.
 - RabbitMQ Testcontainers: ack-after-commit, commit-before-ack replay, poison DLQ, transient retry/exhaustion, failed DLQ routing leaves source unacked, broker startup/reconnect and session loss.
 - API-host: local table initialization, production-mode no-auto-create, readiness independent of broker and consumer health transitions.

@@ -13,7 +13,7 @@
 ## Implementation — blocked pending approval
 - [ ] Add Insight.API, Insight.Application, Insight.Domain, Insight.Infrastructure and Insight.UnitTests with inward-only references.
 - [ ] Add DynamoDB SDK abstractions and the Insight-owned single-table key/item model.
-- [ ] Implement schema-v1 envelope validation and transport-independent lifecycle processor.
+- [ ] Implement schema-v1 envelope validation and transport-independent lifecycle processor, including Identity's optional-note type/1000-character constraint without persisting or logging the note.
 - [ ] Implement DynamoDB TransactWriteItems inbox/projection persistence with conditional version fences, duplicate detection and bounded optimistic-concurrency retries.
 - [ ] Add DynamoDB Local for local execution and isolated integration tests; no AWS account or credentials.
 - [ ] Add opt-in RabbitMQ consumer with manual ack after committed transaction, bounded transient retries, reconnect and separate consumer health.
