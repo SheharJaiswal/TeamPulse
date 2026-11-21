@@ -1,3 +1,13 @@
+## Next execution — Insight queue migration preparation
+
+- CI #195 passed for code commit `64879f7585fff2f6ad8dd2fb964582e7ab2ae9ca`: all 251 .NET tests and 19 Python RabbitMQ topology tests passed; Release build, Compose validation, RabbitMQ startup/topology and pinned DynamoDB Local image pull passed.
+- Challenge API health-route acceptance is verified; no further Challenge implementation work is pending in this increment.
+- The next approved Insight task is to implement and test a standalone, message-preserving RabbitMQ queue migration utility. The existing runbook is prepared for review, but the utility is not yet present.
+- Keep the currently deployed/repository Insight source queue as durable classic with no arguments until the utility, dry-run/confirmation safeguards, migration ledger and exact contract tests are reviewed. Do not change the committed definitions, execute a migration, delete/purge a queue, or reset the shared RabbitMQ volume in this preparation increment.
+- AWS/EventBridge/SQS provisioning and production table setup remain deferred.
+
+Updated: 2026-11-21
+
 ## Challenge API health routes — HTTP-level independence verified
 
 - Added a real `WebApplicationFactory` integration test using the Challenge MySQL 8.4 fixture and an enabled consumer pointed at a reserved-but-closed loopback AMQP port. The test verifies `/health/live` and MySQL-only `/health/ready` return HTTP 200 while `/health/consumer` returns HTTP 503.
