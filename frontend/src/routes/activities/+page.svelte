@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import type { ActionData, PageData } from './$types';
+  import { toLocalDateInputValue } from '$lib/validation.js';
 
   export let data: PageData;
   export let form: ActionData;
@@ -83,7 +84,7 @@
             </div>
             <div class="form-field">
               <label for="activity-date">Activity date</label>
-              <input id="activity-date" name="activityDate" type="date" value={new Date().toISOString().slice(0, 10)} required />
+              <input id="activity-date" name="activityDate" type="date" value={toLocalDateInputValue()} required />
             </div>
             <div class="form-field">
               <label for="activity-quantity">Quantity</label>
