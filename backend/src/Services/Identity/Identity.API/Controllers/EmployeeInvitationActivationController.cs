@@ -4,12 +4,14 @@ using Identity.Application.Abstractions;
 using Identity.Application.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Identity.API.Controllers;
 
 [ApiController]
 [AllowAnonymous]
 [Route("api/identity/invitations")]
+[EnableRateLimiting("invitation-activation")]
 public sealed class EmployeeInvitationActivationController(
     IEmployeeInvitationActivationService activationService) : ControllerBase
 {
