@@ -82,7 +82,7 @@ public sealed class EmployeeInvitation
         Status = "Cancelled";
         CancelledAtUtc = nowUtc;
         PendingNormalizedEmail = null;
-        TokenDigest = string.Empty;
+        TokenDigest = null;
         return true;
     }
 
