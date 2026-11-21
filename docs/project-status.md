@@ -1,3 +1,13 @@
+## Insight queue migration — CI #227 verification pending
+
+- CI #227 is running against code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`. The Release build, Docker Compose validation, RabbitMQ startup/topology verification, all 19 Python topology contract tests and pinned DynamoDB Local image pull have passed; the full .NET test step remains in progress. No .NET test totals are claimed yet.
+- CI #227 includes the fixes for RabbitMQ.Client 7.2.2 mandatory-return handling, the authenticated-user AMQP `user_id` test fixture and temporary ledger cleanup. The latest branch head is documentation-only commit `22539aa448e94a62ab38cd98e40919525c596662`, which adds the `user_id` operational precondition to the migration runbook.
+- Before any migration execution, inspect all non-null AMQP `user_id` values using an approved privacy-safe method and verify they match the migration connection identity. If values are incompatible or vary across users, stop and obtain explicit approval for a different property-handling policy; never silently strip or rewrite the property.
+- After CI completes, record the exact .NET suite totals and review the utility, runbook and current topology contract tests together. The utility remains unapproved for operational use until that review and an explicitly approved maintenance window.
+- The committed Insight source queue remains durable classic with no arguments and its original lifecycle binding; no persistent/shared RabbitMQ broker, MySQL volume or AWS resource was changed.
+
+Updated: 2026-11-21
+
 ## Insight queue migration — CI #223 failure analysis and corrections
 
 - GitHub Actions run #223 for code commit `607ed2f64be41a3fa295045c2177c4519027fa2a` completed with failure in the .NET test step. Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests and pinned DynamoDB Local image pull passed.
