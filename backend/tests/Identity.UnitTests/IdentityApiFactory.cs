@@ -8,11 +8,16 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
     private readonly string _environmentName;
+    private readonly IReadOnlyDictionary<string, string?> _additionalSettings;
 
-    public IdentityApiFactory(string connectionString, string environmentName = "Development")
+    public IdentityApiFactory(
+        string connectionString,
+        string environmentName = "Development",
+        IReadOnlyDictionary<string, string?>? additionalSettings = null)
     {
         _connectionString = connectionString;
         _environmentName = environmentName;
+        _additionalSettings = additionalSettings ?? new Dictionary<string, string?>();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -33,7 +38,8 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
                 ["Jwt:SigningKey"] = "integration-test-signing-key-at-least-32-bytes",
                 ["Jwt:AccessTokenMinutes"] = "15",
                 ["InvitationEmail:Enabled"] = "false"
-            });
+            }.Concat(_additionalSettings).GroupBy(pair => pair.Key)
+                .ToDictionary(group => group.Key, group => group.Last().Value));
         });
     }
 }
