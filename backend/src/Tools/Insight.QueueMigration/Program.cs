@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 const string usage = """
 Insight RabbitMQ queue migration copy utility
@@ -120,12 +119,7 @@ try
     }
 
     var copied = 0;
-    var returnedMessage = false;
-    channel.BasicReturnAsync += (_, _) =>
-    {
-        returnedMessage = true;
-        return Task.CompletedTask;
-    };
+    var mandatoryPublisher = new Insight.QueueMigration.MandatoryPublisher(channel);
 
     var ledgerPath = Path.GetFullPath(options.LedgerPath);
     var ledgerDirectory = Path.GetDirectoryName(ledgerPath);
@@ -146,19 +140,11 @@ try
         {
             var properties = CopyProperties(delivery.BasicProperties);
             // The default exchange routes directly to the already-existing destination queue.
-            // Publisher confirms are enabled on this channel; source ack follows the confirmed publish.
-            returnedMessage = false;
-            await channel.BasicPublishAsync(
-                exchange: string.Empty,
-                routingKey: options.Destination,
-                mandatory: true,
-                basicProperties: properties,
-                body: delivery.Body);
-
-            if (returnedMessage)
-            {
-                throw new InvalidOperationException("The broker returned a mandatory destination publication.");
-            }
+            // The helper awaits publisher confirmation and rejects mandatory returns before source ack.
+            await mandatoryPublisher.PublishAsync(
+                options.Destination,
+                properties,
+                delivery.Body);
 
             var digest = Convert.ToHexString(SHA256.HashData(delivery.Body.Span)).ToLowerInvariant();
             var ledgerRecord = JsonSerializer.Serialize(new { sha256 = digest });
