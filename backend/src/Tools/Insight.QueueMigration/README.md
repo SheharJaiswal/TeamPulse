@@ -13,7 +13,7 @@ This is a deliberately narrow copy tool. It transfers messages from one already-
 - Source acknowledgement occurs only after the destination publish is confirmed and the payload digest has been appended to the local JSONL ledger.
 - The JSONL ledger contains one SHA-256 payload-digest record per acknowledged message plus a per-invocation summary record containing only the source/destination queue names, acknowledged count and completion timestamp. It does not contain message bodies, headers, message identifiers, credentials or connection strings.
 - A crash after destination confirmation but before source acknowledgement can produce a duplicate. This is intentional at-least-once behavior; do not assume exactly-once transfer.
-- Payloads, headers, credentials and message identifiers are never written to the ledger or console. The ledger contains only SHA-256 payload digests, one per acknowledged copy.
+- Payloads, headers, credentials and message identifiers are never written to the ledger or console. Digest records contain only SHA-256 payload fingerprints; summary records contain only the documented operational metadata.
 - The utility never deletes either queue. Queue deletion/recreation and topology changes remain a separate operator-controlled maintenance step.
 
 ## Build
