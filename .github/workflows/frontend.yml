@@ -37,6 +37,10 @@ jobs:
         working-directory: frontend
         run: npm install --no-audit --no-fund
 
+      - name: Frontend unit tests
+        working-directory: frontend
+        run: npm test
+
       - name: Svelte and TypeScript checks
         working-directory: frontend
         run: npm run check
