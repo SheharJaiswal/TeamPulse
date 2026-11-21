@@ -210,6 +210,38 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
+    public async Task Deactivate_RejectsExplicitlyEmptyCorrelationIdBeforeMutation()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var outboxCountBefore = await database.OutboxMessages.CountAsync();
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+        {
+            Content = JsonContent.Create(new { reasonCode = "valid-reason" })
+        };
+        request.Headers.Add("Idempotency-Key", "empty-correlation");
+        request.Headers.TryAddWithoutValidation("X-Correlation-ID", string.Empty);
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var employee = await database.Employees.SingleAsync(x => x.Id == employeeId);
+        Assert.True(employee.IsActive);
+        Assert.Equal(0, employee.LifecycleVersion);
+        Assert.False(await database.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
+        Assert.Equal(outboxCountBefore, await database.OutboxMessages.CountAsync());
+    }
+
+    [Fact]
     public async Task Deactivate_ConcurrentSameKeyRequests_CreateOneTransitionAuditAndOutbox()
     {
         using var factory = _fixture.CreateFactory();
