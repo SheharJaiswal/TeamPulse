@@ -82,6 +82,5 @@ public sealed class EmployeeInvitationDomainTests
             invitation.RotateToken(new string('B', 64), expiredAt, expiredAt.AddHours(24)));
         Assert.Equal("Expired", invitation.Status);
         Assert.Null(invitation.TokenDigest);
-        Assert.Null(invitation.TokenDigest);
     }
 }
