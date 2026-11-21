@@ -187,6 +187,50 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
+    public async Task LifecycleEndpoint_RejectsInvalidOrRepeatedIdempotencyAndCorrelationHeadersWithoutMutation()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        var invalidHeaders = new[]
+        {
+            new[] { ("Idempotency-Key", "   ") },
+            new[] { ("Idempotency-Key", new string('k', 129)) },
+            new[] { ("Idempotency-Key", "first"), ("Idempotency-Key", "second") },
+            new[] { ("Idempotency-Key", "valid-key"), ("X-Correlation-ID", Guid.NewGuid().ToString()),
+                ("X-Correlation-ID", Guid.NewGuid().ToString()) }
+        };
+
+        foreach (var headers in invalidHeaders)
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+            {
+                Content = JsonContent.Create(new { reasonCode = "valid-reason" })
+            };
+            foreach (var (name, value) in headers)
+                request.Headers.TryAddWithoutValidation(name, value);
+
+            using var response = await client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var employee = await database.Employees.SingleAsync(x => x.Id == employeeId);
+
+        Assert.True(employee.IsActive);
+        Assert.Equal(0, employee.LifecycleVersion);
+        Assert.False(await database.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
+        Assert.False(await database.OutboxMessages.AnyAsync(x => x.EmployeeId == employeeId));
+    }
+
+    [Fact]
     public async Task LifecycleEndpoint_RejectsInvalidReasonAndNoteWithoutMutation()
     {
         using var factory = _fixture.CreateFactory();
