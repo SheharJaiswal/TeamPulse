@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -188,8 +189,8 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         var records = document.RootElement.EnumerateArray().ToArray();
 
         Assert.Equal(2, records.Length);
-        Assert.Contains(records, item => item.GetProperty("activityDate").GetDateTime().Date == new DateTime(2026, 11, 20));
-        Assert.Contains(records, item => item.GetProperty("activityDate").GetDateTime().Date == new DateTime(2026, 11, 21));
+        Assert.Contains(records, item => DateOnly.Parse(item.GetProperty("activityDate").GetString()!) == new DateOnly(2026, 11, 20));
+        Assert.Contains(records, item => DateOnly.Parse(item.GetProperty("activityDate").GetString()!) == new DateOnly(2026, 11, 21));
         Assert.Equal(0, habitApi.RequestCount);
     }
 
