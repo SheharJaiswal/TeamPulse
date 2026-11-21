@@ -1,3 +1,13 @@
+## Identity lifecycle request-validation boundary tests — CI #231 pending
+
+- Added MySQL API-host integration coverage for blank and overlength reason codes, overlength notes, and the guarantee that rejected requests do not mutate employee status, lifecycle audit or outbox rows.
+- Added a maximum-boundary success case: a 100-character reason code and 1,000-character note are accepted; reason-code surrounding whitespace is normalized before persistence.
+- Tests are isolated using a dedicated correlation ID for outbox non-mutation assertions, avoiding assumptions about other test rows in the shared MySQL fixture.
+- GitHub Actions CI #231 is running against code commit `55c192484534a54dd2aad62ccd2f1c0d26ab3774`; restore passed and Release build was in progress at this checkpoint. Do not claim the tests are verified until the full workflow passes.
+- No production code, schema, queue topology, persistent broker or AWS resource was changed.
+
+Updated: 2026-11-21
+
 ## Identity employee invitations — SDD and delivery-secret threat model drafted for owner review
 
 - Drafted `docs/changes/identity-employee-invitations/{proposal,spec,design,tasks}.md` and added `security-review.md`. This remains documentation-only; no application code, database schema, API contract or runtime behavior changed.
