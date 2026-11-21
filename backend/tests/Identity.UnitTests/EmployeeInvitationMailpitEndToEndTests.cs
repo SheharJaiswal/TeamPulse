@@ -43,7 +43,7 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         var settings = new Dictionary<string, string?>
         {
             ["InvitationEmail:Enabled"] = "true",
-            ["InvitationEmail:Host"] = mailpit.Hostname,
+            ["InvitationEmail:Host"] = "127.0.0.1",
             ["InvitationEmail:Port"] = smtpPort.ToString(),
             ["InvitationEmail:EnableSsl"] = "false",
             ["InvitationEmail:FromAddress"] = "no-reply@teampulse.local",
@@ -85,7 +85,7 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
 
         using var mailpitClient = new HttpClient
         {
-            BaseAddress = new Uri($"http://{mailpit.Hostname}:{apiPort}")
+            BaseAddress = new Uri($"http://127.0.0.1:{apiPort}")
         };
         string firstToken;
         try
