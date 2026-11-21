@@ -1,4 +1,4 @@
-## ILC-20 exact empty-value boundary regression — implementation added; CI pending
+## ILC-20 exact empty-value boundary regression — CI #241 verified
 
 - [x] Add a controller-level test with an explicitly present X-Correlation-ID key and zero parsed StringValues.
 - [x] Assert HTTP 400 and verify IEmployeeLifecycleService.ExecuteAsync is never called.
