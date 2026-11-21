@@ -1,3 +1,15 @@
+## Event Tracking SDD audit — explicit local infrastructure migration required
+
+- Audited the current RabbitMQ definitions and MySQL initialization scripts against the draft Event Tracking projection-consumer SDD.
+- Found and corrected two assumptions in the draft: `teampulse.event-tracking.events` currently has no queue arguments (durable classic queue, not quorum, no DLX); MySQL initialization currently creates only Habit and Challenge databases.
+- Updated the Event Tracking design/spec/tasks to include the exact source queue upgrade, Event Tracking quorum DLQ/routing key, safe migration requirements for persistent RabbitMQ queues with pending-message preservation, and the third MySQL init script/Compose mount plus existing-volume migration.
+- This remains a documentation-only SDD. No code, queue topology, Compose configuration or database bootstrap changed. Owner approval is still required before implementation.
+- Branch at audit start: `c88fbc86eee3d69128997dd9677258be0646c05d`.
+
+Updated: 2026-11-21
+
+---
+
 ## Next SDD prepared — Event Tracking employee-status projection consumer (awaiting owner approval)
 
 - Challenge's projection-consumer acceptance is complete and verified by CI #133 (178/178 .NET tests; clean Release build; Compose, RabbitMQ topology and 11 Python contract tests passed).

@@ -79,9 +79,20 @@ Use RabbitMQ.Client 7.x asynchronous APIs, consistent with the existing Identity
 - Reconnect with bounded delay; broker state does not affect database readiness.
 - Log only safe identifiers, event type, lifecycle version and sanitized outcome/classification.
 
-## Local topology
+## Local topology and existing-queue migration
 
-Inspect and preserve the existing `teampulse.event-tracking.events` binding in `infra/rabbitmq/definitions.json`. Add only the Event Tracking-owned DLX/DLQ configuration required for durable poison/exhaustion handling. Do not modify Habit, Challenge or other service queues. Keep the source queue durable/quorum with bounded at-least-once dead-lettering and reject-publish overflow semantics consistent with the approved shared topology policy.
+The current `infra/rabbitmq/definitions.json` has a durable `teampulse.event-tracking.events` queue bound to `teampulse.domain.events` with routing key `identity.employee.lifecycle`, but its queue arguments are empty. It is not currently a quorum queue and has no delivery limit or dead-letter policy. Do not assume it already has the Habit/Challenge topology.
+
+After approval, update only the Event Tracking queue:
+- Preserve the existing queue name and binding/routing key.
+- Convert it to a durable quorum queue with delivery limit 5.
+- Set `x-dead-letter-exchange=teampulse.domain.events.dlx`, `x-dead-letter-routing-key=event-tracking.employee.lifecycle.dead`, `x-dead-letter-strategy=at-least-once` and `x-overflow=reject-publish`.
+- Add durable quorum queue `teampulse.event-tracking.events.dlq` and bind it to the existing direct `teampulse.domain.events.dlx` exchange using the new routing key.
+- Do not modify Habit, Challenge, Insight or Notification queues/bindings.
+
+**Existing local broker migration is a prerequisite:** RabbitMQ cannot redeclare an existing queue with incompatible queue-type/arguments. Before importing the changed definitions into a persistent local broker, stop the Event Tracking consumer and Identity publisher, inspect and drain/preserve any queued messages, then explicitly delete/recreate the Event Tracking queue with the approved arguments. Never silently discard pending lifecycle messages or reset the shared RabbitMQ volume without confirming it is disposable. Fresh CI brokers can import the new definitions directly. Add a topology contract test asserting the exact source/DLQ queue arguments and binding.
+
+The MySQL local bootstrap currently creates `teampulse_habit` and `teampulse_challenge` only. Add `infra/mysql/init/03-event-tracking-database.sql` to create `teampulse_event_tracking` with the existing utf8mb4 collation and grant `teampulse_app` access, then mount it in Compose after the existing initialization scripts. Existing persistent MySQL volumes do not rerun init scripts; document the safe manual database/grant command for those volumes.
 
 ## Startup and health
 

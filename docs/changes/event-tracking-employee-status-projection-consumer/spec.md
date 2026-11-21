@@ -6,7 +6,7 @@
 ## Service and persistence boundary
 
 1. Event Tracking is one of the existing six services and owns submitted activity records and audit history.
-2. Event Tracking owns a separate logical MySQL database named `teampulse_event_tracking` locally and separately provisioned production credentials.
+2. Event Tracking owns a separate logical MySQL database named `teampulse_event_tracking` locally and separately provisioned production credentials. The local bootstrap adds a dedicated initialization script and Compose mount; existing persistent MySQL volumes require an explicit database/grant migration because container init scripts run only for an empty data directory.
 3. Event Tracking must not query or reference Identity, Habit or Challenge databases. Employee IDs are stable external identifiers; no cross-service foreign keys.
 4. Use ASP.NET Core .NET 8, EF Core 8, Pomelo.EntityFrameworkCore.MySql and MySQL 8.4, consistent with ADR-0001.
 5. All schema changes use checked-in EF migrations. Apply migrations at host startup before the consumer starts or the API accepts traffic.
@@ -51,7 +51,7 @@ Reject malformed JSON, missing/invalid recognized fields, unsupported event/sche
 
 ## Consumer and acknowledgement
 
-1. Consume only from the existing `teampulse.event-tracking.events` queue, using manual acknowledgements.
+1. Consume only from `teampulse.event-tracking.events`, using manual acknowledgements. The current local queue is durable but has no quorum/dead-letter arguments; this increment upgrades it to the same quorum/at-least-once DLX pattern used by Habit and Challenge, with a dedicated Event Tracking DLQ.
 2. Use bounded prefetch and one in-flight handler per channel initially.
 3. Acknowledge Applied, Stale and Duplicate only after the database transaction commits or the duplicate is safely established.
 4. Poison/unsupported events are dead-lettered to an Event Tracking-owned durable DLQ.
