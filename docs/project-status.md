@@ -17,3 +17,12 @@ Updated: 2026-11-21
 - Habit management tasks HM-T01–HM-T09 are complete. Backend CI #284 passed the Release build and all 298 tests across seven assemblies. Frontend CI #44915274529 passed all 9 unit tests, Svelte/TypeScript checks (0 errors, 0 warnings) and the production build.
 - The employee Activity History and submission vertical slice is also complete and CI-verified. No activity progress/streak projection or downstream activity consumer has been introduced without a separately approved business definition.
 - Next product increment identified: HR-controlled employee invitations. Its SDD and security threat model are drafted, but implementation is blocked pending owner decisions on delivery-secret handling, key protection/backup, expiry/resend/cancel semantics, activation behavior and rate limiting. No invitation implementation has been started.
+
+## Employee Activity History workspace refinement — verified
+
+- Activity date input now formats the browser-local calendar date rather than deriving the selected date from a UTC ISO timestamp. This prevents the default date from shifting to the previous day for users east of UTC near midnight.
+- Activity History now loads the authenticated employee profile from Identity's `/api/identity/me` endpoint and displays the employee name, role and avatar consistently with the Habit workspace. All three API requests remain server-side and use the validated session bearer token; unauthorized responses clear the session and redirect to sign-in.
+- Frontend CI #31 passed on 2026-11-21 for commit `c2001e098bbc4086dfe0b3e9bc836126fc7804d1`: 10/10 Node unit tests, Svelte/TypeScript checks and production build succeeded.
+- The failed intermediate CI attempts exposed a TypeScript definite-assignment issue in the new three-request load; the response tuple was corrected and the final CI run passed. No backend contract or business behavior changed.
+
+Updated: 2026-11-21
