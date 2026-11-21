@@ -21,7 +21,7 @@
 - [x] Add confirmed DLQ publishing and failure classifications; preserve source delivery if DLQ routing/confirmation fails.
 - [ ] Update only Insight source/DLQ topology after pending-message-preserving migration runbook and exact contract tests are in place.
 - [x] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
-- [ ] Add privacy assertions proving raw payload, note and credentials are not stored/logged.
+- [x] Add privacy assertions proving raw payload, note and credentials are not stored/logged — Consumer_DoesNotLogRawPayloadNotesCredentialsOrConnectionStrings passed in Insight.UnitTests (15/15) in CI #193 attempt 1.
 - [x] Add runbooks/configuration docs and update project status.
 - [x] Verify full Release build, DynamoDB Local integration, RabbitMQ Testcontainers, Compose and topology tests in CI — CI #190 passed for code commit `9ca613c41f9116296935270c19b8f8b136c78c5a`; 249/249 .NET tests passed, including all 14 Insight tests; zero failed or skipped.
 

@@ -1,3 +1,13 @@
+## Insight consumer privacy regression verified; full-suite rerun underway
+
+- Added a broker-backed privacy regression test using sentinel raw payload, optional note, credential and connection-string values; the test captures consumer logs and asserts none of those values are emitted.
+- The Insight test project passed **15/15** in CI #193 attempt 1, including the new privacy test. The full workflow was marked failed because unrelated Habit and Challenge Testcontainers tests threw Docker API cancellation exceptions during container cleanup; the stack traces terminate in DockerContainer.DisposeAsync, not in application assertions.
+- CI #193 failed attempt 1 is being rerun to determine whether the Docker cleanup failures are transient. The full-workflow acceptance remains open until a complete passing run is available.
+- Privacy test commit: `40b8e80d649af6b5d2eb8d4d14d6ec22b37601e0`. [CI #193](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44894055289).
+- No production code, persistent RabbitMQ queue/volume, MySQL volume or AWS resource was changed in this verification increment.
+
+Updated: 2026-11-21
+
 ## Insight DynamoDB CI acceptance verified; RabbitMQ consumer tests added
 
 - CI #188 passed for commit `faf0cac9ccc2c13f62fe4a9db25567959222d84f` on `feature/backend-foundation`.
