@@ -1,3 +1,14 @@
+## Event Tracking lifecycle projection consumer acceptance — CI #151 verified
+
+- Live implementation head: `d9402b56fd91ad59a1de34a8aee6fcfcde905db0` on `feature/backend-foundation`; current branch documentation is updated after that tested code commit.
+- The owner-approved Event Tracking projection-consumer SDD acceptance criteria ETESP-01–ETESP-14 are complete. The API-host test verifies the real opt-in RabbitMQ consumer becomes healthy, then reports consumer HTTP 503 after broker shutdown while MySQL readiness remains HTTP 200.
+- The broker interruption/replay integration test uses the production Event Tracking processor and MySQL inbox. It commits the first delivery, interrupts RabbitMQ before acknowledgement, restarts the same broker container, and verifies redelivery is classified Duplicate without a second projection mutation.
+- CI #151 passed: EventTracking **27/27**, Challenge **56/56**, Habit **24/24**, Identity **100/100** — **207/207 .NET tests**; **14/14 Python RabbitMQ topology tests**; Docker Compose validation and RabbitMQ startup/topology checks passed. Release build had 0 errors and one nullable warning in `EventTrackingRabbitMqMySqlReplayIntegrationTests.cs`.
+- [CI #151](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44884885148).
+- This closes only the Event Tracking employee-status projection foundation. Activity submission/evidence APIs and post-deactivation access policy, Insight/Notification consumers, AWS EventBridge/SQS provisioning, inbox retention/legal sign-off and global token revocation remain deferred. No AWS resources were provisioned.
+
+Updated: 2026-11-21
+
 ## Challenge lifecycle projection acceptance — CI #151 verified
 
 - Live code head verified: d9402b56fd91ad59a1de34a8aee6fcfcde905db0 on feature/backend-foundation. The deterministic Challenge fingerprint-vector test is present in this head's history.
