@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved policy; implementation in progress. Business rules are recorded in ADR-0003.
+Approved policy; implementation complete. Business rules are recorded in ADR-0003.
 
 ## Service boundaries
 
