@@ -14,7 +14,9 @@
 
 ## Remaining
 - [x] Add MySQL integration tests proving activity and outbox commit/rollback atomically, employee-scoped idempotency and filtered history.
-- [x] Add API integration tests for missing-bearer authorization, non-disclosing 404 on inaccessible habits, Habit API network outage (503) and no-persistence guarantees; CI execution remains pending.
+- [x] Add API integration tests for missing-bearer authorization, non-disclosing 404 on inaccessible habits, caller bearer-token forwarding, Habit API network outage/timeout (503), identical idempotent retries, conflicting key reuse (409), and no-persistence guarantees; latest CI execution remains pending.
 - [x] Verify local RabbitMQ publisher against a dedicated Testcontainers broker without changing shared persistent topology/data.
-- [x] Add activity history habit/date filters and a preselected habit action from habit cards.\n- [x] Preserve the same idempotency key when a submission response is ambiguous or retryable; rotate it only after acceptance.
+- [x] Add activity history habit/date filters and a preselected habit action from habit cards.
+- [x] Preserve the same idempotency key when a submission response is ambiguous or retryable; rotate it only after acceptance.
+- [x] Verify concurrent submissions with the same employee-scoped idempotency key commit one submission and one outbox event.
 - [ ] Decide downstream event consumer and progress projection scope separately; do not infer streak/target semantics.
