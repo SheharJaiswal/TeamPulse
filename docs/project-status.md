@@ -35,3 +35,13 @@ Updated: 2026-11-21
 - Frontend CI #33 passed on 2026-11-21 for commit `ee333bf413b9d4e1670804f4eaf449f59fdb5133`: frontend unit tests, Svelte/TypeScript checks and production build succeeded.
 
 Updated: 2026-11-21
+
+
+## HR-controlled employee invitations — SDD approval in progress
+
+- Owner approved the HR invitation feature and selected Option A on 2026-11-21: asynchronous delivery using a dedicated, short-lived Data Protection-protected secret record, separate from ordinary outbox payloads.
+- Owner approved deleting the live delivery secret after provider acceptance (with expiry cleanup as a backstop) and at-least-once delivery semantics; duplicate emails are possible.
+- Local development must use a persistent, Git-ignored Data Protection key ring with restrictive filesystem permissions. Production key protection/storage and backup/restore implementation are deferred until cloud infrastructure setup; no AWS/KMS choice is implied.
+- Implementation remains gated on explicit approval of the remaining invitation policy defaults (24-hour expiry, resend/cancel behavior, direct activation to active Employee, generic activation failures/rate limiting) and the development mail-catcher profile. No invitation code or schema has been introduced yet.
+
+Updated: 2026-11-21
