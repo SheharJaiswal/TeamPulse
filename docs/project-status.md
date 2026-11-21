@@ -1,3 +1,16 @@
+## Identity lifecycle command validation — ILC-01–ILC-20 verified
+
+- The HR-authorized lifecycle API now has explicit acceptance coverage for validated HrAdmin authorization and GUID JWT subject attribution; atomic employee/audit/outbox mutation; idempotent retries and conflict handling; lifecycle version/concurrency behavior; and request/header boundary validation.
+- ILC-16 verifies correctly signed HrAdmin tokens with a missing or non-GUID `sub` return HTTP 401 before employee, audit or outbox mutation. This passed in CI #237 (Identity 105/105).
+- ILC-17–ILC-18 verify supplied and generated correlation IDs remain identical across API response, lifecycle audit, outbox row and serialized event envelope; CI #238 passed (Identity 107/107).
+- ILC-19 verifies a same-command idempotency replay with a different retry correlation ID returns the original event/correlation IDs and creates no duplicate audit/outbox rows; CI #239 passed (Identity 108/108).
+- ILC-20 verifies a present malformed/whitespace correlation header returns HTTP 400 before mutation. CI #241 passed after the empty-header edge case was corrected (Identity 109/109).
+- CI #241 passed the complete .NET suite: Identity 109, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **268 passed, 0 failed, 0 skipped**. Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology tests, both pinned Testcontainers image pulls and test-result artifact upload passed. Build had 3 warnings and 0 errors.
+- Evidence: [CI #241](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44904270358) and [test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44904270358/artifacts/14706578896).
+- This closes the Identity lifecycle API validation acceptance slice only; it does not resolve the role catalogue, Organization Admin request intake, HRIS reconciliation, production retention/legal sign-off, global token revocation, or deferred cloud infrastructure.
+
+Updated: 2026-11-21
+
 ## Challenge employee-status projection consumer — acceptance complete
 
 - Challenge's approved lifecycle slice is projection-only. It stores exactly `employeeId`, `isActive`, `lifecycleVersion` and `updatedAtUtc`; Identity remains authoritative. No programme, task, eligibility, participation, scoring or evidence workflow/API was added.
