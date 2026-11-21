@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { eventTrackingApiUrl, habitApiUrl, responseMessage } from '$lib/server/api';
+import { isCalendarDate, isGuid } from '$lib/validation.js';
 
 interface Habit {
   id: string;
@@ -52,7 +53,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
   const fromDate = url.searchParams.get('fromDate') ?? '';
   const toDate = url.searchParams.get('toDate') ?? '';
 
-  if (habitId && !guidPattern.test(habitId)) error(400, 'Choose a valid habit filter.');
+  if (habitId && !isGuid(habitId)) error(400, 'Choose a valid habit filter.');
   if ((fromDate && !isCalendarDate(fromDate)) || (toDate && !isCalendarDate(toDate))) {
     error(400, 'Choose valid calendar dates for the activity filter.');
   }
@@ -100,12 +101,12 @@ export const actions: Actions = {
     const quantity = Number(formData.get('quantity'));
     const idempotencyKey = String(formData.get('idempotencyKey') ?? '');
 
-    if (!guidPattern.test(habitId) || !isCalendarDate(activityDate) ||
+    if (!isGuid(habitId) || !isCalendarDate(activityDate) ||
         !Number.isInteger(quantity) || quantity < 1 || quantity > 1000 ||
-        !guidPattern.test(idempotencyKey)) {
+        !isGuid(idempotencyKey)) {
       return fail(400, {
         message: 'Choose a habit, a valid activity date and a quantity between 1 and 1,000.',
-        idempotencyKey: guidPattern.test(idempotencyKey) ? idempotencyKey : crypto.randomUUID()
+        idempotencyKey: isGuid(idempotencyKey) ? idempotencyKey : crypto.randomUUID()
       });
     }
 
