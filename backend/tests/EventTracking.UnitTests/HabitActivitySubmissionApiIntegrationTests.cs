@@ -81,6 +81,66 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         Assert.Equal(0, habitApi.RequestCount);
     }
 
+    [Theory]
+    [InlineData("2026-11-19")]
+    [InlineData("2026-11-23")]
+    public async Task Create_WhenActivityDateIsOutsideHabitDateRange_ReturnsBadRequestWithoutPersisting(string activityDate)
+    {
+        var habitId = Guid.NewGuid();
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK, responseContent: JsonSerializer.Serialize(new
+        {
+            id = habitId,
+            status = 1,
+            startDate = "2026-11-20",
+            endDate = "2026-11-22"
+        }));
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(Guid.NewGuid()));
+
+        using var response = await client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate,
+            quantity = 1,
+            idempotencyKey = Guid.NewGuid()
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("within the habit's configured date range", await response.Content.ReadAsStringAsync());
+        using var history = await client.GetAsync("/api/habit-activities");
+        history.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Create_WhenHabitIsNotActive_ReturnsConflictWithoutPersisting()
+    {
+        var habitId = Guid.NewGuid();
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK, responseContent: JsonSerializer.Serialize(new
+        {
+            id = habitId,
+            status = 2,
+            startDate = "2026-11-20",
+            endDate = "2026-11-22"
+        }));
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(Guid.NewGuid()));
+
+        using var response = await client.PostAsJsonAsync("/api/habit-activities", NewSubmission(habitId));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("Only active habits accept activity submissions.", await response.Content.ReadAsStringAsync());
+        using var history = await client.GetAsync("/api/habit-activities");
+        history.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
     [Fact]
     public async Task Create_WhenHabitIsNotOwnedByEmployee_ReturnsNotFound_AndDoesNotPersistSubmission()
     {
@@ -356,7 +416,8 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     private sealed class StubHabitApiHandler(
         HttpStatusCode statusCode = HttpStatusCode.OK,
         bool throwNetworkError = false,
-        bool throwTimeoutError = false) : HttpMessageHandler
+        bool throwTimeoutError = false,
+        string? responseContent = null) : HttpMessageHandler
     {
         private int requestCount;
         public int RequestCount => Volatile.Read(ref requestCount);
@@ -372,7 +433,10 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
             ForwardedAuthorizationParameter = request.Headers.Authorization?.Parameter;
             if (throwNetworkError) throw new HttpRequestException("Simulated Habit API outage.");
             if (throwTimeoutError) throw new TaskCanceledException("Simulated Habit API timeout.");
-            return Task.FromResult(new HttpResponseMessage(statusCode));
+            return Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = responseContent is null ? null : new StringContent(responseContent, Encoding.UTF8, "application/json")
+            });
         }
     }
 }
