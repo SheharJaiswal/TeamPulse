@@ -56,6 +56,31 @@ public sealed class HabitActivitySubmissionStoreIntegrationTests(EventTrackingMy
     }
 
     [Fact]
+    public async Task AddAsync_ConcurrentRequestsWithSameEmployeeKey_ReturnTheSingleCommittedSubmission()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+        var store = new HabitActivitySubmissionStore(factory, TimeProvider.System);
+        var employeeId = Guid.NewGuid();
+        var key = Guid.NewGuid();
+        var first = new HabitActivitySubmission(Guid.NewGuid(), employeeId, Guid.NewGuid(),
+            new DateOnly(2026, 11, 21), 1, key, DateTime.UtcNow);
+        var competing = new HabitActivitySubmission(Guid.NewGuid(), employeeId, Guid.NewGuid(),
+            new DateOnly(2026, 11, 21), 2, key, DateTime.UtcNow);
+
+        var results = await Task.WhenAll(
+            store.AddAsync(first, CancellationToken.None),
+            store.AddAsync(competing, CancellationToken.None));
+
+        Assert.Equal(results[0].Id, results[1].Id);
+        await using var database = await factory.CreateDbContextAsync();
+        Assert.Single(await database.HabitActivitySubmissions.Where(x =>
+            x.EmployeeId == employeeId && x.IdempotencyKey == key).ToListAsync());
+        Assert.Single(await database.EventTrackingOutboxMessages.Where(x =>
+            x.Payload.Contains(results[0].Id.ToString())).ToListAsync());
+    }
+
+    [Fact]
     public async Task AddAsync_RollsBackOutboxWhenSubmissionInsertFails()
     {
         using var provider = await CreateProviderAsync();
