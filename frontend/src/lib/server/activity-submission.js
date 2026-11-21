@@ -1,4 +1,4 @@
-import { isCalendarDate, isGuid } from './validation.js';
+import { isCalendarDate, isGuid } from '../validation.js';
 
 /**
  * @typedef {{ habitId: string, activityDate: string, quantity: number, idempotencyKey: string }} ActivitySubmission
