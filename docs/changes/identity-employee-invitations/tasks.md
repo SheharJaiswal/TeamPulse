@@ -25,13 +25,14 @@
 - [x] Clear token digests to SQL NULL on accepted, cancelled and expired terminal states so the unique digest index does not collide on consumed invitations.
 - [x] Add 256-bit cryptographic token generation, SHA-256 digest derivation, purpose-scoped Data Protection wrapping and a persistent local key-ring configuration. Digest lookup and atomic redemption remain pending.
 - [x] Implement the transactional application service for HR create/get/resend/cancel operations, including 24-hour expiry, expired-invitation replacement, atomic resend generation rotation, protected-secret replacement and opaque-reference outbox metadata.
-- [ ] Expose the application service through HrAdmin create/get/resend/cancel endpoints and add the anonymous activation endpoint.
+- [x] Expose create/get/resend/cancel through the HrAdmin-protected API; add authorization, validation, lifecycle and unknown-ID integration coverage.
+- [ ] Add the anonymous activation endpoint.
 - [ ] Implement Employee-only role assignment and atomic Employee creation/password hashing.
 - [ ] Implement the owner-approved secure delivery hand-off with no plaintext token in ordinary outbox/logs.
 - [ ] Add activation rate limiting and generic invalid-token responses.
 - [ ] Add remaining MySQL 8.4 Testcontainers, API-host and delivery failure/concurrency/security tests. MySQL integration coverage now exercises create/duplicate detection, opaque outbox payloads, secret rotation, cancellation cleanup and replacement of expired invitations; CI verification is pending.
 - [x] Add Mailpit to the root local Docker Compose profile (SMTP 1025, web UI 8025).
-- [ ] Update Identity API contract, service spec, runbooks and project status.
+- [ ] Update the broader Identity API contract and runbooks; invitation SDD design/spec and project status now reflect the implemented HR API surface.
 - [ ] Verify Release build, full solution tests, Compose and topology tests in CI.
 
 ## Deferred
