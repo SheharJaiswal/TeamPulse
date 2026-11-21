@@ -1,11 +1,11 @@
-## Habit Management API — implementation added; CI verification pending
+## Habit Management API and employee web experience
 
-- Added the first employee-facing Habit business capability to the existing Habit service: authenticated personal habit create/list/detail/update/archive endpoints.
-- Added the Habit domain aggregate, application service/contracts, Habit-owned MySQL persistence and migration. Employee identity is sourced only from validated JWT `sub`; repository queries enforce owner isolation.
-- Habit validates Identity's issuer/audience/signing key configuration and denies access when its local employee-status projection explicitly marks the caller inactive. Missing projections remain unknown; this increment does not claim immediate global revocation.
-- Habit definitions contain daily/weekly frequency, target count, date range, optional description/category and active/archived lifecycle. Completion/activity records remain owned by Event Tracking; Challenge owns challenge-specific snapshots.
-- Added domain tests, authenticated API integration coverage, cross-employee isolation assertions and startup migration verification. Svelte frontend integration remains the next UI increment.
-- CI #243 passed on the preceding head (`e90ee53`): all existing build/test/topology checks succeeded. New Habit Management changes are not yet CI-verified.
-- No AWS resources, existing persistent RabbitMQ topology or broker data were changed.
+- Habit Management API is implemented: authenticated personal habit create/list/detail/update/archive endpoints, Habit-owned MySQL migration, domain rules, JWT validation, local inactive-status enforcement and owner-isolation integration coverage.
+- Employee web experience is implemented in `frontend/` using SvelteKit, Svelte 5 and TypeScript. It provides Identity login, HTTP-only cookie sessions, employee profile display, personal habit list/create/archive, and active/archived views.
+- Browser code never reads the JWT or calls service APIs directly. SvelteKit server actions/load functions call Identity and Habit with the cookie token; service URLs are private environment configuration.
+- Local ports: Identity `5101`, Habit `5102`, SvelteKit `5173`. See `frontend/README.md`.
+- Backend CI #247 passed after fixing the Habit test host configuration: Release build passed, all 275 .NET tests passed (including 30 Habit tests), and all 19 RabbitMQ topology contract tests passed.
+- SvelteKit frontend CI is added separately and will run Svelte/TypeScript checks plus production build on the frontend commit.
+- Activity completion, streaks, challenge participation, employee invitation and production hosting remain outside this increment. No AWS resources or persistent RabbitMQ data were changed.
 
 Updated: 2026-11-21

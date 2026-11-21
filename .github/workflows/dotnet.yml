@@ -8,6 +8,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
   pull_request:
     branches:
       - main
@@ -15,6 +17,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

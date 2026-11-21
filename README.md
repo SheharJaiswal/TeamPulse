@@ -167,3 +167,16 @@ dotnet run --project backend/src/Services/Challenge/Challenge.API
 Challenge consumes the direct schema-v1 envelope from `teampulse.challenge.events`. It records a minimal event inbox marker and version-aware employee status projection in one Challenge database transaction. It acknowledges Applied, Stale and Duplicate messages only after commit. Invalid messages and exhausted transient retries are routed to `teampulse.challenge.events.dlq`. The Challenge queue is a quorum queue with a finite delivery limit and at-least-once dead-lettering.
 
 This increment only materializes the employee lifecycle projection. It does not mutate programmes, eligibility, participation, completion, scores or evidence, and it does not expose Challenge business APIs. The policy for inactive employees' historical reads versus new participation/task mutations remains open question 19 and must be approved before those APIs are implemented. EventBridge/SQS deployment remains deferred until cloud infrastructure setup.
+
+## Employee web application
+
+The employee-facing SvelteKit application lives in [frontend](frontend/README.md). It provides sign-in and the personal habit workspace. For local startup, run MySQL and the Identity/Habit APIs, then:
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. See [frontend/README.md](frontend/README.md) for shared JWT signing-key configuration and backend port details.

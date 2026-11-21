@@ -1,0 +1,22 @@
+import { env } from '$env/dynamic/private';
+
+function normalizeBaseUrl(value: string | undefined, fallback: string): string {
+  return (value?.trim() || fallback).replace(/\/+$/, '');
+}
+
+export function identityApiUrl(): string {
+  return normalizeBaseUrl(env.IDENTITY_API_BASE_URL, 'http://localhost:5101');
+}
+
+export function habitApiUrl(): string {
+  return normalizeBaseUrl(env.HABIT_API_BASE_URL, 'http://localhost:5102');
+}
+
+export async function responseMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const body: { message?: string; title?: string } = await response.json();
+    return body.message || body.title || fallback;
+  } catch {
+    return fallback;
+  }
+}
