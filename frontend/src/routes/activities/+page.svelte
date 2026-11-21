@@ -47,13 +47,22 @@
       <p>Every small action is worth recording.</p>
     </div>
     <div class="sidebar-profile">
-      <div class="profile-copy"><strong>Personal workspace</strong><span>Private activity history</span></div>
+      <div class="avatar">{data.employee.displayName.slice(0, 1).toUpperCase()}</div>
+      <div class="profile-copy"><strong>{data.employee.displayName}</strong><span>{data.employee.role}</span></div>
       <form method="POST" action="/logout"><button class="icon-button" aria-label="Sign out" title="Sign out">↗</button></form>
     </div>
   </aside>
 
   <main class="main-content">
-    <header class="topbar"><span class="breadcrumb">Workspace / <strong>Activity history</strong></span><a class="text-link" href="/habits">Manage habits</a></header>
+    <header class="topbar">
+      <span class="breadcrumb">Workspace / <strong>Activity history</strong></span>
+      <div class="topbar-right">
+        <a class="text-link" href="/habits">Manage habits</a>
+        <span class="status-dot"></span>
+        <span>Personal space</span>
+        <div class="avatar small">{data.employee.displayName.slice(0, 1).toUpperCase()}</div>
+      </div>
+    </header>
     <section class="page-content">
       <div class="welcome-row">
         <div><p class="eyebrow">YOUR DAILY MOMENTUM</p><h1>Activity history</h1><p class="muted">Record what you did and keep a personal timeline of your effort.</p></div>
