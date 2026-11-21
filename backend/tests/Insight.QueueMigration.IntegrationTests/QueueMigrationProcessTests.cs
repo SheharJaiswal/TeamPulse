@@ -77,7 +77,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         {
             ContentType = "application/json",
             ContentEncoding = "utf-8",
-            DeliveryMode = DeliveryModes.NonPersistent,
+            DeliveryMode = DeliveryModes.Transient,
             Priority = 3,
             CorrelationId = "correlation-123",
             ReplyTo = "reply-queue",
