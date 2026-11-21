@@ -6,4 +6,4 @@
 - [x] Add shared keyboard focus-visible styles for links, buttons and form controls.
 - [x] Add reduced-motion support to the shared stylesheet.
 - [x] Verify frontend CI #44935239670: frontend unit tests, Svelte/TypeScript checks and production build all passed.
-- [ ] Record CI evidence and update the project status.
+- [x] Record CI evidence and update the project status.
