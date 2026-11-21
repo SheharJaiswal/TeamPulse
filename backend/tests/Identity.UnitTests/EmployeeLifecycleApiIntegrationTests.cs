@@ -58,6 +58,44 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
+    public async Task LifecycleEndpoints_RejectMissingOrInvalidSubjectClaimBeforeMutation()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        var correlationIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var invalidSubjects = new string?[] { null, "not-a-guid" };
+
+        for (var index = 0; index < invalidSubjects.Length; index++)
+        {
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", CreateTokenWithRawSubject(invalidSubjects[index], "HrAdmin"));
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+            {
+                Content = JsonContent.Create(new { reasonCode = "valid-reason" })
+            };
+            request.Headers.Add("Idempotency-Key", $"invalid-subject-{index}");
+            request.Headers.Add("X-Correlation-ID", correlationIds[index].ToString());
+
+            using var response = await client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var employee = await database.Employees.SingleAsync(x => x.Id == employeeId);
+
+        Assert.True(employee.IsActive);
+        Assert.Equal(0, employee.LifecycleVersion);
+        Assert.False(await database.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
+        Assert.False(await database.OutboxMessages.AnyAsync(x => correlationIds.Contains(x.CorrelationId)));
+    }
+
+    [Fact]
     public async Task Deactivate_ConcurrentSameKeyRequests_CreateOneTransitionAuditAndOutbox()
     {
         using var factory = _fixture.CreateFactory();
@@ -438,19 +476,22 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response) =>
         JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
-    private static string CreateToken(Guid subject, string role)
+    private static string CreateToken(Guid subject, string role) =>
+        CreateTokenWithRawSubject(subject.ToString(), role);
+
+    private static string CreateTokenWithRawSubject(string? subject, string role)
     {
+        var claims = new List<Claim>();
+        if (subject is not null)
+            claims.Add(new Claim("sub", subject));
+        claims.Add(new Claim("role", role));
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey)),
             SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
             issuer: Issuer,
             audience: Audience,
-            claims: new[]
-            {
-                new Claim("sub", subject.ToString()),
-                new Claim("role", role)
-            },
+            claims,
             notBefore: DateTime.UtcNow.AddMinutes(-1),
             expires: DateTime.UtcNow.AddMinutes(10),
             signingCredentials: credentials);
