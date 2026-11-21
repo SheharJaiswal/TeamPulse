@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { habitApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
+import { isGuid } from '$lib/validation.js';
 
 interface Habit {
   id: string;
@@ -93,10 +94,6 @@ function parseHabitForm(formData: FormData): { request: HabitWriteRequest | null
   };
 }
 
-function isHabitId(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 export const load: PageServerLoad = async ({ cookies, fetch }) => {
   const token = requireSession(cookies);
   const headers = { authorization: `Bearer ${token}` };
@@ -159,7 +156,7 @@ export const actions: Actions = {
     const token = requireSession(cookies);
     const formData = await request.formData();
     const habitId = String(formData.get('habitId') ?? '');
-    if (!isHabitId(habitId)) {
+    if (!isGuid(habitId)) {
       return fail(400, { action: 'update', message: 'Invalid habit selection.' });
     }
 
@@ -194,7 +191,7 @@ export const actions: Actions = {
     const token = requireSession(cookies);
     const formData = await request.formData();
     const habitId = String(formData.get('habitId') ?? '');
-    if (!isHabitId(habitId)) {
+    if (!isGuid(habitId)) {
       return fail(400, { action: 'archive', message: 'Invalid habit selection.' });
     }
 
