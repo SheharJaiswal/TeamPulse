@@ -1,6 +1,6 @@
 # Specification: HR-Controlled Employee Invitations and Credential Activation
 
-**Status:** Owner approved the invitation feature and Option A asynchronous protected-secret delivery on 2026-11-21. Policy defaults and development mail-catcher profile remain pending explicit approval; implementation remains blocked.
+**Status:** Owner approved the full invitation SDD on 2026-11-21, including Option A asynchronous protected-secret delivery, 24-hour expiry, resend/cancel rules, direct Employee activation, generic failures/rate limiting and Mailpit for local development. Production email provider and production key-management implementation remain deferred.
 
 ## Actors and authority
 - `HrAdmin`: may create, inspect, resend and cancel invitations.
@@ -57,11 +57,14 @@ A pending invitation stores invitation ID, normalized email, display name, organ
 - EINV-15: MySQL 8.4 Testcontainers verify migration, uniqueness, concurrent redemption, resend/cancel races and transaction rollback.
 - EINV-16: CI Release build, complete solution tests, Compose validation and topology contract tests pass.
 
-## Decisions still requiring owner approval
-1. Confirm the proposed 24-hour expiry and resend/cancel semantics.
-2. Confirm the local development mail-catcher approach and defer production provider selection.
-3. Confirm that invitation acceptance creates an active Employee with no additional HR approval.
-4. Confirm the proposed generic activation failure behavior and rate-limiting policy.
+## Approved decisions (2026-11-21)
+1. Invitation lifetime is 24 hours from issuance, evaluated in UTC.
+2. Resend is allowed only for pending, unexpired invitations; it atomically rotates the token and expiry and invalidates the previous token.
+3. Cancellation is terminal; cancelled invitations cannot be redeemed or resent.
+4. Successful activation immediately creates an active Employee with fixed role `Employee`; no second HR approval is required.
+5. Invalid, expired, cancelled and used tokens return a generic activation failure; activation attempts are rate-limited.
+6. Mailpit is the local development mail catcher. Production email provider selection remains deferred.
+7. Delivery uses Option A: dedicated protected secret storage, deletion after provider acceptance with expiry cleanup, and at-least-once delivery where duplicate messages may occur.
 
 ## Explicitly excluded
 Role catalogue/elevated-role assignment remains governed by open question 11. No invitation may grant HrAdmin, OrganizationAdmin or Manager. Organization Admin request intake, HRIS integration, password reset and MFA remain separate SDD increments.
