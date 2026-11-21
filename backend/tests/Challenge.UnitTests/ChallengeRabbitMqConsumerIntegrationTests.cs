@@ -7,7 +7,9 @@ using Challenge.Application.Abstractions;
 using Challenge.Application.Contracts;
 using Challenge.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Collections.Concurrent;
 using RabbitMQ.Client;
 using Testcontainers.RabbitMq;
 using Xunit;
@@ -197,6 +199,35 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         if (_connection is not null)
             await _connection.DisposeAsync();
         await _container.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Consumer_DoesNotWriteEventBodyNotesCredentialsOrBrokerUriToApplicationLogs()
+    {
+        const string note = "PRIVATE_OPTIONAL_NOTE_SENTINEL";
+        const string body = """{"eventId":"log-privacy-check","employeeId":"00000000-0000-0000-0000-000000000001","note":"PRIVATE_OPTIONAL_NOTE_SENTINEL","payload":"PRIVATE_EVENT_BODY_SENTINEL"}""";
+        var processor = new SignalingProcessor();
+        var logger = new CapturingLogger();
+
+        await StartConsumerAsync(processor, logger: logger);
+        await PublishAsync(body);
+        await processor.Processed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await WaitUntilAsync(async () =>
+        {
+            var delivery = await _channel!.BasicGetAsync(QueueName, autoAck: false);
+            if (delivery is null)
+                return true;
+
+            await _channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: true);
+            return false;
+        });
+
+        var renderedLogs = string.Join(Environment.NewLine, logger.Entries);
+        Assert.DoesNotContain(body, renderedLogs, StringComparison.Ordinal);
+        Assert.DoesNotContain(note, renderedLogs, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_EVENT_BODY_SENTINEL", renderedLogs, StringComparison.Ordinal);
+        Assert.DoesNotContain("local_rabbitmq_password", renderedLogs, StringComparison.Ordinal);
+        Assert.DoesNotContain(_brokerUri!, renderedLogs, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -423,7 +454,8 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         IEmployeeStatusProjectionProcessor processor,
         int maxAttempts = 3,
         int reconnectDelayMilliseconds = 5000,
-        int connectionTimeoutMilliseconds = 5000)
+        int connectionTimeoutMilliseconds = 5000,
+        ILogger<ChallengeRabbitMqConsumer>? logger = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IEmployeeStatusProjectionProcessor>(processor);
@@ -443,7 +475,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
             provider.GetRequiredService<IServiceScopeFactory>(),
             options,
             status,
-            NullLogger<ChallengeRabbitMqConsumer>.Instance);
+            logger ?? NullLogger<ChallengeRabbitMqConsumer>.Instance);
 
         _consumers.Add((consumer, provider));
         await consumer.StartAsync(CancellationToken.None);
@@ -521,6 +553,39 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         }
 
         throw new TimeoutException("The expected consumer state was not reached.");
+    }
+
+    private sealed class CapturingLogger : ILogger<ChallengeRabbitMqConsumer>
+    {
+        public ConcurrentQueue<string> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Enqueue(formatter(state, exception));
+            if (exception is not null)
+                Entries.Enqueue(exception.ToString());
+        }
+    }
+
+    private sealed class SignalingProcessor : IEmployeeStatusProjectionProcessor
+    {
+        public TaskCompletionSource<bool> Processed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ProjectionProcessingOutcome> ProcessAsync(
+            string message, CancellationToken cancellationToken)
+        {
+            Processed.TrySetResult(true);
+            return Task.FromResult(ProjectionProcessingOutcome.Applied);
+        }
     }
 
     private sealed class CommitBeforeAckReplayProcessor(string committedBody, string sentinelBody)
