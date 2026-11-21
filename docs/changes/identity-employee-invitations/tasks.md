@@ -21,13 +21,13 @@
 - [x] Owner selected Mailpit as the local development mail catcher; production delivery provider remains deferred (2026-11-21).
 
 ## Implementation — authorized
-- [ ] Add invitation Domain/Application/API/Infrastructure components and MySQL migration.
-- [ ] Add cryptographic token generation, digest lookup, UTC expiry and atomic single-use redemption.
+- [x] Add initial invitation domain entities, EF mappings and MySQL migration for invitation records and the separate protected delivery-secret store.
+- [x] Add 256-bit cryptographic token generation, SHA-256 digest derivation, purpose-scoped Data Protection wrapping and a persistent local key-ring configuration. Digest lookup and atomic redemption remain pending.
 - [ ] Implement HrAdmin create/get/resend/cancel endpoints and anonymous activation endpoint.
 - [ ] Implement Employee-only role assignment and atomic Employee creation/password hashing.
 - [ ] Implement the owner-approved secure delivery hand-off with no plaintext token in ordinary outbox/logs.
 - [ ] Add activation rate limiting and generic invalid-token responses.
-- [ ] Add MySQL 8.4 Testcontainers, API-host and delivery failure/concurrency/security tests.
+- [ ] Add MySQL 8.4 Testcontainers, API-host and delivery failure/concurrency/security tests. Initial domain and token-protection unit tests have been added; CI verification is pending.
 - [ ] Update Identity API contract, service spec, runbooks and project status.
 - [ ] Verify Release build, full solution tests, Compose and topology tests in CI.
 
