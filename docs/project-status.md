@@ -1,3 +1,13 @@
+## Identity lifecycle correlation-ID validation — CI #241 passed
+
+- CI #241 passed against correction commit `68dae7896fb1cb264f7792c731b0558e3419e16a`. The corrected controller distinguishes an absent X-Correlation-ID header from a present empty/whitespace value; only absence generates a UUID, while a present malformed value returns HTTP 400 before mutation.
+- ILC-20 passed in Identity **109/109**. Full .NET results: Identity 109, Habit 24, Challenge 57, Event Tracking 27, Notification 28 and Insight 15, plus Insight.QueueMigration.IntegrationTests 8 — **268 passed, 0 failed, 0 skipped**.
+- Restore, Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests, both pinned Testcontainers image pulls and test-results artifact upload passed. Release build reported 3 warnings and 0 errors.
+- [CI #241](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44904270358). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44904270358/artifacts/14706578896).
+- No production schema, queue topology, persistent broker data or AWS resource changed in this increment.
+
+Updated: 2026-11-21
+
 ## Identity correlation-ID replay and empty-header validation — CI #239 passed; ILC-20 verification pending
 
 - CI #239 passed for test commit `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. ILC-19 verified same-command idempotent replay preserves the original event/correlation IDs even when the retry supplies a different correlation ID.

@@ -1,3 +1,13 @@
+## ILC-20 — explicit malformed correlation-header validation verified
+
+- [x] Detect X-Correlation-ID header presence independently of parsed StringValues count.
+- [x] Generate a UUID only when the header is absent; reject a present whitespace-only/malformed value with HTTP 400 before mutation.
+- [x] Verify employee status/version remain unchanged and no lifecycle audit/outbox rows are created for the rejected request.
+- [x] GitHub Actions CI #241 passed: Identity 109/109; Habit 24/24; Challenge 57/57; Event Tracking 27/27; Notification 28/28; Insight 15/15; Insight.QueueMigration.IntegrationTests 8/8 — **268 passed, 0 failed, 0 skipped**.
+- [x] Restore, Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology tests, both pinned Testcontainers image pulls and test-results artifact upload passed; build had 3 warnings and 0 errors.
+- [x] [CI #241](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44904270358); [test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44904270358/artifacts/14706578896).
+- [x] No schema, queue topology, persistent broker data or AWS resource changed.
+
 # Tasks: HR-Authorized Employee Lifecycle Commands
 
 ## SDD and policy reconciliation
