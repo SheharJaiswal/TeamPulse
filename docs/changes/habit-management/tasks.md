@@ -7,5 +7,5 @@
 - [x] HM-T05 Add JWT validation and authenticated API endpoints.
 - [x] HM-T06 Enforce employee ownership and inactive projection denial.
 - [x] HM-T07 Add domain and API integration regression tests.
-- [ ] HM-T08 Verify Release build and complete test suite in GitHub Actions.
-- [ ] HM-T09 Connect the Svelte employee experience to the Habit API.
+- [x] HM-T08 Verify Release build and complete test suite in GitHub Actions; backend CI #284 passed all 298 tests across seven assemblies.
+- [x] HM-T09 Connect the Svelte employee experience to the Habit API through authenticated server-side load/actions; frontend CI #44915274529 passed unit tests, Svelte checks and production build.
