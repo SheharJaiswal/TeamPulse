@@ -1,18 +1,23 @@
 # Tasks: Habit Activity Submissions
 
-## Blocked — owner policy decision required
+## Policy
 
-- [ ] HAS-00 Approve Open Question 20: submission cardinality, correction policy, date/backdating/time-zone semantics, and quantity/target semantics.
-- [ ] Finalize API request/response and event contract from the approved policy.
+- [x] HAS-00 Owner approved submission cardinality, correction policy, date/backdating/time-zone semantics and quantity/idempotency rules (ADR-0003).
 
-## Implementation after approval
+## Implemented in the first delivery slice
 
-- [ ] Add Event Tracking domain model and application abstractions for activity submission/history.
-- [ ] Add Habit API client that forwards the validated caller context and validates habit ownership/status/date eligibility.
-- [ ] Add Event Tracking MySQL persistence and migration; retain startup migration behavior.
-- [ ] Add authenticated submit/list/detail endpoints with employee ownership and local inactive-status enforcement.
-- [ ] Add atomic outbox publication using the existing local transport abstraction.
-- [ ] Add unit tests for policy validation, ownership, idempotency and failure-without-mutation.
-- [ ] Add MySQL integration tests for persistence, unique constraints and history queries.
-- [ ] Add SvelteKit server actions and activity history UI without exposing the JWT to browser JavaScript.
-- [ ] Run backend and frontend CI; update `docs/project-status.md` with verified results.
+- [x] Add Event Tracking domain model and application abstraction for activity submission/history.
+- [x] Add Habit API client call that forwards caller authorization and validates habit ownership/date range.
+- [x] Add Event Tracking MySQL persistence and additive migration; retain startup migration behavior.
+- [x] Add authenticated submit/list/detail endpoints with employee ownership and local inactive-status enforcement.
+- [x] Add SvelteKit server actions and activity history UI without exposing the JWT to browser JavaScript.
+- [x] Add basic domain validation tests for quantity, identity and UTC timestamp rules.
+
+## Remaining before the vertical slice is complete
+
+- [ ] Add a transactional Event Tracking outbox record in the same database transaction as each accepted activity submission.
+- [ ] Add lease-safe local RabbitMQ publisher for the versioned `HabitActivityRecorded` event; EventBridge remains deferred until cloud infrastructure is provisioned.
+- [ ] Add MySQL integration tests for persistence, employee-scoped idempotency, race behavior and history filtering/order.
+- [ ] Add API integration tests for JWT authorization, habit owner isolation, inactive employee denial and Habit API outage handling.
+- [ ] Improve the habit card action to preselect its habit on the activity page.
+- [ ] Run complete backend and frontend CI and record the verified results in `docs/project-status.md`.

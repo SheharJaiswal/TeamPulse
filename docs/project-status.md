@@ -1,18 +1,11 @@
-## Habit Management API and employee web experience
+## Habit activity submissions — implementation in progress
 
-- Habit Management API is implemented: authenticated personal habit create/list/detail/update/archive endpoints, Habit-owned MySQL migration, domain rules, JWT validation, local inactive-status enforcement and owner-isolation integration coverage.
-- Employee web experience is implemented in `frontend/` using SvelteKit, Svelte 5 and TypeScript. It provides Identity login, HTTP-only cookie sessions, employee profile display, personal habit list/create/update/archive, and active/archived views.
-- Browser code never reads the JWT or calls service APIs directly. SvelteKit server actions/load functions call Identity and Habit with the cookie token; service URLs are private environment configuration.
-- Local ports: Identity `5101`, Habit `5102`, SvelteKit `5173`. See `frontend/README.md`.
-- Backend CI #247 passed: Release build, all 275 .NET tests (including 30 Habit tests), and all 19 RabbitMQ topology contract tests.
-- SvelteKit frontend CI #3 passed after adding edit support: Svelte/TypeScript checks and production build succeeded.
-- Activity completion, streaks, challenge participation, employee invitation and production hosting remain outside this increment. No AWS resources or persistent RabbitMQ data were changed.
-
-## Next product increment: habit activity submissions
-
-- The next planned vertical slice is employee self-reported habit activity and personal progress history.
-- Service ownership is fixed: Event Tracking owns activity submissions/history; Habit remains the source of truth for habit definitions. Event Tracking must validate habit ownership through the Habit API and must not access the Habit database.
-- The SDD change is drafted under `docs/changes/habit-activity-submissions/`. Implementation is intentionally blocked pending owner decisions in Open Question 20 covering duplicate/multiple submissions, correction/deletion, backdating/time-zone semantics and quantity/target behavior.
-- This is a draft design, not an implemented API or UI capability.
+- Owner approved the Open Question 20 defaults on 2026-11-21; the resolved policy is recorded in ADR-0003.
+- Event Tracking now has an append-only `habit_activity_submissions` entity/table and an additive MySQL migration. The employee ID is derived from JWT `sub`; employee status projection denies explicitly inactive employees.
+- The authenticated Event Tracking API validates habit ownership by calling the Habit API with the caller's bearer token, checks the configured habit date range, persists quantities from 1–1,000, enforces employee-scoped GUID idempotency and provides owner-scoped chronological history.
+- The SvelteKit workspace now includes an Activity History page with a check-in form and personal timeline. JWT remains in the HTTP-only server cookie.
+- Frontend CI #5 passed Svelte/TypeScript checks and production build. Backend CI #251 Release build passed; the full .NET test step was still running at the time of this update.
+- Remaining before this increment is complete: transactional outbox persistence and local RabbitMQ publisher for `HabitActivityRecorded`, Event Tracking API integration tests for auth/ownership/idempotency/history, frontend polish for selecting the specific habit from the habit card, and final end-to-end CI verification.
+- This feature is not yet considered complete or production-ready. No Event Tracking activity event is published yet; no manager-facing individual activity data is exposed.
 
 Updated: 2026-11-21
