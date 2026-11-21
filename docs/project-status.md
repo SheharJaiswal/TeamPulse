@@ -610,3 +610,15 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - Local verification: no local .NET SDK or Docker commands were run in this automation turn. All passing build/test/Compose/RabbitMQ/Python results above are from GitHub Actions.
 - Changed files reconciled in commit `787bf97b1fcd4083eb6c59bc0595363145e3c83e`: README, communication docs, Challenge reconnect test, RabbitMQ topology test and SDD task checkpoint. This documentation-only checkpoint updates proposal/spec/task approval state and `docs/project-status.md`.
 - Single next task: obtain explicit owner approval or requested revisions for the Challenge SDD package. Until then, do not implement additional Challenge behavior or begin another service feature. The recurring TeamPulse development automation is paused until this approval gate is resolved.
+
+
+## Latest continuation checkpoint — Challenge consumer CI #129 passed
+
+- The Challenge employee-status projection consumer SDD was explicitly approved by the owner on 2026-11-20; the approved spec and task checklist are authoritative. Earlier historical checkpoint text describing the proposal as unapproved is superseded by this checkpoint.
+- Branch: `feature/backend-foundation`. CI #129 verified code commit `a73992143617fb8cd36093a45b32752b14f78863`: [run #129](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44875363047) completed successfully.
+- Verification: Restore and Release build passed; Docker Compose configuration and RabbitMQ startup/topology passed; all 11 Python topology tests passed; .NET tests passed 177/177 (Challenge 53, Habit 24, Identity 100), zero failed/skipped. The new capturing-logger privacy test passed.
+- Newly closed acceptance coverage: consumer logs do not expose event bodies, optional notes, broker credentials or broker URI; DLQ binding restoration causes the original unacknowledged delivery to be redelivered and dead-lettered after reconnect.
+- CI #128 previously passed 176/176 .NET tests and verified concurrent duplicate/fingerprint races plus repeated migration-history stability. CI #127 verified inbox schema/privacy and independent liveness/readiness/consumer health.
+- Remaining test gap: explicit production API-host startup against a clean MySQL database, proving startup applies migrations and the production projection reader reads the migrated schema. Lower-level repeated migration and fresh-database health/readiness checks are covered; do not overstate them as full host-startup verification.
+- No local .NET or Docker execution is claimed; CI is the verification source. EventBridge/SQS and CloudWatch remain deferred until owner cloud setup. Inbox retention remains permanent until privacy/legal sign-off. Open question 19 still blocks employee-facing Challenge business APIs.
+- Next execution: implement the focused API-host startup/projection-reader integration test only, preserve the approved projection-only scope, and verify it in GitHub Actions.
