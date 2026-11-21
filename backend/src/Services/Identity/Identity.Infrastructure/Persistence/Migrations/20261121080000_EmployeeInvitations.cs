@@ -24,7 +24,7 @@ public partial class EmployeeInvitations : Migration
                 DisplayName = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false),
                 OrganizationId = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false),
                 TeamId = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false),
-                TokenDigest = table.Column<string>(type: "char(64)", nullable: false),
+                TokenDigest = table.Column<string>(type: "char(64)", nullable: true),
                 InvitedByEmployeeId = table.Column<Guid>(type: "char(36)", nullable: false),
                 CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 ExpiresAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
