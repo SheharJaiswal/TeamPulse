@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
@@ -88,7 +87,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
     habits: (await habitsResponse.json()) as Habit[],
     activities: (await activitiesResponse.json()) as Activity[],
     filters: { habitId, fromDate, toDate },
-    idempotencyKey: randomUUID()
+    idempotencyKey: crypto.randomUUID()
   };
 };
 
@@ -106,7 +105,7 @@ export const actions: Actions = {
         !guidPattern.test(idempotencyKey)) {
       return fail(400, {
         message: 'Choose a habit, a valid activity date and a quantity between 1 and 1,000.',
-        idempotencyKey: guidPattern.test(idempotencyKey) ? idempotencyKey : randomUUID()
+        idempotencyKey: guidPattern.test(idempotencyKey) ? idempotencyKey : crypto.randomUUID()
       });
     }
 
@@ -130,6 +129,6 @@ export const actions: Actions = {
         idempotencyKey
       });
     }
-    return { success: true, idempotencyKey: randomUUID() };
+    return { success: true, idempotencyKey: crypto.randomUUID() };
   }
 };
