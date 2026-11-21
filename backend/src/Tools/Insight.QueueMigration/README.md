@@ -6,10 +6,12 @@ This is a deliberately narrow copy tool. It transfers messages from one already-
 
 - Default invocation is read-only preflight. It passively inspects both queues and reports the source ready count and consumer count.
 - Execution requires both `--execute` and `--confirm-quiesced`. The operator must first stop the Identity RabbitMQ publisher and every consumer of the source queue.
-- The utility refuses to run if the source queue reports active consumers.
+- The utility refuses to run if either source or destination queue reports active consumers.
 - It uses manual source acknowledgement, a mandatory publish to the destination queue through the default exchange, and publisher confirms.
 - It forces the AMQP delivery mode to persistent (`2`) for the migration copy; body and other supported basic properties/headers are preserved. This deliberate durability upgrade is the only basic-property change.
+- Mandatory returns are detected; a returned publication is treated as failure and the source delivery remains unacknowledged.
 - Source acknowledgement occurs only after the destination publish is confirmed and the payload digest has been appended to the local JSONL ledger.
+- The JSONL ledger contains one payload-digest record per acknowledged message and a per-invocation summary record with source, destination, acknowledged count and completion timestamp.
 - A crash after destination confirmation but before source acknowledgement can produce a duplicate. This is intentional at-least-once behavior; do not assume exactly-once transfer.
 - Payloads, headers, credentials and message identifiers are never written to the ledger or console. The ledger contains only SHA-256 payload digests, one per acknowledged copy.
 - The utility never deletes either queue. Queue deletion/recreation and topology changes remain a separate operator-controlled maintenance step.
