@@ -68,7 +68,14 @@
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": []
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-delivery-limit": 5,
+        "x-dead-letter-exchange": "teampulse.domain.events.dlx",
+        "x-dead-letter-routing-key": "event-tracking.employee.lifecycle.dead",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish"
+      }
     },
     {
       "name": "teampulse.insight.events",
@@ -86,6 +93,15 @@
     },
     {
       "name": "teampulse.challenge.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "teampulse.event-tracking.events.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -149,6 +165,14 @@
       "destination": "teampulse.challenge.events.dlq",
       "destination_type": "queue",
       "routing_key": "challenge.employee.lifecycle.dead",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events.dlx",
+      "vhost": "/",
+      "destination": "teampulse.event-tracking.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "event-tracking.employee.lifecycle.dead",
       "arguments": []
     }
   ]

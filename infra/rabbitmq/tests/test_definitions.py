@@ -8,6 +8,9 @@ EXCHANGE = "teampulse.domain.events"
 ROUTING_KEY = "identity.employee.lifecycle"
 HABIT_QUEUE = "teampulse.habit.events"
 HABIT_DLQ = "teampulse.habit.events.dlq"
+EVENT_TRACKING_QUEUE = "teampulse.event-tracking.events"
+EVENT_TRACKING_DLQ = "teampulse.event-tracking.events.dlq"
+EVENT_TRACKING_DEAD_ROUTING_KEY = "event-tracking.employee.lifecycle.dead"
 DLX = "teampulse.domain.events.dlx"
 DEAD_ROUTING_KEY = "habit.employee.lifecycle.dead"
 SERVICE_QUEUES = {
@@ -36,7 +39,7 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
 
     def test_five_service_queues_and_existing_service_dlqs_are_defined(self):
         queues = {item["name"]: item for item in self.definitions["queues"]}
-        self.assertEqual(SERVICE_QUEUES | {HABIT_DLQ, "teampulse.challenge.events.dlq"}, set(queues))
+        self.assertEqual(SERVICE_QUEUES | {HABIT_DLQ, "teampulse.challenge.events.dlq", EVENT_TRACKING_DLQ}, set(queues))
         self.assertTrue(all(queues[name]["durable"] for name in queues))
 
     def test_habit_source_queue_is_quorum_with_bounded_at_least_once_dead_lettering(self):
@@ -71,6 +74,25 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
     def test_challenge_dead_letter_queue_has_its_own_binding(self):
         bindings = {(item["source"], item["destination"], item["routing_key"]) for item in self.definitions["bindings"]}
         self.assertIn((DLX, "teampulse.challenge.events.dlq", "challenge.employee.lifecycle.dead"), bindings)
+
+
+    def test_event_tracking_source_queue_is_quorum_with_bounded_at_least_once_dead_lettering(self):
+        queues = {item["name"]: item for item in self.definitions["queues"]}
+        arguments = queues[EVENT_TRACKING_QUEUE]["arguments"]
+        self.assertEqual("quorum", arguments["x-queue-type"])
+        self.assertEqual(5, arguments["x-delivery-limit"])
+        self.assertEqual(DLX, arguments["x-dead-letter-exchange"])
+        self.assertEqual(EVENT_TRACKING_DEAD_ROUTING_KEY, arguments["x-dead-letter-routing-key"])
+        self.assertEqual("at-least-once", arguments["x-dead-letter-strategy"])
+        self.assertEqual("reject-publish", arguments["x-overflow"])
+
+    def test_event_tracking_dead_letter_queue_is_a_durable_quorum_queue(self):
+        queues = {item["name"]: item for item in self.definitions["queues"]}
+        self.assertEqual("quorum", queues[EVENT_TRACKING_DLQ]["arguments"]["x-queue-type"])
+
+    def test_event_tracking_dead_letter_queue_has_its_own_binding(self):
+        bindings = {(item["source"], item["destination"], item["routing_key"]) for item in self.definitions["bindings"]}
+        self.assertIn((DLX, EVENT_TRACKING_DLQ, EVENT_TRACKING_DEAD_ROUTING_KEY), bindings)
 
     def test_all_five_service_queues_keep_the_lifecycle_binding(self):
         bindings = {

@@ -4,6 +4,7 @@ using EventTracking.API.HealthChecks;
 using EventTracking.Application;
 using EventTracking.Application.Abstractions;
 using EventTracking.Infrastructure.Persistence;
+using EventTracking.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -11,11 +12,18 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 var builder = WebApplication.CreateBuilder(args);
+var consumerOptions = builder.Configuration.GetSection(EventTrackingRabbitMqConsumerOptions.SectionName)
+    .Get<EventTrackingRabbitMqConsumerOptions>() ?? new EventTrackingRabbitMqConsumerOptions();
+consumerOptions.Validate();
+
 var connectionString = builder.Configuration.GetConnectionString("EventTrackingDatabase")
     ?? throw new InvalidOperationException("EventTrackingDatabase connection string is missing.");
 builder.Services.AddDbContextFactory<EventTrackingDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(consumerOptions);
+builder.Services.AddSingleton<EventTrackingRabbitMqConsumerStatus>();
+builder.Services.AddHostedService<EventTrackingRabbitMqConsumer>();
 builder.Services.AddScoped<EmployeeStatusProjectionStore>();
 builder.Services.AddScoped<IEmployeeStatusProjectionStore>(sp => sp.GetRequiredService<EmployeeStatusProjectionStore>());
 builder.Services.AddScoped<IEmployeeStatusProjectionReader>(sp => sp.GetRequiredService<EmployeeStatusProjectionStore>());
@@ -24,7 +32,12 @@ builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .Add(new HealthCheckRegistration("event-tracking-database",
         sp => new EventTrackingDatabaseHealthCheck(sp.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>()),
-        HealthStatus.Unhealthy, new[] { "ready" }, TimeSpan.FromSeconds(3)));
+        HealthStatus.Unhealthy, new[] { "ready" }, TimeSpan.FromSeconds(3)))
+    .Add(new HealthCheckRegistration("event-tracking-rabbitmq-consumer",
+        sp => new EventTrackingRabbitMqConsumerHealthCheck(
+            sp.GetRequiredService<EventTrackingRabbitMqConsumerStatus>(),
+            sp.GetRequiredService<EventTrackingRabbitMqConsumerOptions>()),
+        HealthStatus.Unhealthy, new[] { "consumer" }, TimeSpan.FromSeconds(3)));
 var app = builder.Build();
 await using (var database = await app.Services.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>().CreateDbContextAsync())
 {
@@ -32,6 +45,7 @@ await using (var database = await app.Services.GetRequiredService<IDbContextFact
 }
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+app.MapHealthChecks("/health/consumer", new HealthCheckOptions { Predicate = check => check.Tags.Contains("consumer") });
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.Run();
 public partial class Program { }

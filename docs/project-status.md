@@ -11,3 +11,14 @@
 - No RabbitMQ queue or shared volume was modified. No local .NET/Docker execution is claimed. Awaiting CI for this correction before proceeding to consumer implementation.
 
 Updated: 2026-11-21
+
+
+## Event Tracking consumer increment — implementation committed, CI pending
+
+- CI #135 passed for foundation commit `f794d545d14dec038ca80bb2f6b59bfee7d98a3e`: Release build, Docker Compose validation, RabbitMQ startup/topology and MySQL 8.4 Testcontainers tests all passed. [CI #135](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44879380833).
+- Added EventTracking's opt-in RabbitMQ hosted consumer, manual acknowledgement after committed projection processing, prefetch 1, bounded full-jitter transient retry, confirmed mandatory DLQ publication before source ack, session teardown/reconnect and independent consumer health.
+- Added Event Tracking's quorum source queue arguments and dedicated quorum DLQ, plus exact Python topology contract tests and initial retry/options unit tests.
+- Added `docs/runbooks/event-tracking-rabbitmq-queue-migration.md`. Existing persistent broker volumes remain untouched; the runbook requires pausing publisher/consumer, moving pending messages to a durable migration buffer, verifying counts, replacing only the Event Tracking queue and restoring the messages before resuming traffic.
+- This consumer/topology increment is not yet CI-verified. API-host startup migration and full RabbitMQ Testcontainers acknowledgement/retry/DLQ/reconnect/privacy tests remain pending. No local .NET/Docker execution is claimed.
+
+Updated: 2026-11-21

@@ -96,6 +96,9 @@ The MySQL local bootstrap currently creates `teampulse_habit` and `teampulse_cha
 
 ## Startup and health
 
+- The local RabbitMQ consumer is implemented as an opt-in hosted service using `EventTrackingConsumer:Enabled`; it defaults to disabled. It uses manual acknowledgements, prefetch 1, bounded full-jitter transient retry, confirmed mandatory DLQ publication before source acknowledgement, session teardown/reconnect, and separate `/health/consumer` reporting.
+- The Event Tracking source queue and its dedicated quorum DLQ are represented in fresh-broker definitions and topology contract tests. Existing persistent broker volumes still need the explicit drain/preserve/recreate procedure; do not import incompatible queue arguments into an existing queue.
+
 - Use the `EventTrackingDatabase` connection string and local `teampulse_event_tracking` database initialization/grant.
 - Apply migrations before hosted consumers start.
 - Consumer disabled by default; validate broker options only when enabled.

@@ -22,8 +22,8 @@
 - [ ] Add production API-host startup integration test against fresh MySQL, proving migrations and production reader.
 - [ ] Add manual-ack RabbitMQ consumer, bounded retry/reconnect and independent consumer health.
 - [ ] Upgrade only the Event Tracking source queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; add dedicated quorum DLQ and exact routing-key contract test.
-- [ ] Document safe migration of the existing persistent RabbitMQ queue, preserving pending messages; never silently discard messages or reset shared volume.
-- [ ] Add unit, MySQL 8.4 and RabbitMQ Testcontainers coverage for consumer acknowledgement, retry, DLQ, reconnect, replay and privacy.
+- [x] Document safe migration of the existing persistent RabbitMQ queue using a durable migration buffer and message-count verification; never silently discard messages or reset shared volume.
+- [ ] Add unit, MySQL 8.4 and RabbitMQ Testcontainers coverage for consumer acknowledgement, retry, DLQ, reconnect, replay and privacy. Initial retry/options unit tests are authored; consumer integration coverage remains pending.
 - [ ] Add local run documentation and update README/project status after consumer topology is complete.
 
 ## Acceptance mapping
