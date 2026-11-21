@@ -8,6 +8,7 @@ using Identity.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using MySqlConnector;
 
 namespace Identity.Infrastructure.Persistence;
 
@@ -111,7 +112,7 @@ public sealed class EmployeeInvitationActivationService(
             await transaction.CommitAsync(cancellationToken);
             return new EmployeeInvitationActivationResult(EmployeeInvitationActivationStatus.Activated);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception) when (exception.InnerException is MySqlException { Number: 1062 })
         {
             await transaction.RollbackAsync(cancellationToken);
             return Invalid();
@@ -130,7 +131,13 @@ public sealed class EmployeeInvitationActivationService(
         parameter.Value = digest;
         command.Parameters.Add(parameter);
         var result = await command.ExecuteScalarAsync(cancellationToken);
-        return result is null || result is DBNull ? null : Guid.Parse(Convert.ToString(result)!);
+        return result switch
+        {
+            null or DBNull => null,
+            Guid id => id,
+            byte[] bytes when bytes.Length == 16 => new Guid(bytes),
+            _ => Guid.Parse(Convert.ToString(result)!)
+        };
     }
 
     private async Task RemoveDeliverySecretAsync(
