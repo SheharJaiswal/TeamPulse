@@ -1,6 +1,6 @@
 # Tasks: Event Tracking Employee Status Projection Consumer
 
-**Status:** Owner-approved SDD; implementation and CI verification in progress.
+**Status:** Complete — owner-approved SDD implemented and verified by CI #151 (2026-11-21).
 
 ## SDD and contract review
 - [x] Owner reviewed and approved proposal/spec/design/tasks on 2026-11-21.
@@ -26,9 +26,9 @@
 - [x] Verify API-host startup with GitHub Actions CI #137: all 17 EventTracking tests passed, including the fresh MySQL 8.4 API-host migration/readback test; total solution tests 195 passed.
 - [x] Verify RabbitMQ consumer integration suite with GitHub Actions CI #140 attempt 2: EventTracking 24, Habit 24, Identity 100 and Challenge 54 tests passed; 14 Python topology tests passed.
 - [x] Verify production processor replay integration test against MySQL 8.4 inbox, including conflicting duplicate payload (CI #142: passed).
-- [ ] Verify actual API-host consumer health isolation against RabbitMQ and MySQL (CI #147's shutdown callback did not resolve the HTTP 503 timeout. CI #148 then exposed a false-positive HTTP 200: the test-host health check was healthy while the shared consumer status remained disconnected, indicating the optional consumer was disabled in the test host. The test factory now explicitly registers enabled consumer options after API registrations, and the test waits for a real connected session before asserting health. Production heartbeat remains five seconds).
-- [x] Add commit-before-ack broker interruption/replay integration test using the production processor and MySQL inbox, with same-container RabbitMQ restart and redelivery; CI verification pending.
-- [ ] Review full CI test output and acceptance matrix before marking this SDD complete.
+- [x] Verify actual API-host consumer health isolation against RabbitMQ and MySQL. The test factory explicitly enables the consumer after API registrations, waits for a real connected session, then stops RabbitMQ and verifies `/health/consumer` returns 503 while `/health/ready` remains 200. Verified by CI #151.
+- [x] Add and verify commit-before-ack broker interruption/replay using the production processor and MySQL inbox. The same-container RabbitMQ restart redelivers the unacknowledged event; the committed inbox classifies replay as Duplicate without a second projection mutation. Verified by CI #151.
+- [x] Review full CI #151 output and close ETESP-01–ETESP-14: Release build, Compose validation, RabbitMQ topology, API-host/MySQL health isolation, broker replay and all Event Tracking unit/integration tests passed.
 
 ## Acceptance mapping
 | Acceptance IDs | Required evidence |
@@ -55,3 +55,12 @@
 - Never log raw event bodies, optional notes, credentials or broker URIs.
 
 Updated: 2026-11-21
+
+
+## Final acceptance checkpoint — CI #151
+
+- [x] All ETESP-01–ETESP-14 acceptance criteria verified on commit `d9402b56fd91ad59a1de34a8aee6fcfcde905db0`.
+- [x] EventTracking tests: 27/27 passed, including API-host consumer-health isolation and production-processor MySQL inbox replay after broker interruption.
+- [x] Full solution: 207/207 .NET tests passed; 14/14 Python RabbitMQ topology tests passed; Docker Compose validation and RabbitMQ startup/topology checks passed.
+- [x] Release build completed with 0 errors and one nullable warning in `EventTrackingRabbitMqMySqlReplayIntegrationTests.cs`.
+- [x] No AWS resources were provisioned. EventBridge/SQS, retention/legal sign-off and downstream business authorization remain deferred.
