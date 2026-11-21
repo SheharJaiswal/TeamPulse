@@ -64,7 +64,7 @@ public sealed class EmployeeInvitationApiIntegrationTests : IClassFixture<MySqlI
         var resent = await resendResponse.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(2, resent.GetProperty("deliveryGeneration").GetInt32());
 
-        var cancelResponse = await client.DeleteAsync($"/api/identity/invitations/{invitationId}");
+        var cancelResponse = await client.PostAsync($"/api/identity/invitations/{invitationId}/cancel", content: null);
         Assert.Equal(HttpStatusCode.OK, cancelResponse.StatusCode);
         var cancelled = await cancelResponse.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Cancelled", cancelled.GetProperty("status").GetString());
@@ -130,7 +130,7 @@ public sealed class EmployeeInvitationApiIntegrationTests : IClassFixture<MySqlI
         Assert.Equal(HttpStatusCode.NotFound,
             (await client.PostAsync($"/api/identity/invitations/{id}/resend", null)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound,
-            (await client.DeleteAsync($"/api/identity/invitations/{id}")).StatusCode);
+            (await client.PostAsync($"/api/identity/invitations/{id}/cancel", null)).StatusCode);
     }
 
     private async Task EnsureDatabaseAsync(HttpClient client)
