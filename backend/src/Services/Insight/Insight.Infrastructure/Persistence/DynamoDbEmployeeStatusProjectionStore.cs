@@ -146,7 +146,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStore : IEmployeeStatusProje
     private Dictionary<string, AttributeValue> InboxItem(EmployeeLifecycleEvent item, DateTime processedAtUtc) =>
         new()
         {
-            ["PK"] = new() { S = $"EVENT#{item.EventId:D}".Replace(item.EventId.ToString("D"), item.EventId.ToString("D").ToLowerInvariant(), StringComparison.Ordinal) },
+            ["PK"] = new() { S = $"EVENT#{item.EventId.ToString("D").ToLowerInvariant()}" },
             ["SK"] = new() { S = "INBOX" },
             ["eventId"] = new() { S = item.EventId.ToString("D").ToLowerInvariant() },
             ["eventType"] = new() { S = item.EventType },
@@ -158,13 +158,13 @@ public sealed class DynamoDbEmployeeStatusProjectionStore : IEmployeeStatusProje
 
     private static Dictionary<string, AttributeValue> ProjectionKey(Guid employeeId) => new()
     {
-        ["PK"] = new() { S = $"EMPLOYEE#{employeeId:D}".Replace(employeeId.ToString("D"), employeeId.ToString("D").ToLowerInvariant(), StringComparison.Ordinal) },
+        ["PK"] = new() { S = $"EMPLOYEE#{employeeId.ToString("D").ToLowerInvariant()}" },
         ["SK"] = new() { S = "STATUS" }
     };
 
     private static Dictionary<string, AttributeValue> InboxKey(Guid eventId) => new()
     {
-        ["PK"] = new() { S = $"EVENT#{eventId:D}".Replace(eventId.ToString("D"), eventId.ToString("D").ToLowerInvariant(), StringComparison.Ordinal) },
+        ["PK"] = new() { S = $"EVENT#{eventId.ToString("D").ToLowerInvariant()}" },
         ["SK"] = new() { S = "INBOX" }
     };
 
