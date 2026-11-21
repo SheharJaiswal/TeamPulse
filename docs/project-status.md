@@ -1,3 +1,13 @@
+## Insight queue migration — isolated integration test harness
+
+- Added `Insight.QueueMigration.IntegrationTests`, a dedicated .NET 8 test project using RabbitMQ Testcontainers and invoking the actual migration console executable against a disposable RabbitMQ broker.
+- Initial coverage verifies passive preflight leaves source messages untouched, successful copy preserves the payload and supported AMQP basic properties/headers while upgrading delivery mode to persistent, bounded copy can resume, queue counts reconcile, and active consumers block execution.
+- Registered the test project in `backend/TeamPulse.sln`. The tests have not yet been compiled or run; CI must provide the first authoritative build/runtime result. The local execution environment has no .NET SDK.
+- Remaining tests: mandatory unroutable publish failure, publish-confirm/source-ack ordering and the documented crash/retry duplicate window. The utility remains unapproved for operational use until the full suite and runbook/topology review pass.
+- All broker interactions in these tests use disposable Testcontainers instances. No persistent RabbitMQ queues, volumes, MySQL, DynamoDB Local or AWS resources were modified.
+
+Updated: 2026-11-21
+
 ## Insight RabbitMQ migration utility — first implementation increment
 
 - Added a standalone .NET 8 console utility under `backend/src/Tools/Insight.QueueMigration`, using the repository-pinned RabbitMQ.Client 7.2.2.
