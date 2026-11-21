@@ -178,7 +178,7 @@ export const actions: Actions = {
 
     await handleUnauthorized(response, cookies);
     if (!response.ok) {
-      return fail(response.status === 400 || response.status === 409 ? response.status : 502, {
+      return fail([400, 404, 409].includes(response.status) ? response.status : 502, {
         action: 'update',
         message: await responseMessage(response, 'Your habit could not be updated.')
       });
