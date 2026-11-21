@@ -35,12 +35,12 @@
 - [x] Verify permanent invalid/integrity events reach the shared lifecycle DLQ and original delivery is acknowledged only after confirmed dead-letter handling in RabbitMQ Testcontainers CI #107.
 - [x] Add deterministic bounded exponential full-jitter delay policy tests and explicit `TransientRetryExhausted` / `NonTransientProcessingFailure` DLQ classifications.
 - [x] Verify transient exhaustion and non-transient processing failures reach the shared lifecycle DLQ, and failed DLQ publication leaves the original delivery unacknowledged, in RabbitMQ Testcontainers CI #108 (40 Challenge tests; full run 164/164 passed).
-- [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note.
+- [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note (schema/metadata integration test added; awaiting CI verification).
 - [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract.
 
 
 - [x] Diagnose CI #120 reconnect failure: the last failure stage was `connection` with `BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`; the source queue retained one message and had zero consumers. The Challenge Testcontainers fixture used a dynamically mapped host port, while the consumer retained its original URI across container restart.
-- [ ] Stabilize the Challenge Testcontainers AMQP host port across stop/start and verify the URI remains unchanged; rerun the complete broker-loss replay and sentinel/prefetch acceptance test. Keep CEPS-11/CEPS-14 open until that end-to-end test passes.
+- [x] Stabilize the Challenge Testcontainers AMQP host port across stop/start, capture the connection string after initial startup and verify it remains unchanged after restart; CI #122 passed the complete broker-loss replay and sentinel/prefetch acceptance test.
 
 ## Verification gaps
 
@@ -48,11 +48,11 @@
 - [ ] MySQL 8.4 Testcontainers: same event ID/same fingerprint and same event ID/different fingerprint.
 - [ ] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert.
 - [ ] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation.
-- [ ] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay (CI #111 still timed out waiting for reconnect after callback cancellation; the consumer now tracks and drains the active callback before session disposal, pending rerun).
+- [x] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay; verified by CI #122 after stable endpoint correction (47 Challenge tests passed).
 - [ ] RabbitMQ Testcontainers: invalid event and integrity violation DLQ handling, including DLX failure and redelivery.
 - [ ] RabbitMQ Testcontainers: bounded exponential retry, exhaustion/non-transient classifications and failed-DLQ redelivery for retry exhaustion.
 - [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect; startup-reconnect test passed in CI #105.
-- [ ] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack (CI #118 failed at the direct DuplicateReplayObserved wait after restart; 44/45 Challenge, 24 Habit and 100 Identity tests passed. The previous-session cancellation and completed-disposal assertions passed, but duplicate replay did not arrive within 30 seconds. CEPS-11/CEPS-14 remain open pending successful CI).
+- [x] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack; CI #122 passed the complete test, including cancellation of the active callback, old-session disposal, replay as Duplicate and sentinel processing proving prefetch-1 acknowledgement release. CEPS-11/CEPS-14 acceptance is verified.
 - [x] Add monotonic in-memory connection-attempt and established-session counters and include them, plus source queue message/consumer counts, in bounded replay-test timeout diagnostics. These counters do not change the public health contract; end-to-end replay remains pending CI.
 - [x] Add in-memory session-setup stage and last-failure exception-type-chain diagnostics so reconnect failures can be localized to connection, channel creation, QoS or consumer registration. Store no exception messages, broker URI or credentials; verify this with a unit test.
 - [x] Bound RabbitMQ connection-attempt, AMQP handshake and protocol continuation timeouts through a validated consumer option; deterministic tests reject out-of-range values. End-to-end reconnect verification remains pending CI.
@@ -87,3 +87,6 @@
 - [ ] Do not implement inbox expiry/cleanup until retention/privacy/legal policy is approved.
 
 - [ ] CI #120 for `0415c697e369ade72d19f6a5432850fd2e12f74e` failed: restore, Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. .NET tests were 168/169 (Challenge 44/45, Habit 24/24, Identity 100/100). The sole failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`. Safe diagnostics showed 137 connection attempts, only one established session, 137 completed sessions, one source message and zero consumers; the last failure was at connection stage with `BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`. [CI run #120](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44872585673).
+
+- [x] CI #122 passed for `725b4a887eeccd83709f9c36dfc33ccf6d776db8`: Release restore/build, Docker Compose validation, RabbitMQ startup/topology and all 11 Python tests passed; .NET tests passed 171/171 (Challenge 47, Habit 24, Identity 100), zero failed/skipped. The established-session broker-loss replay and sentinel/prefetch acceptance test passed. [CI run #122](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44873516708).
+- [ ] Add and verify MySQL inbox schema/privacy assertion: only the eight approved metadata/fingerprint columns exist and no MySQL scheduled events are defined; no raw payload, note, TTL or cleanup process is introduced. Test authored in the next commit; CI pending.

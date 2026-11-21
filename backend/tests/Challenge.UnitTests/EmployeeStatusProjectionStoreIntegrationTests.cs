@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,46 @@ namespace Challenge.UnitTests;
 public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySqlFixture fixture)
     : IClassFixture<ChallengeMySqlFixture>
 {
+    [Fact]
+    public async Task InboxSchema_ContainsOnlyApprovedMetadataAndNoAutomaticCleanupEvents()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        await using var database = await factory.CreateDbContextAsync();
+        var connection = database.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        await using var columnsCommand = connection.CreateCommand();
+        columnsCommand.CommandText =
+            "SELECT COLUMN_NAME FROM information_schema.COLUMNS " +
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'processed_domain_events' " +
+            "ORDER BY ORDINAL_POSITION";
+        var columns = new List<string>();
+        await using (var reader = await columnsCommand.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+                columns.Add(reader.GetString(0));
+        }
+
+        Assert.Equal(new[]
+        {
+            "event_id", "event_type", "schema_version", "employee_id",
+            "lifecycle_version", "processed_at_utc", "fingerprint_algorithm", "content_fingerprint"
+        }, columns);
+
+        await using var eventsCommand = connection.CreateCommand();
+        eventsCommand.CommandText =
+            "SELECT EVENT_NAME FROM information_schema.EVENTS WHERE EVENT_SCHEMA = DATABASE()";
+        var scheduledEvents = new List<string>();
+        await using (var reader = await eventsCommand.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+                scheduledEvents.Add(reader.GetString(0));
+        }
+
+        Assert.Empty(scheduledEvents);
+    }
+
     [Fact]
     public async Task ProcessAsync_DeduplicatesSameEventIdAndFingerprint()
     {

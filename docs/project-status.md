@@ -1,5 +1,18 @@
 # Project Status
 
+## Latest continuation checkpoint — established-session replay verified; inbox privacy schema test added (CI pending)
+
+- Start-of-run branch HEAD: `725b4a887eeccd83709f9c36dfc33ccf6d776db8`. Verified CI #122 for this exact commit: workflow succeeded; Release restore/build, Docker Compose validation, RabbitMQ startup/topology and all 11 Python tests passed; .NET tests were 171/171 (Challenge 47, Habit 24, Identity 100), zero failed/skipped. [CI #122](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44873516708).
+- The previously failing `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck` now passes. It verifies active callback cancellation after the inbox/projection commit, completion/disposal of the old session, replay as Duplicate after broker restart, and sentinel processing proving prefetch=1 releases only after acknowledgement. CEPS-11/CEPS-14 acceptance is now verified; task checklist updated.
+- Stable broker endpoint correction is verified: the Testcontainers fixture binds a host port selected before container startup, captures its connection string after initial startup and asserts the URI remains unchanged after container restart.
+- Next approved SDD increment: add MySQL integration coverage asserting `processed_domain_events` contains exactly the eight approved metadata/fingerprint columns and no scheduled MySQL events exist. This guards against raw payload/note persistence and DB-scheduled expiry/cleanup. The test is authored but awaits CI; do not mark privacy acceptance complete until it passes.
+- Current change remains projection-only. Challenge programme/task/eligibility/participation behavior and open question 19 remain untouched. EventBridge/SQS, CloudWatch and AWS provisioning remain deferred until owner cloud setup. Inbox retention remains permanent initially and requires privacy/legal review before production.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — stabilize Challenge broker endpoint across container restart (CI pending)
 
 - Start-of-run live branch HEAD: `0415c697e369ade72d19f6a5432850fd2e12f74e` (tree `2981578e3520e87974af48f0630aba6c59b2075b`). Fetched CI #120, job steps and full test logs before selecting this increment. CI #120 failed: Release build succeeded with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (Challenge 44/45, Habit 24/24, Identity 100/100). [CI run #120](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44872585673).
