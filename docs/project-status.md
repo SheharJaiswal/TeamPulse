@@ -1,9 +1,10 @@
-## Challenge API health routes — HTTP-level independence regression under correction
+## Challenge API health routes — HTTP-level independence verified
 
-- Added a real `WebApplicationFactory` integration test using the Challenge MySQL 8.4 fixture and an enabled consumer pointed at a reserved-but-closed loopback AMQP port.
-- CI #194 passed restore, Release build, Compose validation, RabbitMQ startup/topology and all 19 Python topology tests. Its .NET suites passed except for the new Challenge test: 56/57 Challenge tests passed, and the other five service suites passed (194/194 combined).
-- The new test failed before issuing HTTP requests because it assumed the hosted consumer's in-memory connection-attempt counter would advance within five seconds. This is a test synchronization assumption, not a production health-check failure. The test now asserts the consumer options are enabled and its status is disconnected, then verifies the three HTTP route status codes.
-- The HTTP-route regression remains pending a successful CI rerun. Production health-check behavior, default consumer-disabled configuration and all existing projection behavior remain unchanged.
+- Added a real `WebApplicationFactory` integration test using the Challenge MySQL 8.4 fixture and an enabled consumer pointed at a reserved-but-closed loopback AMQP port. The test verifies `/health/live` and MySQL-only `/health/ready` return HTTP 200 while `/health/consumer` returns HTTP 503.
+- CI #194 exposed a test-only synchronization assumption: the connection-attempt counter did not advance within the test's five-second wait. The test now asserts the consumer configuration is enabled and its status is disconnected before checking the HTTP routes; no production health logic changed.
+- CI #195 passed for code commit `64879f7585fff2f6ad8dd2fb964582e7ab2ae9ca`: Challenge **57/57**, Habit 24/24, Identity 100/100, Event Tracking 27/27, Notification 28/28 and Insight 15/15 — **251/251 .NET tests**, zero failed or skipped. All **19/19 Python RabbitMQ topology tests**, Release build, Compose validation, RabbitMQ startup/topology, pinned DynamoDB Local image pull and test-result upload passed.
+- Build reported two nullable warnings in EventTracking and Notification test helpers; no Challenge warning or error was reported. [CI #195](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44896073551). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44896073551/artifacts/14704755053).
+- CEPS-15 is now verified at the real API-host HTTP route boundary. The consumer remains disabled by default; no persistent RabbitMQ topology, MySQL volume or AWS resource was changed.
 
 Updated: 2026-11-21
 
