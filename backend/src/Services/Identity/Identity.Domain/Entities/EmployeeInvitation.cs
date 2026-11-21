@@ -39,7 +39,7 @@ public sealed class EmployeeInvitation
     public string DisplayName { get; private set; } = string.Empty;
     public string OrganizationId { get; private set; } = string.Empty;
     public string TeamId { get; private set; } = string.Empty;
-    public string TokenDigest { get; private set; } = string.Empty;
+    public string? TokenDigest { get; private set; }
     public Guid InvitedByEmployeeId { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime ExpiresAtUtc { get; private set; }
@@ -72,7 +72,7 @@ public sealed class EmployeeInvitation
         Status = "Accepted";
         AcceptedAtUtc = nowUtc;
         PendingNormalizedEmail = null;
-        TokenDigest = string.Empty;
+        TokenDigest = null;
         return true;
     }
 
