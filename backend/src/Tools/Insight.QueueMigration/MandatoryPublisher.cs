@@ -19,7 +19,7 @@ internal sealed class MandatoryPublisher
 
     public async Task PublishAsync(
         string destination,
-        IReadOnlyBasicProperties properties,
+        BasicProperties properties,
         ReadOnlyMemory<byte> body)
     {
         _returned = false;
