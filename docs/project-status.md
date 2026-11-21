@@ -1,3 +1,16 @@
+## Next SDD prepared — Event Tracking employee-status projection consumer (awaiting owner approval)
+
+- Challenge's projection-consumer acceptance is complete and verified by CI #133 (178/178 .NET tests; clean Release build; Compose, RabbitMQ topology and 11 Python contract tests passed).
+- Reviewed the six-service ownership map and shared Employee Status Projection Contract v1. The next downstream projection rollout candidate is Event Tracking, which owns submitted activity records and audit history and already has a local RabbitMQ queue in the shared topology.
+- Drafted `docs/changes/event-tracking-employee-status-projection-consumer/{proposal,spec,design,tasks}.md`. The proposed scope is limited to Event Tracking's local lifecycle projection/inbox and consumer; it does not add activity submission/evidence APIs or alter historical activity records.
+- **No Event Tracking code or topology was changed.** The new SDD is explicitly awaiting owner approval; implementation tasks remain unchecked until approval. EventBridge/SQS and AWS provisioning remain deferred to owner cloud setup.
+- Open question 19 continues to block employee-facing Challenge authorization policy; it does not alter the scope of this Event Tracking projection proposal.
+- Current branch head before this documentation-only proposal: `87187d6d2ffe25d0d4da87fbeb11ed52822848d4`.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — CI #133 passed; Challenge API-host acceptance verified
 
 - Branch: `feature/backend-foundation`; verified HEAD `adaef8ef7d9aeb8af05ce9a48278647e0bf4ad43`.
