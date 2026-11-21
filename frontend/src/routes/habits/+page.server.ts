@@ -206,8 +206,8 @@ export const actions: Actions = {
     }
 
     await handleUnauthorized(response, cookies);
-    if (!response.ok && response.status !== 404) {
-      return fail(502, {
+    if (!response.ok) {
+      return fail(response.status === 404 ? 404 : response.status === 400 ? 400 : 502, {
         action: 'archive',
         message: await responseMessage(response, 'Your habit could not be archived.')
       });
