@@ -34,3 +34,11 @@
 - [ ] HRIS service authentication and feed reconciliation.
 - [ ] EventBridge outbox dispatcher, retries, DLQ and delivery monitoring.
 - [ ] Employee-status projection consumers in the five receiving services.
+
+
+## Additional request-validation regression coverage — CI #231 pending
+
+- Added integration tests for blank and overlength reason codes, overlength notes, and no employee/audit/outbox mutation on rejected requests.
+- Added a successful maximum-boundary case for a 100-character reason code and 1,000-character note, including reason-code trimming.
+- The tests use an explicit correlation ID to isolate the outbox assertion from unrelated rows in the shared MySQL test database.
+- GitHub Actions CI #231 is running against code commit `55c192484534a54dd2aad62ccd2f1c0d26ab3774`; full verification is pending.
