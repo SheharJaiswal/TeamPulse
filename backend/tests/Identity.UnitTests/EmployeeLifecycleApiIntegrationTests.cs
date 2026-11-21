@@ -250,7 +250,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
             Content = JsonContent.Create(new
             {
                 reasonCode = $"  {reason}  ",
-                note = $"  {note}  "
+                note
             })
         };
         request.Headers.Add("Idempotency-Key", "maximum-lifecycle-fields");
