@@ -14,6 +14,10 @@ public sealed class ChallengeApiFactory(
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:ChallengeDatabase", connectionString);
+        builder.UseSetting("ChallengeConsumer:Enabled", consumerEnabled ? "true" : "false");
+        builder.UseSetting("ChallengeConsumer:Uri", rabbitMqUri ?? string.Empty);
+        builder.UseSetting("ChallengeConsumer:ReconnectDelayMilliseconds", "250");
+        builder.UseSetting("ChallengeConsumer:ConnectionTimeoutMilliseconds", "1000");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>

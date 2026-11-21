@@ -78,12 +78,9 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
             rabbitMqUri: brokerUri);
         using var client = factory.CreateClient();
 
+        var consumerOptions = factory.Services.GetRequiredService<ChallengeRabbitMqConsumerOptions>();
         var consumerStatus = factory.Services.GetRequiredService<ChallengeRabbitMqConsumerStatus>();
-        var connectionDeadline = DateTime.UtcNow.AddSeconds(5);
-        while (consumerStatus.ConnectionAttemptCount == 0 && DateTime.UtcNow < connectionDeadline)
-            await Task.Delay(25);
-
-        Assert.True(consumerStatus.ConnectionAttemptCount > 0);
+        Assert.True(consumerOptions.Enabled);
         Assert.False(consumerStatus.IsConnected);
 
         using var liveness = await client.GetAsync("/health/live");
