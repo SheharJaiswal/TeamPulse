@@ -1,9 +1,11 @@
-## Identity lifecycle header-validation tests — CI pending
+## Identity lifecycle header-validation tests — CI #233 passed
 
-- Added API-host integration coverage for whitespace-only and overlength idempotency keys, repeated idempotency headers and repeated correlation headers. Rejected requests must leave employee state/version, audit and correlation-scoped outbox unchanged.
-- Added specification acceptance criterion ILC-14 and updated the lifecycle task checklist.
-- Code commits: `7c36d77a4a82c705ee3976ee6582ba51ac882562` and `d7dc8b8663e28e25c9beec395acd0ae48c628185`. CI verification is pending; no local .NET test result is available.
-- No production code, schema, queue topology, persistent broker or AWS resource was changed.
+- Added API-host integration coverage for whitespace-only and overlength idempotency keys, repeated idempotency headers and repeated correlation headers. Rejected requests leave employee state/version unchanged, create no lifecycle audit rows and create no outbox rows for the supplied correlation IDs.
+- Added specification acceptance criterion ILC-14. The complete header-validation regression passed in the Identity MySQL API-host suite.
+- CI #233 passed against code commit `d7dc8b8663e28e25c9beec395acd0ae48c628185`: restore, Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests, pinned DynamoDB Local image pull and the complete .NET suite passed.
+- Exact .NET results: Identity 103/103, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28, Insight 15/15 and Insight.QueueMigration.IntegrationTests 8/8 — **262 passed, 0 failed, 0 skipped**.
+- [CI #233](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522/artifacts/14706141699).
+- This increment changed tests and SDD documentation only; no production code, schema, queue topology, persistent broker or AWS resource was changed.
 
 Updated: 2026-11-21
 
