@@ -157,11 +157,13 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
     public async Task MandatoryPublisher_ThrowsWhenBrokerReturnsUnroutableMandatoryPublication()
     {
         var missingDestination = QueueName();
+        var validDestination = QueueName();
         await using var connection = await CreateConnectionAsync();
         var channelOptions = new CreateChannelOptions(
             publisherConfirmationsEnabled: true,
             publisherConfirmationTrackingEnabled: true);
         await using var channel = await connection.CreateChannelAsync(channelOptions);
+        await channel.QueueDeclareAsync(validDestination, durable: true, exclusive: false, autoDelete: false);
         var publisher = new Insight.QueueMigration.MandatoryPublisher(channel);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -171,6 +173,13 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
                 Encoding.UTF8.GetBytes("must-not-be-treated-as-copied")));
 
         Assert.Contains("mandatory destination publication", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        // A failed returned publication must not poison the next confirmed publication.
+        await publisher.PublishAsync(
+            validDestination,
+            new BasicProperties { DeliveryMode = 2 },
+            Encoding.UTF8.GetBytes("valid-copy"));
+        Assert.Equal(1u, (await channel.QueueDeclarePassiveAsync(validDestination)).MessageCount);
     }
 
     [Fact]
