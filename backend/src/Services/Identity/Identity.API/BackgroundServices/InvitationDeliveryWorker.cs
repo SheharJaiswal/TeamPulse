@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using System.Net.Mail;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.Application.Abstractions;
