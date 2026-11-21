@@ -81,3 +81,12 @@
 - Added a second integration test proving omission of X-Correlation-ID generates one non-empty UUID that is identical in the response, audit, outbox and event envelope.
 - Added acceptance criteria ILC-17 and ILC-18 to the lifecycle specification.
 - Test implementation commit: `ff9c87b53c8943ed0719528b280304ac2e5199db`. CI verification pending.
+
+## CI #237 — JWT subject validation and RabbitMQ image setup verified
+
+- CI #237 passed for workflow-fix/code head `819242fe43a446fe1574e3025458d12a14331188`.
+- The workflow now explicitly pulls `rabbitmq:4.0-alpine` before Testcontainers tests. The Insight queue-migration suite passed all 8 tests; the previous image-not-found failure is resolved.
+- Full .NET results: Identity 105, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **264 passed, 0 failed, 0 skipped**.
+- Restore, Release build, Docker Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests and both pinned test-image pulls passed. Build reported 3 warnings and 0 errors.
+- [CI #237](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902295123). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902295123/artifacts/14705604839).
+
