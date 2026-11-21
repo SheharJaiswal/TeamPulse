@@ -154,6 +154,26 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MandatoryPublisher_ThrowsWhenBrokerReturnsUnroutableMandatoryPublication()
+    {
+        var missingDestination = QueueName();
+        await using var connection = await CreateConnectionAsync();
+        var channelOptions = new CreateChannelOptions(
+            publisherConfirmationsEnabled: true,
+            publisherConfirmationTrackingEnabled: true);
+        await using var channel = await connection.CreateChannelAsync(channelOptions);
+        var publisher = new Insight.QueueMigration.MandatoryPublisher(channel);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            publisher.PublishAsync(
+                missingDestination,
+                new BasicProperties { DeliveryMode = 2 },
+                Encoding.UTF8.GetBytes("must-not-be-treated-as-copied")));
+
+        Assert.Contains("mandatory destination publication", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Execute_RefusesQueuesWithActiveConsumers()
     {
         var source = QueueName();
