@@ -1,3 +1,15 @@
+## Insight queue migration — CI #228 passed; review completed
+
+- CI #228 completed successfully for code commit `5bf2b0e97b5234af4c9dd438b0742e119623582b`: Release restore/build, Docker Compose validation, RabbitMQ startup/topology checks, all 19 Python RabbitMQ topology contract tests, pinned DynamoDB Local image pull and the complete .NET test step passed.
+- Exact .NET results: Identity 100/100, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28, Insight 15/15 and Insight.QueueMigration.IntegrationTests 8/8 — **259 passed, 0 failed, 0 skipped**.
+- The queue-migration integration tests passed the corrected AMQP header byte assertion and all execution safety/failure-path scenarios, including mandatory-return recovery and the at-least-once duplicate window after confirmed destination publish followed by ledger failure.
+- Reviewed the migration utility, its README, the runbook and the exact RabbitMQ definitions/topology contract tests together. The runbook accurately describes the tool's limits and operator preconditions. Current definitions/tests intentionally preserve the Insight source as durable classic with no arguments and its existing lifecycle binding; no Insight DLQ or target quorum topology has been activated.
+- Operational migration remains a separate, gated activity: obtain explicit maintenance-window approval, verify all publishers/consumers are quiesced, and inventory non-null AMQP `user_id` values through an approved privacy-safe method to confirm compatibility with the migration connection identity. Do not silently remove or rewrite that property.
+- CI used disposable infrastructure; no persistent/shared RabbitMQ broker, shared volume, MySQL data or AWS resource was modified.
+- [CI #228](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44899197310). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44899197310/artifacts/14705491683).
+
+Updated: 2026-11-21
+
 ## Insight queue migration — CI #227 header assertion failure and correction
 
 - CI #227 completed for code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`. Restore and Release build passed; Compose validation, RabbitMQ startup/topology, all 19 Python topology tests and the pinned DynamoDB Local image pull passed.
