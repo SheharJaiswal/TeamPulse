@@ -1,6 +1,6 @@
 # Tasks: HR-Controlled Employee Invitations and Credential Activation
 
-**Status:** Implementation in progress; initial domain, persistence, token-protection foundation and local Mailpit service are committed.
+**Status:** Application implementation committed; hosted-worker SMTP delivery verification is deferred by owner direction. HR invitation APIs, credential activation, protected-secret delivery queue, and application-restart/lease recovery are implemented. Mailpit end-to-end delivery remains unverified.
 
 ## Reconciliation
 - [x] Read AGENTS.md, Identity service specification, API contract, ADR-0002, HR lifecycle SDD and HR administrator bootstrap SDD.
@@ -23,7 +23,7 @@
 ## Implementation — authorized
 - [x] Add initial invitation domain entities, EF mappings and MySQL migration for invitation records and the separate protected delivery-secret store.
 - [x] Clear token digests to SQL NULL on accepted, cancelled and expired terminal states so the unique digest index does not collide on consumed invitations.
-- [x] Add 256-bit cryptographic token generation, SHA-256 digest derivation, purpose-scoped Data Protection wrapping and a persistent local key-ring configuration. Digest lookup and atomic redemption remain pending.
+- [x] Add 256-bit cryptographic token generation, SHA-256 digest derivation, purpose-scoped Data Protection wrapping and a persistent local key-ring configuration; digest lookup and atomic redemption are implemented in the invitation application service and activation endpoint.
 - [x] Implement the transactional application service for HR create/get/resend/cancel operations, including 24-hour expiry, expired-invitation replacement, atomic resend generation rotation, protected-secret replacement and opaque-reference outbox metadata.
 - [x] Expose create/get/resend/cancel through the HrAdmin-protected API; add authorization, validation, lifecycle and unknown-ID integration coverage.
 - [x] Add the anonymous activation endpoint with generic invalid-token responses and an IP-based fixed-window rate limit (5 attempts/minute).
