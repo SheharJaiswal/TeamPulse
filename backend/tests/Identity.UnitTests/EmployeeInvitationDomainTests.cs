@@ -67,7 +67,7 @@ public sealed class EmployeeInvitationDomainTests
         Assert.False(invitation.Accept(CreatedAtUtc.AddHours(2)));
         Assert.Equal("Cancelled", invitation.Status);
         Assert.Null(invitation.PendingNormalizedEmail);
-        Assert.Equal(string.Empty, invitation.TokenDigest);
+        Assert.Null(invitation.TokenDigest);
     }
 
     [Fact]
@@ -81,5 +81,6 @@ public sealed class EmployeeInvitationDomainTests
         Assert.Throws<InvalidOperationException>(() =>
             invitation.RotateToken(new string('B', 64), expiredAt, expiredAt.AddHours(24)));
         Assert.Equal("Expired", invitation.Status);
+        Assert.Null(invitation.TokenDigest);
     }
 }
