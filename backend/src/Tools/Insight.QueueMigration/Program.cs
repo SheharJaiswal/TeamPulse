@@ -101,6 +101,12 @@ try
         return 3;
     }
 
+    if (destination.ConsumerCount != 0)
+    {
+        Console.Error.WriteLine("Preflight failed: destination queue has active consumers. Stop all consumers before migration.");
+        return 3;
+    }
+
     if (!options.Execute)
     {
         Console.WriteLine("Preflight succeeded. No messages were read or changed.");
@@ -114,6 +120,13 @@ try
     }
 
     var copied = 0;
+    var returnedMessage = false;
+    channel.BasicReturnAsync += (_, _) =>
+    {
+        returnedMessage = true;
+        return Task.CompletedTask;
+    };
+
     var ledgerPath = Path.GetFullPath(options.LedgerPath);
     var ledgerDirectory = Path.GetDirectoryName(ledgerPath);
     if (!string.IsNullOrEmpty(ledgerDirectory))
@@ -134,12 +147,18 @@ try
             var properties = CopyProperties(delivery.BasicProperties);
             // The default exchange routes directly to the already-existing destination queue.
             // Publisher confirms are enabled on this channel; source ack follows the confirmed publish.
+            returnedMessage = false;
             await channel.BasicPublishAsync(
                 exchange: string.Empty,
                 routingKey: options.Destination,
                 mandatory: true,
                 basicProperties: properties,
                 body: delivery.Body);
+
+            if (returnedMessage)
+            {
+                throw new InvalidOperationException("The broker returned a mandatory destination publication.");
+            }
 
             var digest = Convert.ToHexString(SHA256.HashData(delivery.Body.Span)).ToLowerInvariant();
             var ledgerRecord = JsonSerializer.Serialize(new { sha256 = digest });
