@@ -69,6 +69,9 @@
     <nav class="mobile-workspace-nav" aria-label="Workspace">
       <a class="mobile-workspace-link active" href="/habits" aria-current="page">My habits</a>
       <a class="mobile-workspace-link" href="/activities">Activity history</a>
+      {#if data.employee.role === 'HrAdmin'}
+        <a class="mobile-workspace-link" href="/hr/invitations">Invitations</a>
+      {/if}
     </nav>
     <div class="sidebar-note">
       <span class="note-icon">✳</span>

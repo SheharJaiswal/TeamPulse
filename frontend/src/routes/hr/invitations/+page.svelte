@@ -37,6 +37,12 @@
       <span class="nav-icon">✉</span> Employee invitations
     </a>
     <a class="nav-link" href="/habits"><span class="nav-icon">◷</span> My habits</a>
+    <a class="nav-link" href="/activities"><span class="nav-icon">✓</span> Activity history</a>
+    <nav class="mobile-workspace-nav" aria-label="Workspace">
+      <a class="mobile-workspace-link" href="/habits">My habits</a>
+      <a class="mobile-workspace-link" href="/activities">Activity history</a>
+      <a class="mobile-workspace-link active" href="/hr/invitations" aria-current="page">Invitations</a>
+    </nav>
     <div class="sidebar-note">
       <span class="note-icon">✳</span>
       <strong>Make room to grow.</strong>
