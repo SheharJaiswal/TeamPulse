@@ -16,6 +16,7 @@ public sealed class NotificationApiHostTests(NotificationMySqlFixture fixture) :
     {
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.UseSetting("ConnectionStrings:NotificationDatabase", fixture.ConnectionString);
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {

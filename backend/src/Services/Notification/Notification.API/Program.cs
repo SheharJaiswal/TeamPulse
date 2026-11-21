@@ -11,14 +11,20 @@ using Notification.Application;
 using Notification.Application.Abstractions;
 using Notification.Infrastructure.Persistence;
 using Notification.Infrastructure.Messaging;
+using MySqlConnector;
 
 var builder = WebApplication.CreateBuilder(args);
 var consumerOptions = builder.Configuration.GetSection(NotificationRabbitMqConsumerOptions.SectionName)
     .Get<NotificationRabbitMqConsumerOptions>() ?? new NotificationRabbitMqConsumerOptions();
 consumerOptions.Validate();
 
-var connectionString = builder.Configuration.GetConnectionString("NotificationDatabase")
+var configuredConnectionString = builder.Configuration.GetConnectionString("NotificationDatabase")
     ?? throw new InvalidOperationException("NotificationDatabase connection string is missing.");
+var connectionString = new MySqlConnectionStringBuilder(configuredConnectionString)
+{
+    // No-op stale/equal upserts must report zero changed rows.
+    UseAffectedRows = true
+}.ConnectionString;
 
 builder.Services.AddDbContextFactory<NotificationDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));

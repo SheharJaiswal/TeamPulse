@@ -10,6 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Services/Notification/Notification.Application/Notification.Application.csproj" />
+    <ProjectReference Include="../../src/Services/Notification/Notification.Infrastructure/Notification.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Services/Notification/Notification.Domain/Notification.Domain.csproj" />
     <ProjectReference Include="../../src/Services/Notification/Notification.API/Notification.API.csproj" />
   </ItemGroup>
