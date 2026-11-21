@@ -100,10 +100,13 @@ export const actions: Actions = {
   submit: async ({ request, cookies, fetch }) => {
     const token = requireSession(cookies);
     const formData = await request.formData();
+    const submittedHabitId = String(formData.get('habitId') ?? '');
+    const submittedActivityDate = String(formData.get('activityDate') ?? '');
+    const submittedQuantity = String(formData.get('quantity') ?? '');
     const submission = {
-      habitId: String(formData.get('habitId') ?? ''),
-      activityDate: String(formData.get('activityDate') ?? ''),
-      quantity: Number(formData.get('quantity')),
+      habitId: submittedHabitId,
+      activityDate: submittedActivityDate,
+      quantity: Number(submittedQuantity),
       idempotencyKey: String(formData.get('idempotencyKey') ?? '')
     };
 
@@ -124,7 +127,10 @@ export const actions: Actions = {
 
     return fail(result.status, {
       message: result.message,
-      idempotencyKey: result.idempotencyKey
+      idempotencyKey: result.idempotencyKey,
+      habitId: submittedHabitId,
+      activityDate: submittedActivityDate,
+      quantity: submittedQuantity
     });
   }
 };
