@@ -68,7 +68,7 @@ public sealed class EmployeeInvitationController(
         };
     }
 
-    [HttpDelete("{invitationId:guid}")]
+    [HttpPost("{invitationId:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid invitationId, CancellationToken cancellationToken)
     {
         var result = await invitationService.CancelAsync(invitationId, cancellationToken);
