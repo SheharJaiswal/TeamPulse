@@ -1,3 +1,12 @@
+## Notification consumer CI verification and DLQ test extension
+
+- CI #165 passed for commit `13095cc3effb30a11862ccc68a64fc3ebf60425e` on `feature/backend-foundation`: restore, Release build, Docker Compose validation, RabbitMQ startup/topology contract tests and the full .NET suite (including MySQL 8.4 and RabbitMQ Testcontainers) all succeeded.
+- This verifies the Notification API host, persistence, stale/equal lifecycle-version classification and existing broker replay integration coverage.
+- Added a focused Testcontainers case for malformed UTF-8 delivery: assert original bytes and `InvalidEvent` classification are published to the Notification DLQ, then source queue empties after confirmed publication. Verification is pending in the next CI run.
+- Remaining Notification acceptance work: verify DLQ routing failure leaves the source delivery unacknowledged/recoverable, then update acceptance evidence. No persistent/shared RabbitMQ broker or database volume was changed.
+
+Updated: 2026-11-21
+
 ## Notification lifecycle consumer and broker topology added
 
 - Added the opt-in Notification RabbitMQ consumer with manual ack after MySQL commit, bounded transient retry/backoff, reconnect, dedicated publisher-confirmed DLQ publishing and independent `/health/consumer`.

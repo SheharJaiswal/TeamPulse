@@ -15,7 +15,7 @@
 
 - [x] Add Notification Domain and Application projects with inward-only references (initial application-core increment).
 - [x] Add Notification.UnitTests and register Domain, Application and test projects in backend/TeamPulse.sln.
-- [ ] Add Notification-owned MySQL database initialization, Compose mount and safe existing-volume migration runbook.
+- [x] Add Notification-owned MySQL database initialization, Compose mount and safe existing-volume migration runbook.
 - [x] Implement minimal projection/inbox domain entities, schema-v1 envelope validator and transport-independent application processor.
 - [x] Add checked-in EF migration and transactional projection/inbox store with reader abstraction; API startup migration remains pending.
 - [x] Add opt-in RabbitMQ consumer with manual ack, bounded retries, reconnect and independent consumer health.
@@ -23,8 +23,8 @@
 - [x] Add MySQL 8.4 Testcontainers coverage for migration idempotency/schema, duplicate event IDs, stale/equal ordering and concurrent maximum-version preservation; RabbitMQ/API-host tests remain pending.
 - [x] Add processor tests for strict recognized-field validation, additive unknown-field tolerance, transition consistency, note exclusion and zero persistence calls on invalid input.
 - [x] Document existing MySQL/RabbitMQ volume migrations; API host configuration is documented in appsettings and consumer is disabled by default.
-- [ ] Run full restore, Release build, solution tests, Compose validation and topology tests in CI.
-- [ ] Update acceptance evidence and docs/project-status.md.
+- [x] Run full restore, Release build, solution tests, Compose validation and topology tests in CI (#165 passed for `13095cc3effb30a11862ccc68a64fc3ebf60425e`).
+- [ ] Complete remaining DLQ failure-path verification and update acceptance evidence.
 
 ## Acceptance mapping
 
@@ -76,4 +76,5 @@
 - [x] Updated only Notification's source queue to quorum with delivery limit 5, at-least-once DLX and reject-publish overflow; added Notification quorum DLQ and exact routing binding.
 - [x] Added Notification RabbitMQ persistent-message replay integration test based on the already-proven Event Tracking harness, plus options/retry and API consumer-health tests.
 - [x] Added `docs/runbooks/notification-rabbitmq-queue-migration.md`; it requires pausing publisher/consumer and buffering pending messages before queue recreation. No live broker topology was changed.
-- [ ] Full CI verification pending for this increment.
+- [x] CI #165 passed for commit `13095cc3effb30a11862ccc68a64fc3ebf60425e`; restore, Release build, Compose, RabbitMQ topology and full .NET/Testcontainers suite passed.
+- [ ] Verify the new malformed-message DLQ integration test in the next CI run; add the missing-DLQ-route redelivery test before closing NESP-10.

@@ -134,6 +134,59 @@ public sealed class NotificationRabbitMqMySqlReplayIntegrationTests(
         Assert.Equal(2, _signals.DeliveryCount);
     }
 
+
+    [Fact]
+    public async Task Consumer_PublishesInvalidUtf8ToDeadLetterQueueBeforeAcknowledgingSource()
+    {
+        await CreateProductionProcessorServicesAsync();
+        await StartConsumerAsync();
+
+        var messageId = Guid.NewGuid().ToString("D");
+        var invalidUtf8Body = new byte[] { 0xC3, 0x28 };
+        var properties = new BasicProperties
+        {
+            MessageId = messageId,
+            ContentType = "application/json",
+            DeliveryMode = DeliveryModes.Persistent
+        };
+
+        await _adminChannel!.BasicPublishAsync(
+            ExchangeName,
+            RoutingKey,
+            mandatory: true,
+            basicProperties: properties,
+            body: invalidUtf8Body);
+
+        BasicGetResult? deadLetter = null;
+        await WaitUntilAsync(async () =>
+        {
+            deadLetter = await _adminChannel.BasicGetAsync(DeadLetterQueueName, autoAck: false);
+            return deadLetter is not null;
+        }, 20);
+
+        Assert.NotNull(deadLetter);
+        Assert.Equal(messageId, deadLetter!.BasicProperties.MessageId);
+        Assert.True(invalidUtf8Body.SequenceEqual(deadLetter.Body.ToArray()));
+
+        var headers = deadLetter.BasicProperties.Headers;
+        Assert.NotNull(headers);
+        Assert.True(headers.TryGetValue("x-teampulse-failure-classification", out var rawClassification));
+        var classification = rawClassification switch
+        {
+            byte[] bytes => Encoding.UTF8.GetString(bytes),
+            ReadOnlyMemory<byte> bytes => Encoding.UTF8.GetString(bytes.Span),
+            string value => value,
+            _ => Convert.ToString(rawClassification)
+        };
+        Assert.Equal("InvalidEvent", classification);
+
+        // The source is acknowledged only after the confirmed DLQ publish. The DLQ
+        // delivery is explicitly acknowledged here so the disposable test queue is empty.
+        await _adminChannel.BasicAckAsync(deadLetter.DeliveryTag, multiple: false);
+        Assert.Equal(0u, (await _adminChannel.QueueDeclarePassiveAsync(QueueName)).MessageCount);
+        Assert.Equal(0u, (await _adminChannel.QueueDeclarePassiveAsync(DeadLetterQueueName)).MessageCount);
+    }
+
     private async Task CreateProductionProcessorServicesAsync()
     {
         var services = new ServiceCollection();
