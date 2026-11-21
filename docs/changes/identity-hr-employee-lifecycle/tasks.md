@@ -74,3 +74,10 @@
 - Corrected CI workflow to pre-pull the exact RabbitMQ image used by the Testcontainers fixture before running the suite. Workflow fix commit: `819242fe43a446fe1574e3025458d12a14331188`. Full workflow verification is pending.
 - [CI #236](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44901781762).
 
+
+## Correlation-ID propagation regression coverage — implementation added
+
+- Added a MySQL API-host integration test proving a supplied X-Correlation-ID is returned unchanged and persisted identically in the lifecycle audit, outbox row and serialized event envelope.
+- Added a second integration test proving omission of X-Correlation-ID generates one non-empty UUID that is identical in the response, audit, outbox and event envelope.
+- Added acceptance criteria ILC-17 and ILC-18 to the lifecycle specification.
+- Test implementation commit: `ff9c87b53c8943ed0719528b280304ac2e5199db`. CI verification pending.
