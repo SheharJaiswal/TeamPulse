@@ -37,11 +37,12 @@
 - [x] Re-run backend CI #44927041146: Restore, Release build, Compose validation and RabbitMQ topology checks passed; 131/132 Identity tests passed. Safe diagnostics narrowed the worker failure to SmtpException with an inner SocketException and SMTP GeneralFailure; no socket error code was captured yet.
 - [x] Capture the hosted-worker socket error: CI #44927595688 reports ConnectionRefused (native code 111) on all three SMTP attempts, while the direct SMTP probe succeeds; add a post-timeout TCP reachability check to distinguish a stopped listener from worker-only connection behavior.
 - [x] CI #44928325765 confirms the SMTP port is reachable after all three worker failures (post-timeout TCP probe says Connected); add bounded Mailpit container-log capture to the failure diagnostic to determine whether the listener restarted or observed the worker's connection attempts.
-- [ ] Identify the underlying endpoint/connectivity failure before changing delivery behavior.
-- [ ] Compare real SMTP sends before API-host startup, after hosted-worker startup, and after worker failure to determine whether the mapped endpoint becomes intermittently unavailable or only fails from the hosted worker.
+- [ ] **Deferred by owner:** Diagnose the local hosted-worker SMTP endpoint/connectivity failure. Do not spend further execution cycles on SMTP until the owner reopens this work.
+- [ ] **Deferred by owner:** Compare SMTP sends across API-host/worker lifecycle states; SMTP outage and recovery verification remains unverified and out of scope until the owner reopens it.
 - [x] Update the broader Identity API contract and add the local Mailpit invitation-delivery runbook; document that hosted-worker SMTP delivery remains unverified.
-- [ ] Add operational verification for application restart during a leased delivery and SMTP outage recovery.
-- [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits after the SMTP failure is diagnosed and corrected.
+- [x] Verify application restart during a leased delivery: `ExpiredLease_IsRecoveredByANewQueueInstanceAfterWorkerRestart` proves a fresh queue instance reclaims the expired lease and the stale lease token cannot acknowledge it.
+- [ ] **Deferred by owner:** Verify SMTP outage/recovery behavior; this is separate from the completed application-restart/lease-recovery test.
+- [ ] **Deferred:** Re-run the full delivery-worker CI acceptance gate if/when SMTP delivery work is reopened; current CI is not fully green because the Mailpit delivery test remains failing.
 
 ## Deferred
 - [ ] Production email provider selection and deployment configuration.
