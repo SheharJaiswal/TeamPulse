@@ -1,10 +1,11 @@
-## Identity employee invitations — SDD drafted for owner review
+## Identity employee invitations — SDD and delivery-secret threat model drafted for owner review
 
-- Drafted `docs/changes/identity-employee-invitations/{proposal,spec,design,tasks}.md` as the next Identity increment. This is documentation only; no application code, database schema, API contract or runtime behavior was changed.
-- Proposed scope: HrAdmin-only invitation management, anonymous one-time activation, Employee-only role, 256-bit token, digest-only invitation lookup, proposed 24-hour expiry, resend rotation, cancellation, atomic Employee creation and password hashing. Public registration remains disabled outside Development.
-- Security/design blocker identified before implementation: hash-only token persistence cannot support retrying email delivery after process restart. The SDD explicitly blocks implementation until the owner approves either an encrypted short-lived delivery-secret store with key management/threat model, or a synchronous delivery model with explicit resend behavior. Plaintext tokens must not be placed in the ordinary outbox or logs.
-- Owner approval is still required for expiry/resend/cancel semantics, activation behavior, local mail-catcher approach and delivery-secret handling. Elevated-role assignment remains separately blocked by open question 11.
-- No AWS resource, persistent RabbitMQ topology, MySQL data or service runtime was changed.
+- Drafted `docs/changes/identity-employee-invitations/{proposal,spec,design,tasks}.md` and added `security-review.md`. This remains documentation-only; no application code, database schema, API contract or runtime behavior changed.
+- Proposed scope remains HrAdmin-only invitation management, anonymous one-time activation, Employee-only role, 256-bit token, digest-only invitation lookup, proposed 24-hour expiry, resend rotation, cancellation, atomic Employee creation and password hashing. Public registration remains disabled outside Development.
+- The security review compares asynchronous protected-secret delivery with synchronous post-commit delivery. It documents Data Protection purpose isolation, persistent/shared protected key-ring requirements, worker access boundaries, generation checks, resend races, at-least-once duplicate delivery, backup-retention limits and fail-closed recovery.
+- Preferred candidate is a dedicated short-lived Data Protection-protected secret record, separate from the ordinary outbox. The ordinary outbox must contain only opaque invitation reference/generation metadata. This candidate is **not approved** and is not implemented.
+- Owner approval remains required to select the delivery model, approve key protection/backup operations if Option A is chosen, and confirm invitation policy defaults, local mail-catcher boundary and provider-acceptance deletion behavior. Elevated-role assignment remains separately blocked by open question 11.
+- No CI run was required for this documentation-only update. No AWS resource, persistent RabbitMQ topology, MySQL data or service runtime was changed.
 
 Updated: 2026-11-21
 
