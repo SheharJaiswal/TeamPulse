@@ -109,6 +109,7 @@ The projection is a status signal, not a replacement for each service's resource
 | ILC-10 | API contract documents 400/401/403/404/409 outcomes and correlation behavior. | Controller integration tests and API contract. |
 | ILC-11 | Existing login guard continues to reject inactive employees. | Existing login integration test remains green. |
 | ILC-12 | Checked-in EF migration applies at startup and can be applied to a clean MySQL 8.4 database. | GitHub Actions MySQL Testcontainers suite, run #72. |
+| ILC-13 | Blank/overlength reason codes and overlength notes return 400 without mutating employee, audit or outbox; maximum accepted lengths succeed and the reason code is trimmed. | MySQL API-host integration tests. |
 
 ## Deferred work (not acceptance criteria for this increment)
 
