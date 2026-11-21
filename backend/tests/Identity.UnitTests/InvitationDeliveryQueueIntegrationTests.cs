@@ -120,4 +120,65 @@ public sealed class InvitationDeliveryQueueIntegrationTests : IClassFixture<MySq
         Assert.False(await verify.InvitationDeliverySecrets.AnyAsync(
             item => item.InvitationId == invitationId));
     }
+
+    [Fact]
+    public async Task ExpiredLease_IsRecoveredByANewQueueInstanceAfterWorkerRestart()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        var ready = await client.GetAsync("/health/ready");
+        Assert.True(ready.IsSuccessStatusCode);
+
+        Guid invitationId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var service = scope.ServiceProvider.GetRequiredService<IEmployeeInvitationService>();
+            var created = await service.CreateAsync(
+                Guid.NewGuid(),
+                new CreateEmployeeInvitationRequest(
+                    $"restart-delivery-{Guid.NewGuid():N}@example.com",
+                    "Restart Delivery",
+                    "org",
+                    "team"),
+                CancellationToken.None);
+            Assert.Equal(EmployeeInvitationCommandStatus.Created, created.Status);
+            invitationId = created.Invitation!.InvitationId;
+        }
+
+        InvitationDeliveryWorkItem firstLease;
+        await using (var workerScope = factory.Services.CreateAsyncScope())
+        {
+            var workerQueue = workerScope.ServiceProvider.GetRequiredService<IInvitationDeliveryQueue>();
+            var claimed = await workerQueue.ClaimBatchAsync(
+                10, TimeSpan.FromMilliseconds(250), CancellationToken.None);
+            firstLease = Assert.Single(claimed, item => item.InvitationId == invitationId);
+            Assert.Equal(1, firstLease.AttemptCount);
+        }
+
+        // Simulate process termination: the queue scope is disposed without acknowledging
+        // or scheduling a retry. The lease remains durable in MySQL until it expires.
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+
+        await using (var restartedWorkerScope = factory.Services.CreateAsyncScope())
+        {
+            var restartedQueue = restartedWorkerScope.ServiceProvider.GetRequiredService<IInvitationDeliveryQueue>();
+            var recovered = await restartedQueue.ClaimBatchAsync(
+                10, TimeSpan.FromSeconds(30), CancellationToken.None);
+            var secondLease = Assert.Single(recovered, item => item.InvitationId == invitationId);
+
+            Assert.Equal(firstLease.SecretId, secondLease.SecretId);
+            Assert.Equal(firstLease.Generation, secondLease.Generation);
+            Assert.Equal(2, secondLease.AttemptCount);
+            Assert.NotEqual(firstLease.LeaseToken, secondLease.LeaseToken);
+            Assert.False(await restartedQueue.MarkAcceptedAsync(
+                firstLease.SecretId, firstLease.Generation, firstLease.LeaseToken, CancellationToken.None));
+            Assert.True(await restartedQueue.MarkAcceptedAsync(
+                secondLease.SecretId, secondLease.Generation, secondLease.LeaseToken, CancellationToken.None));
+        }
+
+        await using var verifyScope = factory.Services.CreateAsyncScope();
+        var database = verifyScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        Assert.False(await database.InvitationDeliverySecrets.AnyAsync(
+            item => item.InvitationId == invitationId));
+    }
 }
