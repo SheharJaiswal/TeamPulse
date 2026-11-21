@@ -94,4 +94,41 @@ public sealed class EmployeeInvitationServiceIntegrationTests : IClassFixture<My
         var finalSummary = await service.GetAsync(createdSummary.InvitationId, CancellationToken.None);
         Assert.Equal("Cancelled", finalSummary!.Status);
     }
+
+    [Fact]
+    public async Task Create_ReplacesExpiredPendingInvitationAndRemovesItsDeliverySecret()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        using var startupResponse = await client.GetAsync("/health/live");
+        startupResponse.EnsureSuccessStatusCode();
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<IEmployeeInvitationService>();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var email = $"expired-{Guid.NewGuid():N}@example.com";
+        var request = new CreateEmployeeInvitationRequest(
+            email, "Replacement Employee", "org-test", "team-test");
+
+        var original = await service.CreateAsync(Guid.NewGuid(), request, CancellationToken.None);
+        Assert.Equal(EmployeeInvitationCommandStatus.Created, original.Status);
+        var originalId = original.Invitation!.InvitationId;
+
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE employee_invitations SET ExpiresAtUtc = {DateTime.UtcNow.AddMinutes(-1)} WHERE Id = {originalId}");
+        database.ChangeTracker.Clear();
+
+        var replacement = await service.CreateAsync(Guid.NewGuid(), request, CancellationToken.None);
+
+        Assert.Equal(EmployeeInvitationCommandStatus.Created, replacement.Status);
+        Assert.NotEqual(originalId, replacement.Invitation!.InvitationId);
+
+        var expired = await database.EmployeeInvitations.SingleAsync(item => item.Id == originalId);
+        Assert.Equal("Expired", expired.Status);
+        Assert.Null(expired.TokenDigest);
+        Assert.Null(expired.PendingNormalizedEmail);
+        Assert.False(await database.InvitationDeliverySecrets.AnyAsync(
+            item => item.InvitationId == originalId));
+        Assert.Equal(email, replacement.Invitation.Email);
+    }
 }
