@@ -190,6 +190,37 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
     }
 
     [Fact]
+    public async Task ProcessAsync_ConcurrentEqualVersions_OnlyOneProjectionMutationIsApplied()
+    {
+        var readBarrier = new ConcurrentProjectionReadBarrierInterceptor();
+        using var provider = await CreateProviderAsync(readBarrier);
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        var store = new EmployeeStatusProjectionStore(factory);
+        var employeeId = Guid.NewGuid();
+        var firstProcessedAt = new DateTime(DateTime.UtcNow.Ticks / 10 * 10, DateTimeKind.Utc);
+        var secondProcessedAt = firstProcessedAt.AddSeconds(1);
+        var first = CreateEvent(Guid.NewGuid(), employeeId, 3, false);
+        var second = CreateEvent(Guid.NewGuid(), employeeId, 3, true);
+
+        var results = await Task.WhenAll(
+            store.ProcessAsync(first, firstProcessedAt, CancellationToken.None),
+            store.ProcessAsync(second, secondProcessedAt, CancellationToken.None));
+        readBarrier.Disable();
+
+        Assert.Equal(1, results.Count(result => result == ProjectionProcessingOutcome.Applied));
+        Assert.Equal(1, results.Count(result => result == ProjectionProcessingOutcome.Stale));
+        var winningEvent = results[0] == ProjectionProcessingOutcome.Applied ? first : second;
+        var winningTimestamp = results[0] == ProjectionProcessingOutcome.Applied ? firstProcessedAt : secondProcessedAt;
+
+        await using var database = await factory.CreateDbContextAsync();
+        var projection = await database.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.Equal(3, projection.LifecycleVersion);
+        Assert.Equal(winningEvent.IsActive, projection.IsActive);
+        Assert.Equal(winningTimestamp.Ticks, projection.UpdatedAtUtc.Ticks);
+        Assert.Equal(2, await database.ProcessedDomainEvents.CountAsync(x => x.EmployeeId == employeeId));
+    }
+
+    [Fact]
     public async Task ProcessAsync_RecordsEqualVersionAsStaleWithoutChangingProjection()
     {
         using var provider = await CreateProviderAsync();
@@ -230,6 +261,39 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
             await using var database = await factory.CreateDbContextAsync();
             Assert.False(await database.ProcessedDomainEvents.AnyAsync(x => x.EventId == eventId));
             Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == employeeId));
+        }
+    }
+
+    // If a pre-upsert projection read is reintroduced, hold both concurrent reads
+    // until they have observed the same initial version. This makes the old outcome
+    // classification race deterministic. The current affected-row implementation
+    // performs no such pre-read, so the barrier is disabled before verification reads.
+    private sealed class ConcurrentProjectionReadBarrierInterceptor : DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource<bool> _bothReadsCompleted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _readCount;
+        private int _enabled = 1;
+
+        public void Disable() => Interlocked.Exchange(ref _enabled, 0);
+
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            DbDataReader result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Volatile.Read(ref _enabled) == 1 &&
+                command.CommandText.Contains("employee_status_projections", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("lifecycle_version", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Interlocked.Increment(ref _readCount) == 2)
+                    _bothReadsCompleted.TrySetResult(true);
+
+                await _bothReadsCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+
+            return result;
         }
     }
 

@@ -48,6 +48,8 @@
 - [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
 - [x] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert; concurrent same-fingerprint and conflicting-fingerprint tests passed CI #128.
 - [x] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation (existing integration tests passed CI #127).
+- [x] Add a deterministic concurrent equal-version MySQL 8.4 regression test and classify Applied/Stale from the atomic upsert's affected-row count; CI verification pending.
+- [ ] Verify concurrent equal-version outcome classification against MySQL 8.4 in GitHub Actions.
 - [x] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay; verified by CI #122 after stable endpoint correction (47 Challenge tests passed).
 - [x] RabbitMQ Testcontainers: invalid event and integrity-violation classifications, mandatory DLQ confirmation, and unacknowledged source delivery when DLQ publication cannot be confirmed; verified in CI #107/#108/#127.
 - [x] RabbitMQ Testcontainers: bounded retry then success, retry exhaustion, non-transient no-retry classification, and unacknowledged source delivery when retry-exhaustion DLQ publication cannot be confirmed; verified in CI #108/#129.
@@ -106,18 +108,18 @@
 - Verified DLQ recovery: after a mandatory dead-letter publish fails because the DLQ binding is absent, the original source delivery remains unacknowledged; after the binding is restored and the consumer reconnects, the redelivery is successfully dead-lettered with the expected classification.
 - Existing RabbitMQ coverage for terminal validation classifications, transient retry success, retry exhaustion, non-transient failures and failed DLQ confirmation is reconciled as verified against CI #107/#108/#129.
 - Concurrent same-ID/same-fingerprint and conflicting-fingerprint MySQL race tests plus repeated migration-history stability passed CI #128 (176/176 .NET tests). Schema/privacy and health-check integration passed CI #127.
-- Remaining acceptance gap: add an explicit production API-host integration test that starts against a clean MySQL database, verifies the host startup migration path, and reads a projection through the production reader. Lower-level fresh-database migration/readiness and repeated migration-history tests have passed, but do not claim this full host-startup path is verified.
+- The explicit production API-host startup/migration/projection-reader gap identified at this checkpoint was closed by the corrected integration test and CI #133 below.
 - Local .NET SDK and Docker CLI remain unavailable in this environment; all build/test/container evidence above is from GitHub Actions.
 - Deferred: AWS EventBridge/SQS/CloudWatch until owner cloud setup; inbox retention remains permanent until privacy/legal review; open question 19 remains unresolved and blocks employee-facing Challenge business APIs.
-- Next increment: close the explicit clean API-host startup/projection-reader test gap, without expanding Challenge product scope.
+- The API-host startup/migration/projection-reader acceptance is closed; do not reopen it unless a later regression is observed.
 
 
-## API-host startup migration and projection-reader test — CI pending
+## API-host startup migration and projection-reader test — CI #133 verified
 
 - Added `ChallengeApiStartupIntegrationTests` using `WebApplicationFactory<Program>` and a fresh MySQL 8.4 Testcontainers fixture.
 - The test starts the actual Challenge API host with its RabbitMQ consumer disabled, calls the production readiness endpoint, asserts both checked-in EF migrations are applied, then writes and reads an employee projection through the registered production store.
 - Added `Microsoft.AspNetCore.Mvc.Testing` 8.0.11 to the Challenge test project.
-- Keep this acceptance item unchecked until GitHub Actions confirms package restore, host startup, migration execution and projection read.
+- CI #133 confirmed package restore, host startup, both migrations and production projection read; CEPS-03 remains closed.
 
 
 ## CI #130 failure analysis and test-host configuration correction
@@ -125,7 +127,7 @@
 - CI #130 (`8dca20f026034f1fff18939e3c8441754b392337`) passed restore, Release build, Compose, RabbitMQ topology and Python tests. .NET result: 230 passed / 1 failed (Challenge 53/54, Habit 24/24, Identity 100/100).
 - The only failure was the new API-host startup test. Stack trace showed `ServerVersion.AutoDetect` attempted to connect using the appsettings localhost connection string, not the Testcontainers connection string. The existing Habit API integration factory establishes test settings with both `UseSetting` and `ConfigureAppConfiguration`, and sets Testing environment.
 - Applied the same proven test-host configuration pattern in a dedicated `ChallengeApiFactory`; disabled the consumer in the in-memory test configuration. The test logic and production API startup path remain unchanged.
-- Re-run pending. Keep API-host acceptance unchecked until CI verifies host startup, migrations and projection read.
+- This pending note was superseded by the successful corrected run documented in CI #133 below.
 
 
 ## CI #131 result and timestamp precision correction
@@ -133,7 +135,7 @@
 - CI #131 for `5026138c2bcdf85f13416c572c201d50c5a7b932` passed restore, Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests. The .NET suite reported 230 passed / 1 failed (Challenge 53/54, Habit 24/24, Identity 100/100). [CI #131](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44876734230).
 - The API-host integration test successfully started the real Challenge API against the fresh MySQL 8.4 Testcontainers database, returned HTTP 200 from `/health/ready`, observed both production-startup migrations, and successfully wrote/read the projection through the production store. Its sole assertion failure was timestamp precision: the .NET expected value retained 100-nanosecond ticks while MySQL `datetime(6)` stores microseconds (actual value differed by 8 ticks).
 - Corrected only test data precision by truncating the generated UTC timestamp to MySQL microsecond precision before passing it to the production store. Removed redundant double-disposal of the WebApplicationFactory while keeping deterministic disposal of factory and client.
-- The API-host acceptance remains unchecked until the corrected full CI run passes. No production behavior or schema was changed.
+- The API-host acceptance was subsequently closed by CI #133 below. No production behavior or schema was changed.
 
 
 ## CI #133 passed — API-host startup/migration/projection acceptance closed
@@ -142,3 +144,12 @@
 - The corrected API-host integration test passed against a fresh MySQL 8.4 Testcontainers database. It starts the real Challenge API, receives HTTP 200 from `/health/ready`, confirms both checked-in migrations were applied during host startup, and successfully writes/reads the employee-status projection through production DI registrations.
 - The original assertion mismatch was test-only: .NET timestamps carry 100-nanosecond ticks while MySQL `datetime(6)` persists microseconds. Test input is now aligned to the database precision; no production code or schema changed.
 - No local .NET/Docker execution is claimed; CI is the verification source. Projection-only scope remains unchanged. Open question 19, permanent inbox retention pending privacy/legal review, and deferred AWS EventBridge/SQS/CloudWatch remain unchanged.
+
+
+## Latest repository CI and Challenge concurrency checkpoint — 2026-11-21
+
+- Branch baseline before this focused increment: `feature/backend-foundation` at `9901c0f2e9487e0e85e2ded1458c622983090a54` (`fix(event-tracking): detect broker loss with heartbeat`). The latest CI run for that commit was #143: [GitHub Actions run #143](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44881977542).
+- CI #143 passed restore, Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology and all 14 Python topology tests. .NET results: Challenge 54/54, Habit 24/24 and Identity 100/100 passed; Event Tracking was 25/26, with the sole failure in `EventTrackingApiStartupIntegrationTests.ApiHost_ConsumerHealthIsIndependentFromDatabaseReadiness` waiting for `/health/consumer` to return 503 after broker shutdown. CI #142 had the same Event Tracking failure. This is outside the approved Challenge SDD scope; no Challenge test failed.
+- The Challenge store previously inferred Applied/Stale by reading the projection version before the upsert and comparing the final version. Two concurrent, distinct events with the same lifecycle version could both read the same earlier state and both report Applied, although the atomic upsert correctly allowed only one mutation.
+- This increment removes the pre-read heuristic, configures Challenge MySQL with MySqlConnector `UseAffectedRows=true`, and classifies the atomic upsert as Applied only when it inserts or changes a row. A deterministic MySQL 8.4 Testcontainers regression test forces concurrent pre-upsert reads if that old pattern is reintroduced and asserts exactly one Applied, one Stale, and preservation of the winning projection state.
+- Challenge increment CI verification is pending. No schema or projection fields changed; inbox atomicity, strict version ordering, permanent retention and projection-only scope remain intact.

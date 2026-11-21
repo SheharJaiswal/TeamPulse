@@ -77,7 +77,7 @@ For a new event ID, within a MySQL ReadCommitted transaction:
 1. Insert the inbox metadata and fingerprint.
 2. Execute a parameterized atomic conditional upsert on `employee_id`: insert if absent; on conflict update status/version/time only when incoming lifecycleVersion is strictly greater than stored.
 3. Commit inbox and projection decision together.
-4. Return Applied or Stale.
+4. Use the atomic upsert's affected-row count to return Applied for an insert/newer-version update and Stale for an equal/lower-version no-op. Challenge's MySqlConnector connection is configured with `UseAffectedRows=true`: the upsert reports 1 for an insert, 2 for a changed row and 0 when no projection field changes. Do not infer the outcome from a pre-read version; concurrent equal-version deliveries can both observe the same earlier state and incorrectly both report Applied.
 
 A valid new event ID with equal/lower version is recorded and returns Stale. Any persistence failure rolls back the inbox marker and projection decision. Do not implement an unprotected read-then-write race.
 

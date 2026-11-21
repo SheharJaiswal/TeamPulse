@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using MySqlConnector;
 using Testcontainers.MySql;
 using Xunit;
 
@@ -13,7 +14,10 @@ public sealed class ChallengeMySqlFixture : IAsyncLifetime
         .WithPassword("teampulse_test_password")
         .Build();
 
-    public string ConnectionString => _database.GetConnectionString();
+    public string ConnectionString => new MySqlConnectionStringBuilder(_database.GetConnectionString())
+    {
+        UseAffectedRows = true
+    }.ConnectionString;
 
     public ChallengeApiFactory CreateFactory() => new(ConnectionString);
     public Task InitializeAsync() => _database.StartAsync();

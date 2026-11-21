@@ -49,12 +49,9 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
                 : ProjectionProcessingOutcome.DuplicateEventIntegrityViolation;
         }
 
-        var previousVersion = await database.EmployeeStatusProjections.AsNoTracking()
-            .Where(x => x.EmployeeId == lifecycleEvent.EmployeeId)
-            .Select(x => (long?)x.LifecycleVersion)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        await database.Database.ExecuteSqlInterpolatedAsync($"""
+        // UseAffectedRows=true makes the upsert report 1 for insert, 2 for a changed
+        // row and 0 when an equal/lower lifecycle version leaves the projection unchanged.
+        var affectedRows = await database.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO employee_status_projections
                 (employee_id, is_active, lifecycle_version, updated_at_utc)
             VALUES
@@ -68,15 +65,8 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
                 lifecycle_version = GREATEST(employee_status_projections.lifecycle_version, incoming.lifecycle_version);
             """, cancellationToken);
 
-        var finalVersion = await database.EmployeeStatusProjections.AsNoTracking()
-            .Where(x => x.EmployeeId == lifecycleEvent.EmployeeId)
-            .Select(x => x.LifecycleVersion)
-            .SingleAsync(cancellationToken);
-
         await transaction.CommitAsync(cancellationToken);
-        var applied = (!previousVersion.HasValue || lifecycleEvent.LifecycleVersion > previousVersion.Value)
-            && finalVersion == lifecycleEvent.LifecycleVersion;
-        return applied ? ProjectionProcessingOutcome.Applied : ProjectionProcessingOutcome.Stale;
+        return affectedRows > 0 ? ProjectionProcessingOutcome.Applied : ProjectionProcessingOutcome.Stale;
     }
 
     public async Task<EmployeeStatusProjection?> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken)
