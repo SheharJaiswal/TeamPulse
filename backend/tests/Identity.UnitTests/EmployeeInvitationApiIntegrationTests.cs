@@ -92,6 +92,18 @@ public sealed class EmployeeInvitationApiIntegrationTests : IClassFixture<MySqlI
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
 
+        int invitationsBefore;
+        int secretsBefore;
+        int deliveryEventsBefore;
+        await using (var beforeScope = factory.Services.CreateAsyncScope())
+        {
+            var beforeDatabase = beforeScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            invitationsBefore = await beforeDatabase.EmployeeInvitations.CountAsync();
+            secretsBefore = await beforeDatabase.InvitationDeliverySecrets.CountAsync();
+            deliveryEventsBefore = await beforeDatabase.OutboxMessages.CountAsync(
+                item => item.EventType == "EmployeeInvitationDeliveryRequested");
+        }
+
         var invalidRequests = new[]
         {
             new { email = "not-an-email", displayName = "Employee", organizationId = "org", teamId = "team" },
@@ -109,9 +121,9 @@ public sealed class EmployeeInvitationApiIntegrationTests : IClassFixture<MySqlI
 
         await using var scope = factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-        Assert.Empty(await database.EmployeeInvitations.ToListAsync());
-        Assert.Empty(await database.InvitationDeliverySecrets.ToListAsync());
-        Assert.False(await database.OutboxMessages.AnyAsync(
+        Assert.Equal(invitationsBefore, await database.EmployeeInvitations.CountAsync());
+        Assert.Equal(secretsBefore, await database.InvitationDeliverySecrets.CountAsync());
+        Assert.Equal(deliveryEventsBefore, await database.OutboxMessages.CountAsync(
             item => item.EventType == "EmployeeInvitationDeliveryRequested"));
     }
 
