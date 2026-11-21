@@ -1,6 +1,6 @@
 # Design: HR-Controlled Employee Invitations and Credential Activation
 
-**Status:** Option A asynchronous protected-secret delivery approved by owner on 2026-11-21. Local key-ring persistence/protection requirements are accepted for development; production key protection/storage is deferred to cloud infrastructure setup. The remaining policy defaults and local mail-catcher profile still require approval before implementation.
+**Status:** Option A asynchronous protected-secret delivery approved by owner on 2026-11-21. Local key-ring persistence/protection requirements are accepted for development; production key protection/storage is deferred to cloud infrastructure setup. The full policy and local mail-catcher profile were approved on 2026-11-21.
 
 ## Service boundary
 All invitation state, canonical employee creation and password hashing remain in Identity. No new service or cross-service database dependency is introduced. Use the existing .NET 8, EF Core 8, Pomelo and MySQL 8.4 conventions.
