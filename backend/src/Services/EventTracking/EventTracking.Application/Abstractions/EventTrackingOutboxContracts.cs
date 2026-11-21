@@ -10,7 +10,7 @@ public interface IEventTrackingOutboxStore
 {
     Task<IReadOnlyList<EventTrackingOutboxDispatchMessage>> ClaimBatchAsync(int batchSize, TimeSpan leaseDuration, CancellationToken cancellationToken);
     Task<bool> MarkPublishedAsync(Guid eventId, Guid leaseToken, DateTime publishedAtUtc, CancellationToken cancellationToken);
-    Task<bool> ScheduleRetryAsync(Guid eventId, Guid leaseToken, DateTime retryAtUtc, string errorCode, CancellationToken cancellationToken);
+    Task<bool> ScheduleRetryAsync(Guid eventId, Guid leaseToken, DateTime attemptedAtUtc, DateTime retryAtUtc, string errorCode, CancellationToken cancellationToken);
     Task<bool> QuarantineAsync(Guid eventId, Guid leaseToken, DateTime deadLetteredAtUtc, string errorCode, CancellationToken cancellationToken);
 }
 public enum EventTrackingPublishOutcome { Accepted = 0, RetryableFailure = 1, SystemicFailure = 2 }
