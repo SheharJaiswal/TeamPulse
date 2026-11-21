@@ -6,11 +6,11 @@
 All invitation state, canonical employee creation and password hashing remain in Identity. No new service or cross-service database dependency is introduced. Use the existing .NET 8, EF Core 8, Pomelo and MySQL 8.4 conventions.
 
 ## Components
-- API: thin HrAdmin-protected invitation controller is implemented for create, inspect, resend and cancel. Anonymous activation action remains pending.
-- Application: create/get/resend/cancel/redeem command handlers and delivery abstraction.
+- API: HrAdmin-protected create, inspect, resend and cancel endpoints plus anonymous activation are implemented. SvelteKit provides the invitee password setup page.
+- Application: transactional invitation commands, atomic activation and delivery queue/email sender abstractions.
 - Domain: invitation state transitions and invariants.
-- Infrastructure: EF mappings/migration, transactional repository, token generator/hash service and mail adapter.
-- Tests: unit tests, MySQL 8.4 Testcontainers, API-host integration and delivery adapter tests.
+- Infrastructure: EF mappings/migrations, transactional invitation repository, token generator/hash service, durable MySQL delivery queue and SMTP Mailpit adapter.
+- Tests: unit tests, MySQL 8.4 Testcontainers, API-host activation integration and delivery queue integration coverage. SMTP provider acceptance still needs a local Mailpit smoke test.
 
 ## Token lifecycle
 Generate 32 random bytes with `RandomNumberGenerator`; encode for a URL-safe link. Persist only SHA-256(token bytes) as the activation lookup value. The raw token must never enter logs, exception text, API response bodies, telemetry or ordinary business/lifecycle outbox records. Store UTC creation and expiry timestamps. Use fixed-length digest values and an approved constant-time comparison or indexed digest lookup.
@@ -29,7 +29,7 @@ Redemption runs in one transaction:
 Resend rotates the digest and expiry in a transaction and invalidates the previous token before dispatch. Cancellation conditionally changes Pending to Cancelled. Redemption, resend and cancellation must serialize on the same invitation row so races have one deterministic winner. A unique Employee normalized-email constraint is the final guard.
 
 ## Delivery boundary
-Use an `IInvitationDelivery` abstraction. Development uses a local mail catcher in the Compose profile; the message contains the activation URL, but the API and application logs do not. Production adapter/provider is deliberately not selected in this change.
+Use an `IInvitationEmailSender` abstraction. Development uses Mailpit over SMTP (`localhost:1025`) with the SvelteKit activation page as the link destination. The durable worker leases protected-secret rows, validates pending state/expiry/generation, unprotects only at the delivery boundary, and sends the activation URL without logging it. Transient failures receive bounded exponential retry; SMTP acceptance deletes the secret only when the generation and lease still match. Resend clears any previous lease and retry schedule. Production adapter/provider is deliberately not selected in this change.
 
 The ordinary outbox must contain only an opaque invitation reference and delivery generation/metadata; it must never contain the raw token, activation URL or protected token ciphertext. If delivery is asynchronous/retryable, recoverable token material requires a separate protected-secret store and a narrowly scoped unprotect boundary. See [security-review.md](security-review.md) for the threat model, required invariants and owner decisions.
 
