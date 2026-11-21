@@ -14,7 +14,7 @@ namespace EventTracking.UnitTests;
 public sealed class HabitActivitySubmissionStoreIntegrationTests(EventTrackingMySqlFixture fixture) : IClassFixture<EventTrackingMySqlFixture>
 {
     [Fact]
-    public async Task AddAsync_CommitsSubmissionAndOutboxTogether_AndReturnsOriginalForDuplicateKey()
+    public async Task AddAsync_PreservesMultipleDailySubmissionsAndScopesIdempotencyPerEmployee()
     {
         using var provider = await CreateProviderAsync();
         var factory = provider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
@@ -28,18 +28,30 @@ public sealed class HabitActivitySubmissionStoreIntegrationTests(EventTrackingMy
         var accepted = await store.AddAsync(first, CancellationToken.None);
         var duplicate = new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId, date, 2, key, DateTime.UtcNow);
         var retried = await store.AddAsync(duplicate, CancellationToken.None);
+        var secondDailySubmission = new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId,
+            date, 3, Guid.NewGuid(), DateTime.UtcNow);
+        await store.AddAsync(secondDailySubmission, CancellationToken.None);
+        var anotherEmployee = Guid.NewGuid();
+        var sameKeyForAnotherEmployee = new HabitActivitySubmission(Guid.NewGuid(), anotherEmployee, habitId,
+            date, 2, key, DateTime.UtcNow);
+        await store.AddAsync(sameKeyForAnotherEmployee, CancellationToken.None);
 
         Assert.Equal(first.Id, accepted.Id);
         Assert.Equal(first.Id, retried.Id);
         await using var database = await factory.CreateDbContextAsync();
-        Assert.Equal(1, await database.HabitActivitySubmissions.CountAsync(x => x.EmployeeId == employeeId));
+        Assert.Equal(2, await database.HabitActivitySubmissions.CountAsync(x => x.EmployeeId == employeeId));
+        Assert.Equal(1, await database.HabitActivitySubmissions.CountAsync(x => x.EmployeeId == anotherEmployee));
+        Assert.Equal(3, await database.EventTrackingOutboxMessages.CountAsync(x =>
+            x.Payload.Contains(first.Id.ToString()) ||
+            x.Payload.Contains(secondDailySubmission.Id.ToString()) ||
+            x.Payload.Contains(sameKeyForAnotherEmployee.Id.ToString())));
         var outbox = await database.EventTrackingOutboxMessages.SingleAsync(x => x.Payload.Contains(first.Id.ToString()));
         using var envelope = JsonDocument.Parse(outbox.Payload);
         Assert.Equal("HabitActivityRecorded", envelope.RootElement.GetProperty("eventType").GetString());
         Assert.Equal(first.Id, envelope.RootElement.GetProperty("payload").GetProperty("submissionId").GetGuid());
         Assert.Equal(employeeId, envelope.RootElement.GetProperty("payload").GetProperty("employeeId").GetGuid());
         var history = await store.GetMineAsync(employeeId, habitId, date, date, CancellationToken.None);
-        Assert.Single(history);
+        Assert.Equal(2, history.Count);
         Assert.Empty(await store.GetMineAsync(Guid.NewGuid(), habitId, date, date, CancellationToken.None));
     }
 
