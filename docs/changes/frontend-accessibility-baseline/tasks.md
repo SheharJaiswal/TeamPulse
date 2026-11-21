@@ -5,5 +5,5 @@
 - [x] Add proposal, specification, design and acceptance-mapped tasks.
 - [x] Add shared keyboard focus-visible styles for links, buttons and form controls.
 - [x] Add reduced-motion support to the shared stylesheet.
-- [ ] Verify frontend unit tests, Svelte/TypeScript checks and production build in GitHub Actions (workflow triggered by the frontend change; result pending).
+- [x] Verify frontend CI #44935239670: frontend unit tests, Svelte/TypeScript checks and production build all passed.
 - [ ] Record CI evidence and update the project status.
