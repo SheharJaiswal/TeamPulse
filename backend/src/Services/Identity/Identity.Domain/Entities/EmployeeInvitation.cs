@@ -91,7 +91,7 @@ public sealed class EmployeeInvitation
         if (Status != "Pending" || ExpiresAtUtc > nowUtc) return false;
         Status = "Expired";
         PendingNormalizedEmail = null;
-        TokenDigest = string.Empty;
+        TokenDigest = null;
         return true;
     }
 }
