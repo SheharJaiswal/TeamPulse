@@ -15,9 +15,9 @@ All paths are under `/api/identity`.
 - `GET /invitations/{invitationId}` — HrAdmin reads non-secret invitation status.
 - `POST /invitations/{invitationId}/resend` — HrAdmin invalidates the old token and issues a replacement.
 - `POST /invitations/{invitationId}/cancel` — HrAdmin cancels a pending invitation.
-- `POST /invitations/activate` — anonymous invitee redeems token and sets password.
+- `POST /invitations/activate` — anonymous invitee redeems token and sets password. The activation email links to the SvelteKit `/activate` route.
 
-The activation request contains only the opaque token and new password. Raw tokens and activation URLs are never returned by HR APIs; they are delivered through the configured mail adapter. Responses do not expose token digests or secrets. The HR create, inspect, resend and cancel endpoints are now implemented; activation remains pending.
+The activation request contains only the opaque token and new password. Raw tokens and activation URLs are never returned by HR APIs; they are delivered through the configured mail adapter. Responses do not expose token digests or secrets. The HR create, inspect, resend and cancel endpoints, anonymous activation endpoint and SvelteKit activation page are implemented.
 
 ## Invitation data and state
 Proposed states: `Pending`, `Accepted`, `Cancelled`, `Expired`. Expiry may be computed from `ExpiresAtUtc`; a background cleanup job is not required for correctness.
@@ -36,7 +36,7 @@ A pending invitation stores invitation ID, normalized email, display name, organ
 - Successful redemption creates an active Employee with role exactly `Employee`, normalized unique email and ASP.NET Core PasswordHasher output. No role is accepted from the client.
 - The password must satisfy the existing Identity password policy. No password or token is logged, persisted in plaintext, or included in telemetry.
 - The activation endpoint returns a generic invalid/expired/cancelled/used-token response and does not disclose whether an email or employee exists. Apply rate limiting to activation attempts.
-- Delivery is asynchronous/retryable. A delivery outage must not expose the raw token through logs or an API response and must not create an active account.
+- Delivery is asynchronous/retryable. The outbox carries only invitation ID and generation; a separate Data Protection-protected secret store retains the token until SMTP acceptance or expiry cleanup. A delivery outage must not expose the raw token through logs or an API response and must not create an active account.
 - Existing Development-only `POST /register` behavior remains unchanged; every non-Development environment continues returning 404.
 
 ## Acceptance criteria
@@ -52,7 +52,7 @@ A pending invitation stores invitation ID, normalized email, display name, organ
 - EINV-10: Cancellation prevents redemption; accepted/cancelled/expired invitations cannot be reused.
 - EINV-11: No endpoint response, log, exception, trace or metric contains raw tokens, activation URLs, passwords, hashes or connection secrets.
 - EINV-12: Invalid/expired/used/cancelled token responses do not disclose account existence; activation is rate-limited.
-- EINV-13: Delivery failure is safely retryable and does not create an active Employee or leak the activation token.
+- EINV-13: Delivery failure is safely retryable and does not create an active Employee or leak the activation token. MySQL leases prevent concurrent workers from claiming the same delivery generation; resend invalidates stale leases.
 - EINV-14: Existing Development-only registration behavior and production 404 behavior remain unchanged.
 - EINV-15: MySQL 8.4 Testcontainers verify migration, uniqueness, concurrent redemption, resend/cancel races and transaction rollback.
 - EINV-16: CI Release build, complete solution tests, Compose validation and topology contract tests pass.
