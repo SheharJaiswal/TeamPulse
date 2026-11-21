@@ -36,6 +36,7 @@
 - [x] Capture the hosted worker's existing safe warning diagnostics in the Mailpit test timeout (exception types, SMTP status and configured endpoint only); do not capture exception messages, email bodies, tokens or URLs.
 - [x] Re-run backend CI #44927041146: Restore, Release build, Compose validation and RabbitMQ topology checks passed; 131/132 Identity tests passed. Safe diagnostics narrowed the worker failure to SmtpException with an inner SocketException and SMTP GeneralFailure; no socket error code was captured yet.
 - [x] Capture the hosted-worker socket error: CI #44927595688 reports ConnectionRefused (native code 111) on all three SMTP attempts, while the direct SMTP probe succeeds; add a post-timeout TCP reachability check to distinguish a stopped listener from worker-only connection behavior.
+- [x] CI #44928325765 confirms the SMTP port is reachable after all three worker failures (post-timeout TCP probe says Connected); add bounded Mailpit container-log capture to the failure diagnostic to determine whether the listener restarted or observed the worker's connection attempts.
 - [ ] Identify the underlying endpoint/connectivity failure before changing delivery behavior.
 - [x] Update the broader Identity API contract and add the local Mailpit invitation-delivery runbook; document that hosted-worker SMTP delivery remains unverified.
 - [ ] Add operational verification for application restart during a leased delivery and SMTP outage recovery.

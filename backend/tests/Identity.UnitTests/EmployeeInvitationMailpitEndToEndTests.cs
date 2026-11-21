@@ -136,11 +136,13 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
             var messageCount = JsonDocument.Parse(mailpitStatus).RootElement
                 .GetProperty("total").GetInt32();
             var smtpEndpointAfterTimeout = await CheckSmtpEndpointAsync(smtpPort);
+            var (mailpitStdout, mailpitStderr) = await mailpit.GetLogsAsync();
+            var mailpitLogs = Tail($"{mailpitStdout}\n{mailpitStderr}", 4000);
             throw new Xunit.Sdk.XunitException(
                 $"Invitation delivery did not reach Mailpit. Attempts={secret?.AttemptCount}, " +
                 $"LastErrorCode={secret?.LastErrorCode ?? "none"}, LeaseActive={secret?.LeaseExpiresAtUtc > DateTime.UtcNow}, " +
                 $"MailpitMessageCount={messageCount}, SmtpEndpointAfterTimeout={smtpEndpointAfterTimeout}, " +
-                $"WorkerDiagnostics={string.Join(" || ", workerLogCapture.Messages)}.");
+                $"MailpitLogs={mailpitLogs}, WorkerDiagnostics={string.Join(" || ", workerLogCapture.Messages)}.");
         }
         Assert.Matches("^[A-Za-z0-9_-]{43}$", firstToken);
 
@@ -172,6 +174,9 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         Assert.Equal("Employee",
             loginDocument.RootElement.GetProperty("employee").GetProperty("role").GetString());
     }
+
+    private static string Tail(string value, int maxLength) =>
+        value.Length <= maxLength ? value : value[^maxLength..];
 
     private static async Task<string> CheckSmtpEndpointAsync(int smtpPort)
     {
