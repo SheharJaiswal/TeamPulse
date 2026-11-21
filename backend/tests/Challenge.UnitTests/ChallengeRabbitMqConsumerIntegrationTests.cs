@@ -84,6 +84,23 @@ public sealed class ChallengeRabbitMqConsumerOptionsTests
         Assert.True(status.IsConnected);
     }
 
+    [Fact]
+    public void Status_RecordsFailureStageAndExceptionTypesWithoutExceptionMessages()
+    {
+        var status = new ChallengeRabbitMqConsumerStatus();
+        const string sensitiveMessage = "amqp://teampulse:secret-password@broker:5672/";
+
+        status.MarkConnectionAttempt();
+        status.MarkSessionStage("consumer-registration");
+        status.RecordSessionFailure(new InvalidOperationException(
+            sensitiveMessage,
+            new System.Net.Sockets.SocketException()));
+
+        Assert.Equal("consumer-registration", status.LastSessionFailureStage);
+        Assert.Equal("InvalidOperationException -> SocketException", status.LastSessionFailureTypes);
+        Assert.DoesNotContain(sensitiveMessage, status.LastSessionFailureTypes, StringComparison.Ordinal);
+    }
+
     internal static ChallengeRabbitMqConsumerOptions ValidOptions() => new()
     {
         Enabled = true,
@@ -232,7 +249,10 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
                 establishedSessionsBeforeBrokerStop + "/" + status.EstablishedSessionCount +
                 "; completed sessions: " + status.CompletedSessionCount +
                 "; source queue messages: " + queueState.MessageCount +
-                "; consumers: " + queueState.ConsumerCount + ".");
+                "; consumers: " + queueState.ConsumerCount +
+                "; last session failure stage/types: " + status.LastSessionFailureStage +
+                "/" + status.LastSessionFailureTypes +
+                "; current session stage: " + status.CurrentSessionStage + ".");
         }
 
         await processor.DuplicateReplayObserved.Task;

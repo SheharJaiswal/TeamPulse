@@ -1,5 +1,19 @@
 # Project Status
 
+## Latest continuation checkpoint — capture safe RabbitMQ session setup failure stage (CI pending)
+
+- Live branch HEAD before this increment: `1b123541ea52dd845309977506eff170207fdcc2` (tree `3749f844b5ac99b76822485c7ad0790cb099b1ae`). CI #119 for this exact HEAD failed: Release build succeeded with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (45/46 Challenge, 24 Habit, 100 Identity), zero skipped. [CI run #119](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44867775340).
+- The only failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`. The bounded diagnostic reported connection attempts 1→137, established sessions 1→1, completed sessions 137, source queue messages 1 and consumers 0. The previous session was disposed, but every subsequent setup attempt ended before a new consumer session was established. This narrows the failure to session setup, rather than a missing queue message after a successful consumer registration.
+- Added internal in-memory stage tracking for connection creation, consumer-channel creation, DLQ-channel creation, QoS setup and consumer registration. Failed sessions retain only the failed stage and exception type chain; exception messages, broker URIs and credentials are not stored. The existing bounded replay timeout includes these safe diagnostics.
+- Added a unit test proving exception messages containing a broker URI/credential are not retained. Counters and failure diagnostics remain outside HTTP health responses and persistence; `IsConnected` remains the instantaneous consumer-health signal. No acknowledgement, retry, DLQ or projection behavior changed.
+- The next CI run should identify the exact failing setup stage and exception types. Do not close CEPS-11/CEPS-14 until duplicate replay and sentinel/prefetch release pass.
+- Local environment recheck: .NET SDK and Docker CLI are unavailable; no local build/test is claimed.
+- Scope remains the owner-approved Challenge employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention remains permanent initially; privacy/legal sign-off is a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
+
 ## Latest continuation checkpoint — add reconnect progress diagnostics after duplicate replay timeout (CI pending)
 
 - Live branch HEAD before this increment: `aa602bdb3b99098827d9b07485c54d96f55d987c` (tree `af6a47b561addee81c9f1c7a0ef5d4aee37ee465`). CI #118 for test commit `6ffd928966659f228851f95cc1137d8f6bb6e145` failed: restore and Release build passed (0 warnings/errors); Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (44/45 Challenge, 24 Habit, 100 Identity), with zero skipped. [CI run #118](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44862518699).

@@ -50,6 +50,9 @@ public sealed class ChallengeRabbitMqConsumer(
             }
             catch (Exception exception)
             {
+                // Retain only the stage and exception type chain for bounded test diagnostics.
+                // Exception messages can contain broker addresses or credentials.
+                status.RecordSessionFailure(exception);
                 // Do not log exception messages: broker exceptions can contain connection details.
                 logger.LogWarning(
                     "Challenge RabbitMQ consumer session ended ({ErrorType}); reconnecting.",
@@ -90,12 +93,15 @@ public sealed class ChallengeRabbitMqConsumer(
             TopologyRecoveryEnabled = false
         };
 
+        status.MarkSessionStage("connection");
         await using var connection = await factory.CreateConnectionAsync(ConnectionName, stoppingToken);
+        status.MarkSessionStage("consumer-channel");
         await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
         // This dedicated channel confirms every DLQ publish. Mandatory routing plus tracked
         // publisher confirms makes BasicPublishAsync fail if the DLQ binding is absent or the
         // broker does not accept the dead-letter message.
+        status.MarkSessionStage("dead-letter-channel");
         await using var deadLetterChannel = await connection.CreateChannelAsync(
             new CreateChannelOptions(
                 publisherConfirmationsEnabled: true,
@@ -126,6 +132,7 @@ public sealed class ChallengeRabbitMqConsumer(
         using var sessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var sessionToken = sessionCancellation.Token;
 
+        status.MarkSessionStage("quality-of-service");
         await channel.BasicQosAsync(0, options.PrefetchCount, false, stoppingToken);
 
         var callbackSync = new object();
@@ -177,6 +184,7 @@ public sealed class ChallengeRabbitMqConsumer(
             }
         };
 
+        status.MarkSessionStage("consumer-registration");
         await channel.BasicConsumeAsync(
             options.QueueName,
             autoAck: false,
