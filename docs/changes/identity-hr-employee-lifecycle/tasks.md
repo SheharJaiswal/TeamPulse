@@ -80,7 +80,7 @@
 - Added a MySQL API-host integration test proving a supplied X-Correlation-ID is returned unchanged and persisted identically in the lifecycle audit, outbox row and serialized event envelope.
 - Added a second integration test proving omission of X-Correlation-ID generates one non-empty UUID that is identical in the response, audit, outbox and event envelope.
 - Added acceptance criteria ILC-17 and ILC-18 to the lifecycle specification.
-- Test implementation commit: `ff9c87b53c8943ed0719528b280304ac2e5199db`. CI verification pending.
+- Test implementation commit: `ff9c87b53c8943ed0719528b280304ac2e5199db`. Verified by CI #238 (Identity 107/107).
 
 ## CI #237 — JWT subject validation and RabbitMQ image setup verified
 
@@ -90,3 +90,19 @@
 - Restore, Release build, Docker Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests and both pinned test-image pulls passed. Build reported 3 warnings and 0 errors.
 - [CI #237](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902295123). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902295123/artifacts/14705604839).
 
+
+
+## CI #238 — correlation-ID propagation verified
+
+- CI #238 passed for test commit `ff9c87b53c8943ed0719528b280304ac2e5199db`.
+- ILC-17 and ILC-18 passed: supplied and generated correlation IDs were identical across the API response, lifecycle audit, outbox row and serialized event envelope.
+- Full .NET results: Identity 107, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **266 passed, 0 failed, 0 skipped**.
+- Restore, Release build, Docker Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests, and both pinned Testcontainers image pulls passed. Build reported 3 warnings and 0 errors (including one nullable warning in the lifecycle integration-test project).
+- [CI #238](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902665384). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902665384/artifacts/14706737222).
+
+## Correlation-ID idempotency replay regression — implementation added
+
+- Added a sequential MySQL API-host integration test that submits the same lifecycle command twice using the same actor/idempotency key and different correlation IDs.
+- The test asserts the first response is `transitioned`, the second is `replayed`, both expose the original event and correlation IDs, and exactly one employee lifecycle audit/outbox row exists with the original correlation ID also present in the serialized envelope.
+- Added acceptance criterion ILC-19 to the lifecycle specification.
+- Test commit: `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. Specification commit: `9d4a7130dbd4dc745611cda4356d73f199e47318`. CI verification pending.
