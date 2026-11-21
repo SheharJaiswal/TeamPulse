@@ -21,4 +21,16 @@ public sealed class InvitationDeliverySecret
     public int Generation { get; private set; }
     public string ProtectedToken { get; private set; } = string.Empty;
     public DateTime CreatedAtUtc { get; private set; }
+
+    public void Replace(int generation, string protectedToken, DateTime createdAtUtc)
+    {
+        if (generation <= Generation)
+            throw new ArgumentOutOfRangeException(nameof(generation), "Delivery generation must increase.");
+        if (string.IsNullOrWhiteSpace(protectedToken))
+            throw new ArgumentException("Protected token is required.", nameof(protectedToken));
+
+        Generation = generation;
+        ProtectedToken = protectedToken;
+        CreatedAtUtc = createdAtUtc;
+    }
 }
