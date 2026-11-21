@@ -154,6 +154,71 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetMine_FiltersByHabitAndInclusiveDateRange_AndReturnsOnlyCallerRecords()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        var employeeId = Guid.NewGuid();
+        var otherEmployeeId = Guid.NewGuid();
+        var habitId = Guid.NewGuid();
+        var otherHabitId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(employeeId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IHabitActivitySubmissionStore>();
+            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId,
+                new DateOnly(2026, 11, 20), 1, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId,
+                new DateOnly(2026, 11, 21), 2, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId,
+                new DateOnly(2026, 11, 22), 3, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), employeeId, otherHabitId,
+                new DateOnly(2026, 11, 21), 4, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), otherEmployeeId, habitId,
+                new DateOnly(2026, 11, 21), 5, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+        }
+
+        using var response = await client.GetAsync(
+            $"/api/habit-activities?habitId={habitId}&fromDate=2026-11-20&toDate=2026-11-21");
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var records = document.RootElement.EnumerateArray().ToArray();
+
+        Assert.Equal(2, records.Length);
+        Assert.Contains(records, item => item.GetProperty("activityDate").GetDateTime().Date == new DateTime(2026, 11, 20));
+        Assert.Contains(records, item => item.GetProperty("activityDate").GetDateTime().Date == new DateTime(2026, 11, 21));
+        Assert.Equal(0, habitApi.RequestCount);
+    }
+
+    [Fact]
+    public async Task Get_WhenSubmissionBelongsToAnotherEmployee_ReturnsNotFound()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        var ownerId = Guid.NewGuid();
+        var otherEmployeeId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IHabitActivitySubmissionStore>();
+            await store.AddAsync(new HabitActivitySubmission(submissionId, ownerId, Guid.NewGuid(),
+                new DateOnly(2026, 11, 21), 1, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+        }
+
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(otherEmployeeId));
+        using var response = await client.GetAsync($"/api/habit-activities/{submissionId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(0, habitApi.RequestCount);
+    }
+
+    [Fact]
     public async Task Create_WhenHabitApiIsUnavailable_ReturnsServiceUnavailable_AndDoesNotPersistSubmission()
     {
         var habitApi = new StubHabitApiHandler(throwNetworkError: true);
