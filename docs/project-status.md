@@ -1,3 +1,15 @@
+## Identity correlation-ID replay and empty-header validation — CI #239 passed; ILC-20 verification pending
+
+- CI #239 passed for test commit `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. ILC-19 verified same-command idempotent replay preserves the original event/correlation IDs even when the retry supplies a different correlation ID.
+- Full .NET results: Identity 108/108, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28, Insight 15/15 and Insight.QueueMigration.IntegrationTests 8/8 — **267 passed, 0 failed, 0 skipped**.
+- All 19 Python RabbitMQ topology tests, restore, Release build, Compose validation, RabbitMQ startup/topology, both pinned Testcontainers image pulls and test-result artifact upload passed. Release build reported 3 warnings and 0 errors.
+- [CI #239](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903148180). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903148180/artifacts/14706841604).
+- Fixed a header-validation edge case: Identity now generates X-Correlation-ID only when the header is absent; an explicitly supplied empty value is rejected as malformed. Added a MySQL API-host test verifying HTTP 400 and no employee, audit or outbox mutation.
+- Added ILC-20 to the lifecycle SDD. Controller commit: `62b84ee4a68c9fbca1b48c8329a029b6183dc4ee`; test commit: `df805822b958cae6cd9580af019ca3cbf07d2558`. New CI verification is pending.
+- No schema, queue topology, persistent broker data or AWS resources changed.
+
+Updated: 2026-11-21
+
 ## Identity correlation-ID replay semantics — CI #238 passed; ILC-19 pending verification
 
 - CI #238 passed for test commit `ff9c87b53c8943ed0719528b280304ac2e5199db`. ILC-17 and ILC-18 verified supplied and generated correlation-ID propagation through the response, audit, outbox and event envelope.
