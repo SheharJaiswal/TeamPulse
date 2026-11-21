@@ -1,3 +1,14 @@
+## Next increment prepared — Insight lifecycle projection SDD draft
+
+- Prepared docs/changes/insight-employee-status-projection-consumer/ with proposal, spec, design and acceptance-mapped tasks on 2026-11-21.
+- Repository review confirmed Insight is an architectural member of the six services and its local RabbitMQ queue exists, but no Insight service projects are currently present. The architecture reserves DynamoDB for Insight read models; this SDD therefore proposes a DynamoDB-native implementation, not MySQL/EF Core.
+- Proposed storage uses one Insight-owned DynamoDB table for employee projection and processed-event inbox items, with TransactWriteItems and conditional version fences to keep inbox/projection decisions atomic under concurrent delivery.
+- Proposed local development uses DynamoDB Local and the existing RabbitMQ transport. The existing Insight queue is durable classic with no queue arguments or DLQ; the SDD requires a pending-message-preserving migration before any topology change. No live broker or AWS resource was modified.
+- Scope is projection-only. Analytics, aggregation, dashboards, read APIs, historical aggregate treatment, AWS EventBridge/SQS provisioning and retention cleanup remain deferred.
+- **Awaiting owner approval.** No Insight application code, DynamoDB table, Compose change or RabbitMQ topology change has been implemented.
+
+Updated: 2026-11-21
+
 ## Notification employee-status projection — acceptance verified by CI #168
 
 - CI #168 passed for commit `bd27c4a118e851d02625d5e2002a9be357acec0a` on `feature/backend-foundation`.
