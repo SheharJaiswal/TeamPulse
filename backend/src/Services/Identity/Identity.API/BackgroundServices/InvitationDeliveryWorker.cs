@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.Application.Abstractions;
-using Identity.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -42,8 +41,7 @@ public sealed class InvitationDeliveryWorker(
                     try
                     {
                         var token = tokenService.Unprotect(item.ProtectedToken);
-                        var sender = (SmtpInvitationEmailSender)emailSender;
-                        var activationUrl = sender.CreateActivationUrl(token);
+                        var activationUrl = CreateActivationUrl(token);
                         await emailSender.SendAsync(
                             item.Email, item.DisplayName, activationUrl, stoppingToken);
 
@@ -98,6 +96,15 @@ public sealed class InvitationDeliveryWorker(
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             }
         }
+    }
+
+    private string CreateActivationUrl(string token)
+    {
+        var builder = new UriBuilder(_options.ActivationBaseUrl);
+        var query = builder.Query.TrimStart('?');
+        var tokenParameter = "token=" + Uri.EscapeDataString(token);
+        builder.Query = string.IsNullOrEmpty(query) ? tokenParameter : query + "&" + tokenParameter;
+        return builder.Uri.ToString();
     }
 
     private int RetryDelay(int attemptCount)
