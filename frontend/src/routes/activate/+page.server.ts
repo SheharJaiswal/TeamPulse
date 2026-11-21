@@ -2,9 +2,15 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { identityApiUrl, responseMessage } from '$lib/server/api';
 
-export const load: PageServerLoad = ({ url }) => ({
-  token: url.searchParams.get('token') ?? ''
-});
+export const load: PageServerLoad = ({ url, setHeaders }) => {
+  // Invitation tokens must not be retained by shared caches or sent as referrers.
+  setHeaders({
+    'cache-control': 'no-store',
+    'referrer-policy': 'no-referrer'
+  });
+
+  return { token: url.searchParams.get('token') ?? '' };
+};
 
 export const actions: Actions = {
   default: async ({ request, fetch }) => {
