@@ -14,6 +14,7 @@ public sealed class EventTrackingRabbitMqConsumerOptions
     public int RetryMaxDelayMilliseconds { get; set; } = 2000;
     public int ReconnectDelayMilliseconds { get; set; } = 5000;
     public int ConnectionTimeoutMilliseconds { get; set; } = 5000;
+    public int HeartbeatSeconds { get; set; } = 5;
 
     public void Validate()
     {
@@ -34,5 +35,7 @@ public sealed class EventTrackingRabbitMqConsumerOptions
             throw new InvalidOperationException("EventTrackingConsumer:ReconnectDelayMilliseconds must be between 250 and 60000.");
         if (ConnectionTimeoutMilliseconds is < 1000 or > 30000)
             throw new InvalidOperationException("EventTrackingConsumer:ConnectionTimeoutMilliseconds must be between 1000 and 30000.");
+        if (HeartbeatSeconds is < 1 or > 60)
+            throw new InvalidOperationException("EventTrackingConsumer:HeartbeatSeconds must be between 1 and 60.");
     }
 }

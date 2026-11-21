@@ -88,6 +88,7 @@ public sealed class EventTrackingRabbitMqConsumer(
             RequestedConnectionTimeout = TimeSpan.FromMilliseconds(options.ConnectionTimeoutMilliseconds),
             HandshakeContinuationTimeout = TimeSpan.FromMilliseconds(options.ConnectionTimeoutMilliseconds),
             ContinuationTimeout = TimeSpan.FromMilliseconds(options.ConnectionTimeoutMilliseconds),
+            RequestedHeartbeat = TimeSpan.FromSeconds(options.HeartbeatSeconds),
             ClientProvidedName = ConnectionName,
             AutomaticRecoveryEnabled = false,
             TopologyRecoveryEnabled = false
