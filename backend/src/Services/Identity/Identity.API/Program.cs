@@ -61,8 +61,7 @@ if (invitationEmailOptions.Enabled)
         invitationEmailOptions.UserName,
         invitationEmailOptions.Password,
         invitationEmailOptions.FromAddress,
-        invitationEmailOptions.FromName,
-        invitationEmailOptions.ActivationBaseUrl));
+        invitationEmailOptions.FromName));
     builder.Services.AddHostedService<InvitationDeliveryWorker>();
 }
 builder.Services.AddScoped<IInvitationTokenService, InvitationTokenService>();
