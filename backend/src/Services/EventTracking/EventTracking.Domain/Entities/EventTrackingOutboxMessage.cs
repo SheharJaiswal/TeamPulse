@@ -42,9 +42,9 @@ public sealed class EventTrackingOutboxMessage
         if (!OwnsUnexpiredLease(token, publishedAtUtc)) return false;
         PublishedAtUtc = publishedAtUtc; ClearLease(); NextAttemptAtUtc = null; LastErrorCode = null; return true;
     }
-    public bool TryScheduleRetry(Guid token, DateTime retryAtUtc, string errorCode)
+    public bool TryScheduleRetry(Guid token, DateTime attemptedAtUtc, DateTime retryAtUtc, string errorCode)
     {
-        if (!IsUtc(retryAtUtc) || !OwnsUnexpiredLease(token, retryAtUtc)) return false;
+        if (!IsUtc(retryAtUtc) || !OwnsUnexpiredLease(token, attemptedAtUtc)) return false;
         NextAttemptAtUtc = retryAtUtc; LastErrorCode = Sanitize(errorCode); ClearLease(); return true;
     }
     public bool TryQuarantine(Guid token, DateTime deadLetteredAtUtc, string errorCode)
