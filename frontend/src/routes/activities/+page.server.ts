@@ -3,6 +3,7 @@ import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { eventTrackingApiUrl, habitApiUrl, responseMessage } from '$lib/server/api';
 import { isCalendarDate, isGuid } from '$lib/validation.js';
+import { submitActivity } from '$lib/server/activity-submission.js';
 
 interface Habit {
   id: string;
@@ -86,40 +87,31 @@ export const actions: Actions = {
   submit: async ({ request, cookies, fetch }) => {
     const token = requireSession(cookies);
     const formData = await request.formData();
-    const habitId = String(formData.get('habitId') ?? '');
-    const activityDate = String(formData.get('activityDate') ?? '');
-    const quantity = Number(formData.get('quantity'));
-    const idempotencyKey = String(formData.get('idempotencyKey') ?? '');
+    const submission = {
+      habitId: String(formData.get('habitId') ?? ''),
+      activityDate: String(formData.get('activityDate') ?? ''),
+      quantity: Number(formData.get('quantity')),
+      idempotencyKey: String(formData.get('idempotencyKey') ?? '')
+    };
 
-    if (!isGuid(habitId) || !isCalendarDate(activityDate) ||
-        !Number.isInteger(quantity) || quantity < 1 || quantity > 1000 ||
-        !isGuid(idempotencyKey)) {
-      return fail(400, {
-        message: 'Choose a habit, a valid activity date and a quantity between 1 and 1,000.',
-        idempotencyKey: isGuid(idempotencyKey) ? idempotencyKey : crypto.randomUUID()
-      });
-    }
-
-    let response: Response;
-    try {
-      response = await fetch(`${eventTrackingApiUrl()}/api/habit-activities`, {
+    const result = await submitActivity(submission, {
+      createIdempotencyKey: () => crypto.randomUUID(),
+      send: (payload) => fetch(`${eventTrackingApiUrl()}/api/habit-activities`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ habitId, activityDate, quantity, idempotencyKey })
-      });
-    } catch {
-      return fail(503, {
-        message: 'Event Tracking service is unavailable. Retry this submission safely.',
-        idempotencyKey
-      });
+        body: JSON.stringify(payload)
+      }),
+      onResponse: (response) => handleUnauthorized(response, cookies),
+      getResponseMessage: responseMessage
+    });
+
+    if (result.kind === 'success') {
+      return { success: true, idempotencyKey: result.idempotencyKey };
     }
-    await handleUnauthorized(response, cookies);
-    if (!response.ok) {
-      return fail(response.status === 400 || response.status === 404 || response.status === 409 ? response.status : 502, {
-        message: await responseMessage(response, 'Your activity could not be recorded.'),
-        idempotencyKey
-      });
-    }
-    return { success: true, idempotencyKey: crypto.randomUUID() };
+
+    return fail(result.status, {
+      message: result.message,
+      idempotencyKey: result.idempotencyKey
+    });
   }
 };
