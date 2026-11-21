@@ -44,6 +44,8 @@
 
 ## Verification gaps
 
+- [ ] Add a deterministic RFC 8785/SHA-256 known-answer regression covering property-order/whitespace equivalence, lowercase UUID normalization, UTC timestamp normalization and `long.MaxValue`; CI #149 pending.
+
 - [x] Dedicated API-host startup integration test authored in `ChallengeApiStartupIntegrationTests.cs`: starts the real `Program` against the fixture's fresh MySQL 8.4 database with the RabbitMQ consumer disabled, calls `/health/ready`, asserts both checked-in migrations were applied, writes through the production projection store and reads through its production reader. Verified in CI #133 after aligning the test timestamp to MySQL `datetime(6)` microsecond precision.
 - [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
 - [x] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert; concurrent same-fingerprint and conflicting-fingerprint tests passed CI #128.

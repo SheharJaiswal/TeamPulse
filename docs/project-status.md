@@ -1,3 +1,13 @@
+## Challenge RFC 8785 fingerprint vector — CI pending
+
+- Live branch baseline for this increment: `960db3e0505077495707a10b82685e84bd72d204` (`test(event-tracking): expose consumer shutdown health state`).
+- CI #148 completed with Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passing. Challenge passed 55/55; Habit 24/24 and Identity 100/100 passed. The full workflow failed only in the unrelated EventTracking API-host consumer-health test: `EventTrackingApiStartupIntegrationTests.ApiHost_ConsumerHealthIsIndependentFromDatabaseReadiness` asserted that the consumer had disconnected after broker shutdown, but the assertion remained false. [CI #148](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44883911468).
+- Added a deterministic SHA-256 known-answer test for the approved `rfc8785-sha256-v1` fingerprint. It verifies identical output across reordered/whitespace-varied JSON, uppercase versus lowercase UUIDs, equivalent UTC timestamp representations, and `long.MaxValue` lifecycleVersion.
+- CI verification for this focused Challenge test is pending. No production behavior, schema, queue topology or Challenge business workflow changed.
+
+Updated: 2026-11-21
+
+
 ## Latest repository checkpoint — 2026-11-21
 
 - Active branch: `feature/backend-foundation`. Current head at this documentation update: `ee99cdb24994a5a06c9efcdc5eeb8c624ff1b2a2` (an EventTracking-only follow-up; no Challenge files changed).
