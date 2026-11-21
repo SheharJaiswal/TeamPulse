@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text;
 using Insight.Application.Abstractions;
 using Insight.Application.Contracts;
@@ -85,7 +84,12 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
 
         processor.Release.TrySetResult(true);
         await processor.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        await WaitUntilAsync(async () => await _channel!.BasicGetAsync(QueueName, autoAck: false) is null);
+
+        // With prefetch=1, this second delivery cannot be processed until the first
+        // delivery's acknowledgement has completed on the consumer channel.
+        await PublishAsync("{\"eventId\":\"after-ack-sentinel\"}");
+        await processor.SentinelProcessed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Null(await _channel!.BasicGetAsync(QueueName, autoAck: false));
         Assert.Null(await _channel.BasicGetAsync(DeadLetterQueueName, autoAck: false));
     }
 
@@ -131,7 +135,6 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
         int reconnectDelayMilliseconds = 250)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(processor);
         services.AddSingleton<IEmployeeStatusProjectionProcessor>(processor);
         var provider = services.BuildServiceProvider();
         var options = new InsightRabbitMqConsumerOptions
@@ -227,9 +230,16 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
         public TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> SentinelProcessed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public async Task<ProjectionProcessingOutcome> ProcessAsync(string message, CancellationToken cancellationToken)
         {
+            if (message.Contains("after-ack-sentinel", StringComparison.Ordinal))
+            {
+                SentinelProcessed.TrySetResult(true);
+                return ProjectionProcessingOutcome.Applied;
+            }
+
             Started.TrySetResult(true);
             await Release.Task.WaitAsync(cancellationToken);
             Completed.TrySetResult(true);
