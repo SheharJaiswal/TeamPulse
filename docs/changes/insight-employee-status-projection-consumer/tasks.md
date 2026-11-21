@@ -19,11 +19,14 @@
 - [x] Add DynamoDB Local for local execution and isolated integration tests; no AWS account or credentials. CI #188 passed all 11 Insight tests.
 - [x] Add opt-in RabbitMQ consumer with manual ack after committed transaction, bounded transient retries, reconnect and separate consumer health.
 - [x] Add confirmed DLQ publishing and failure classifications; preserve source delivery if DLQ routing/confirmation fails.
-- [ ] Update only Insight source/DLQ topology after pending-message-preserving migration runbook and exact contract tests are in place.
+- [ ] Implement a standalone, explicitly invoked Insight queue migration utility with read-only preflight/dry-run, durable temporary-queue staging, mandatory publisher confirms before source acknowledgement, message-property/header preservation, a non-sensitive count/checksum ledger, resumable failure handling and rollback support. Add isolated RabbitMQ Testcontainers coverage; do not execute against the persistent broker.
+- [ ] Review the migration utility, pending-message-preserving runbook and exact topology contract tests together. Keep the committed Insight topology on its existing durable classic declaration until a separately scheduled maintenance window is approved.
+- [ ] Update only Insight source/DLQ topology after the migration utility, runbook and exact contract tests are reviewed and the controlled maintenance window is approved.
 - [x] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
 - [x] Add privacy assertions proving raw payload, note and credentials are not stored/logged — Consumer_DoesNotLogRawPayloadNotesCredentialsOrConnectionStrings passed in Insight.UnitTests (15/15) in CI #193 attempt 1.
 - [x] Add runbooks/configuration docs and update project status.
 - [x] Verify full Release build, DynamoDB Local integration, RabbitMQ Testcontainers, Compose and topology tests in CI — CI #190 passed for code commit `9ca613c41f9116296935270c19b8f8b136c78c5a`; 249/249 .NET tests passed, including all 14 Insight tests; zero failed or skipped.
+- [x] Cross-service regression and Insight privacy verification: CI #193 attempt 2 passed 250/250 .NET tests; CI #195 passed 251/251 .NET tests (including 15 Insight tests), all 19 Python RabbitMQ topology tests, Release build, Compose validation and pinned DynamoDB Local image pull.
 
 ## Acceptance mapping
 | Acceptance IDs | Required evidence |
