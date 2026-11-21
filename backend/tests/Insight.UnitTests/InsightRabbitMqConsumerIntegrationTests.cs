@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Insight.Application.Abstractions;
 using Insight.Application.Contracts;
@@ -94,6 +95,34 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Consumer_DoesNotLogRawPayloadNotesCredentialsOrConnectionStrings()
+    {
+        const string note = "privacy-sentinel-note";
+        const string credential = "privacy-sentinel-password";
+        const string body = "{\\"eventId\\":\\"privacy-sentinel-event\\",\\"note\\":\\"privacy-sentinel-note\\",\\"credential\\":\\"privacy-sentinel-password\\",\\"connectionString\\":\\"amqp://user:privacy-sentinel-password@private-host:5672/private\\"}";
+        var processor = new BlockingProcessor();
+        var logger = new CapturingLogger<InsightRabbitMqConsumer>();
+        await StartConsumerAsync(processor, logger: logger);
+        await PublishAsync(body);
+
+        await processor.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        processor.Release.TrySetResult(true);
+        await processor.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // The sentinel delivery proves the sensitive message was acknowledged before
+        // the consumer moved on; the logger snapshot is taken after both callbacks.
+        await PublishAsync("{\\"eventId\\":\\"after-privacy-sentinel\\"}");
+        await processor.SentinelProcessed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        var logs = string.Join(Environment.NewLine, logger.Entries);
+        Assert.DoesNotContain(body, logs, StringComparison.Ordinal);
+        Assert.DoesNotContain("privacy-sentinel-event", logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(note, logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(credential, logs, StringComparison.Ordinal);
+        Assert.DoesNotContain(_brokerUri, logs, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Consumer_PublishesTerminalOutcomeToDlqWithClassification()
     {
         const string body = "{\"eventId\":\"invalid-insight-event\"}";
@@ -132,7 +161,8 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
 
     private async Task<InsightRabbitMqConsumerStatus> StartConsumerAsync(
         IEmployeeStatusProjectionProcessor processor,
-        int reconnectDelayMilliseconds = 250)
+        int reconnectDelayMilliseconds = 250,
+        ILogger<InsightRabbitMqConsumer>? logger = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IEmployeeStatusProjectionProcessor>(processor);
@@ -154,7 +184,7 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
             provider.GetRequiredService<IServiceScopeFactory>(),
             options,
             status,
-            LoggerFactory.Create(_ => { }).CreateLogger<InsightRabbitMqConsumer>());
+            logger ?? LoggerFactory.Create(_ => { }).CreateLogger<InsightRabbitMqConsumer>());
         _consumers.Add((consumer, provider));
         await consumer.StartAsync(CancellationToken.None);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
@@ -216,6 +246,24 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
             await Task.Delay(25);
         }
         throw new TimeoutException("The expected Insight consumer state was not reached.");
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public ConcurrentQueue<string> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Enqueue(formatter(state, exception));
+        }
     }
 
     private sealed class FixedOutcomeProcessor(ProjectionProcessingOutcome outcome)
