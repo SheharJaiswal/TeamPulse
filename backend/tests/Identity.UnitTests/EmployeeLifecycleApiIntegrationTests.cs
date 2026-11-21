@@ -196,6 +196,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
 
+        var correlationId = Guid.NewGuid();
         var invalidRequests = new[]
         {
             new { ReasonCode = "   ", Note = (string?)null },
@@ -216,6 +217,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
                 })
             };
             message.Headers.Add("Idempotency-Key", $"invalid-lifecycle-{index}");
+            message.Headers.Add("X-Correlation-ID", correlationId.ToString());
 
             using var response = await client.SendAsync(message);
 
@@ -229,7 +231,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         Assert.True(employee.IsActive);
         Assert.Equal(0, employee.LifecycleVersion);
         Assert.False(await database.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
-        Assert.Empty(await database.OutboxMessages.ToListAsync());
+        Assert.False(await database.OutboxMessages.AnyAsync(x => x.CorrelationId == correlationId));
     }
 
     [Fact]
