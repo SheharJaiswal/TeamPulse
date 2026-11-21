@@ -14,11 +14,11 @@
 - [x] Record unresolved owner decisions and implementation blockers.
 - [x] Threat-model the protected-secret candidate: key-ring persistence/protection/rotation, worker boundary, stale-generation checks, retry behavior, deletion/backup limitations and fail-closed recovery.
 - [x] Keep ordinary outbox payload limited to opaque invitation reference and generation metadata; prohibit raw token, activation URL and ciphertext.
-- [ ] Owner chooses asynchronous protected-secret delivery or synchronous post-commit delivery with resend on failure.
-- [ ] If protected-secret delivery is selected, approve Data Protection key-ring operating requirements, production key-protection boundary and backup/restore policy.
-- [ ] Approve provider-acceptance deletion point and at-least-once/duplicate-email behavior.
-- [ ] Owner approval of the proposed policy defaults and SDD package (24-hour expiry, resend/cancel semantics, Employee activation behavior, generic failures/rate limiting).
-- [ ] Select/approve development mail-catcher profile and production delivery-provider boundary.
+- [x] Owner selected Option A: asynchronous delivery with a dedicated Data Protection-protected short-lived secret store (2026-11-21).
+- [x] Owner accepted persistent, Git-ignored local key-ring storage with restrictive filesystem permissions; production key protection/storage and backup/restore implementation are deferred to cloud infrastructure setup.
+- [x] Owner approved deleting the live secret after provider acceptance, with expiry cleanup as a backstop, and at-least-once delivery where duplicate emails may occur (2026-11-21).
+- [ ] Owner approval of policy defaults (24-hour expiry, resend/cancel semantics, activation directly creates an active Employee, generic activation failures and rate limiting).
+- [ ] Select/approve the development mail-catcher profile; production delivery provider remains deferred.
 
 ## Implementation — blocked pending approval
 - [ ] Add invitation Domain/Application/API/Infrastructure components and MySQL migration.
