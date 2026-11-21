@@ -3,6 +3,7 @@
 - Added an isolated Testcontainers scenario that intentionally makes the ledger append fail after the destination publish has completed. It verifies the destination copy exists while the source delivery remains unacknowledged and is requeued when the utility channel closes.
 - The test then retries with a valid ledger and verifies the source is acknowledged while the destination contains the duplicate copy, proving the documented at-least-once crash window rather than claiming exactly-once behavior.
 - Added a separate destination-consumer guard test: the utility refuses execution if the destination queue has active consumers. A missing-destination preflight test also confirms the source message remains untouched.
+- Expanded the successful-copy contract assertions to cover AMQP expiration, timestamp, user ID and cluster ID in addition to content type/encoding, persistent delivery mode, priority, correlation ID, reply-to, message ID, type, app ID, headers and body. This is source-level test coverage only until CI compiles and runs the project.
 - This coverage runs only against a disposable RabbitMQ Testcontainers broker. No persistent/shared broker was accessed. CI build/runtime verification remains pending because the local environment does not provide the .NET SDK.
 - Remaining before operational review: deterministic mandatory-unroutable publication race coverage, complete Release build/test run, then joint review of utility, runbook and exact topology contract tests.
 
