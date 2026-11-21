@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
 using Identity.Application.Abstractions;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -28,8 +29,12 @@ public sealed class InvitationTokenService : IInvitationTokenService
 
     public string ComputeDigest(string token)
     {
-        if (string.IsNullOrWhiteSpace(token))
-            throw new ArgumentException("Invitation token is required.", nameof(token));
+        if (string.IsNullOrWhiteSpace(token) || token.Length != 43 ||
+            token.Any(character => !((character >= 'A' && character <= 'Z') ||
+                                     (character >= 'a' && character <= 'z') ||
+                                     (character >= '0' && character <= '9') ||
+                                     character == '-' || character == '_')))
+            throw new ArgumentException("Invitation token is invalid.", nameof(token));
 
         byte[] bytes;
         try
