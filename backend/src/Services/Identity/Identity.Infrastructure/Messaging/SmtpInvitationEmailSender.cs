@@ -18,11 +18,10 @@ public sealed class SmtpInvitationEmailSender : IInvitationEmailSender
     private readonly string? _password;
     private readonly string _fromAddress;
     private readonly string _fromName;
-    private readonly Uri _activationBaseUri;
 
     public SmtpInvitationEmailSender(
         string host, int port, bool enableSsl, string? userName, string? password,
-        string fromAddress, string fromName, string activationBaseUrl)
+        string fromAddress, string fromName)
     {
         _host = host;
         _port = port;
@@ -31,7 +30,6 @@ public sealed class SmtpInvitationEmailSender : IInvitationEmailSender
         _password = password;
         _fromAddress = fromAddress;
         _fromName = fromName;
-        _activationBaseUri = new Uri(activationBaseUrl, UriKind.Absolute);
     }
 
     public async Task SendAsync(
@@ -59,15 +57,6 @@ public sealed class SmtpInvitationEmailSender : IInvitationEmailSender
             client.Credentials = new NetworkCredential(_userName, _password);
 
         await client.SendMailAsync(message, cancellationToken);
-    }
-
-    public string CreateActivationUrl(string token)
-    {
-        var builder = new UriBuilder(_activationBaseUri);
-        var query = builder.Query.TrimStart('?');
-        var tokenParameter = "token=" + Uri.EscapeDataString(token);
-        builder.Query = string.IsNullOrEmpty(query) ? tokenParameter : query + "&" + tokenParameter;
-        return builder.Uri.ToString();
     }
 
     private static string BuildBody(string displayName, string activationUrl)
