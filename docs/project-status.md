@@ -26,3 +26,12 @@ Updated: 2026-11-21
 - The failed intermediate CI attempts exposed a TypeScript definite-assignment issue in the new three-request load; the response tuple was corrected and the final CI run passed. No backend contract or business behavior changed.
 
 Updated: 2026-11-21
+
+## Activity submission form resilience — verified
+
+- Activity submission failures now return the attempted habit, activity date and quantity to the SvelteKit page along with the existing idempotency key.
+- The form restores those values after client-side validation failures, API rejections and ambiguous service errors, so employees can correct or retry without re-entering their submission.
+- The idempotency key continues to be retained on failure and is rotated only after Event Tracking confirms acceptance.
+- Frontend CI #33 passed on 2026-11-21 for commit `ee333bf413b9d4e1670804f4eaf449f59fdb5133`: frontend unit tests, Svelte/TypeScript checks and production build succeeded.
+
+Updated: 2026-11-21
