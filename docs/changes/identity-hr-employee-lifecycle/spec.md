@@ -116,3 +116,4 @@ The projection is a status signal, not a replacement for each service's resource
 ## Deferred work (not acceptance criteria for this increment)
 
 Employee invitations/provisioning, profile/role mutation, Organization Admin request intake, HRIS integration, EventBridge dispatch/retries/DLQ, and downstream consumer implementations each require their own SDD change and tests.
+
