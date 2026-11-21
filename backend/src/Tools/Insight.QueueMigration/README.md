@@ -11,7 +11,7 @@ This is a deliberately narrow copy tool. It transfers messages from one already-
 - It forces the AMQP delivery mode to persistent (`2`) for the migration copy; body and other supported basic properties/headers are preserved. This deliberate durability upgrade is the only basic-property change.
 - Mandatory returns are detected; a returned publication is treated as failure and the source delivery remains unacknowledged.
 - Source acknowledgement occurs only after the destination publish is confirmed and the payload digest has been appended to the local JSONL ledger.
-- The JSONL ledger contains one payload-digest record per acknowledged message and a per-invocation summary record with source, destination, acknowledged count and completion timestamp.
+- The JSONL ledger contains one SHA-256 payload-digest record per acknowledged message plus a per-invocation summary record containing only the source/destination queue names, acknowledged count and completion timestamp. It does not contain message bodies, headers, message identifiers, credentials or connection strings.
 - A crash after destination confirmation but before source acknowledgement can produce a duplicate. This is intentional at-least-once behavior; do not assume exactly-once transfer.
 - Payloads, headers, credentials and message identifiers are never written to the ledger or console. The ledger contains only SHA-256 payload digests, one per acknowledged copy.
 - The utility never deletes either queue. Queue deletion/recreation and topology changes remain a separate operator-controlled maintenance step.
@@ -49,5 +49,6 @@ After the new source queue is recreated and its bindings are verified, run the s
 - The utility does not create the temporary queue, recreate the source queue, create the DLQ or change bindings.
 - It does not prove that producers are paused. The explicit `--confirm-quiesced` flag is an operator attestation, not a broker-enforced lock.
 - A ledger digest is a per-message payload fingerprint, not a cryptographic signature or a globally unique message identifier. Duplicate deliveries can create repeated digest lines.
+- The summary record is operational metadata, not a payload digest. Do not treat the ledger as an exactly-once reconciliation database; use queue counts and operator review alongside its digest records.
 - Preserve the original source and staging queues until count, digest and topology verification is complete.
 - Follow `docs/changes/insight-employee-status-projection-consumer/rabbitmq-migration-runbook.md`. Never purge a queue or reset the shared RabbitMQ volume.
