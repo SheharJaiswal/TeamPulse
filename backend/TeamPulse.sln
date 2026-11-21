@@ -62,12 +62,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Insight.UnitTests", "tests/
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Insight.API", "src/Services/Insight/Insight.API/Insight.API.csproj", "{F4F4F4F4-4444-4444-8444-444444444444}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Insight.Infrastructure", "src/Services/Insight/Insight.Infrastructure/Insight.Infrastructure.csproj", "{F5F5F5F5-5555-4555-8555-555555555555}"
+EndProject
 Global
  GlobalSection(SolutionConfigurationPlatforms) = preSolution
   Debug|Any CPU = Debug|Any CPU
   Release|Any CPU = Release|Any CPU
  EndGlobalSection
  GlobalSection(ProjectConfigurationPlatforms) = postSolution
+  {F5F5F5F5-5555-4555-8555-555555555555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {F5F5F5F5-5555-4555-8555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {F5F5F5F5-5555-4555-8555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {F5F5F5F5-5555-4555-8555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
   {F4F4F4F4-4444-4444-8444-444444444444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
   {F4F4F4F4-4444-4444-8444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {F4F4F4F4-4444-4444-8444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU

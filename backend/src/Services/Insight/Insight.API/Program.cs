@@ -5,10 +5,15 @@ using Insight.API.HealthChecks;
 using Insight.Application;
 using Insight.Application.Abstractions;
 using Insight.Infrastructure.Persistence;
+using Insight.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
+var consumerOptions = builder.Configuration.GetSection(InsightRabbitMqConsumerOptions.SectionName)
+    .Get<InsightRabbitMqConsumerOptions>() ?? new InsightRabbitMqConsumerOptions();
+consumerOptions.Validate();
+
 var dynamoOptions = builder.Configuration.GetSection(InsightDynamoDbOptions.SectionName)
     .Get<InsightDynamoDbOptions>() ?? new InsightDynamoDbOptions();
 dynamoOptions.Validate();
@@ -17,6 +22,9 @@ if (dynamoOptions.InitializeLocalTable && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("Insight DynamoDB table initialization is permitted only in Development.");
 
 builder.Services.AddSingleton(dynamoOptions);
+builder.Services.AddSingleton(consumerOptions);
+builder.Services.AddSingleton<InsightRabbitMqConsumerStatus>();
+builder.Services.AddHostedService<InsightRabbitMqConsumer>();
 builder.Services.AddSingleton<IAmazonDynamoDB>(_ =>
 {
     var config = new AmazonDynamoDBConfig
