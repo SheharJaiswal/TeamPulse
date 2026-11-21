@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
@@ -57,8 +58,8 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
 
         using var history = await client.GetAsync("/api/habit-activities");
         history.EnsureSuccessStatusCode();
-        var body = await history.Content.ReadAsStringAsync();
-        Assert.Equal("[]", body);
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Empty(document.RootElement.EnumerateArray());
     }
 
     [Fact]
