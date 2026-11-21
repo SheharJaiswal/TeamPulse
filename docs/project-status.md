@@ -1,3 +1,16 @@
+## Identity correlation-ID replay semantics — CI #238 passed; ILC-19 pending verification
+
+- CI #238 passed for test commit `ff9c87b53c8943ed0719528b280304ac2e5199db`. ILC-17 and ILC-18 verified supplied and generated correlation-ID propagation through the response, audit, outbox and event envelope.
+- Full .NET results: Identity 107/107, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28, Insight 15/15 and Insight.QueueMigration.IntegrationTests 8/8 — **266 passed, 0 failed, 0 skipped**.
+- Restore, Release build, Docker Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests and both pinned Testcontainers image pulls passed. Build reported 3 warnings and 0 errors.
+- [CI #238](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902665384). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44902665384/artifacts/14706737222).
+- Added ILC-19 and a sequential MySQL API-host test for same-command idempotent replay with a different retry correlation ID. The replay must preserve the original event/correlation IDs and produce only one audit/outbox row.
+- Implementation commit: `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`; specification commit: `9d4a7130dbd4dc745611cda4356d73f199e47318`; task evidence commit: `c5de9fc11f3d3eac4abb359073e49250fa7d9ec5`.
+- CI #239 is running against test commit `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`: [workflow](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903148180).
+- This increment changes test coverage and SDD/status documentation only; no production behavior, database schema, persistent RabbitMQ topology/data or AWS resource changed.
+
+Updated: 2026-11-21
+
 ## Identity JWT subject validation and CI Testcontainers image setup — 2026-11-21
 
 - Added ILC-16 API-host regression coverage: correctly signed HrAdmin tokens with a missing `sub` or a non-GUID `sub` are rejected with HTTP 401 before mutation. The test verifies the seeded employee remains active at lifecycle version 0 and that no audit or correlation-scoped outbox rows are created.
