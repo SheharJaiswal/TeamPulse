@@ -1,6 +1,6 @@
 # Design: HR-Controlled Employee Invitations and Credential Activation
 
-**Status:** Proposed design; implementation is blocked on owner approval.
+**Status:** Option A asynchronous protected-secret delivery approved by owner on 2026-11-21. Local key-ring persistence/protection requirements are accepted for development; production key protection/storage is deferred to cloud infrastructure setup. The remaining policy defaults and local mail-catcher profile still require approval before implementation.
 
 ## Service boundary
 All invitation state, canonical employee creation and password hashing remain in Identity. No new service or cross-service database dependency is introduced. Use the existing .NET 8, EF Core 8, Pomelo and MySQL 8.4 conventions.
@@ -33,7 +33,7 @@ Use an `IInvitationDelivery` abstraction. Development uses a local mail catcher 
 
 The ordinary outbox must contain only an opaque invitation reference and delivery generation/metadata; it must never contain the raw token, activation URL or protected token ciphertext. If delivery is asynchronous/retryable, recoverable token material requires a separate protected-secret store and a narrowly scoped unprotect boundary. See [security-review.md](security-review.md) for the threat model, required invariants and owner decisions.
 
-## Delivery-secret operating model — candidate, not approved
+## Delivery-secret operating model — Option A approved
 The preferred candidate is a dedicated short-lived delivery-secret row containing an ASP.NET Core Data Protection-protected token. The invitation table continues to store only the SHA-256 lookup digest. The Data Protection purpose must be specific to TeamPulse Identity invitation delivery and versioned; the key ring must be persistent, protected at rest, shared by all eligible workers/instances, backed up and retained long enough to decrypt outstanding records. Keys must not be committed or stored in the same database as ciphertext without an independent protection boundary.
 
 Only the delivery worker may read/unprotect the secret. Before each send it must verify the invitation is still Pending, unexpired and on the same generation as the outbox item. Resend atomically rotates the digest and protected secret. Delete the live secret after the provider accepts the message or after cancellation/expiry cleanup; provider acceptance does not prove recipient receipt. Email is at-least-once and duplicates may occur. Missing/invalid ciphertext or unavailable keys fail closed and require HR-initiated resend after recovery.
