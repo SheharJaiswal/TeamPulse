@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
@@ -78,7 +77,7 @@ export const actions: Actions = {
       response = await fetch(`${eventTrackingApiUrl()}/api/habit-activities`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ habitId, activityDate, quantity, idempotencyKey: randomUUID() })
+        body: JSON.stringify({ habitId, activityDate, quantity, idempotencyKey: crypto.randomUUID() })
       });
     } catch {
       return fail(503, { message: 'Event Tracking service is unavailable. Please try again.' });
