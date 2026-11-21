@@ -1,6 +1,6 @@
 # Specification: HR-Controlled Employee Invitations and Credential Activation
 
-**Status:** Proposed for owner review. No implementation is authorized until proposal, specification, design and tasks are approved.
+**Status:** Owner approved the invitation feature and Option A asynchronous protected-secret delivery on 2026-11-21. Policy defaults and development mail-catcher profile remain pending explicit approval; implementation remains blocked.
 
 ## Actors and authority
 - `HrAdmin`: may create, inspect, resend and cancel invitations.
