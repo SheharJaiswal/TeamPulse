@@ -10,6 +10,14 @@
   $: activeHabits = data.habits.filter((habit) => habit.status === 1);
   $: archivedHabits = data.habits.filter((habit) => habit.status === 2);
   $: formMessage = form && 'message' in form ? form.message : undefined;
+  $: formSuccessMessage =
+    form && 'success' in form && form.success
+      ? form.action === 'create'
+        ? 'Habit created successfully.'
+        : form.action === 'update'
+          ? 'Habit updated successfully.'
+          : 'Habit archived successfully.'
+      : undefined;
 
   function dateLabel(value: string): string {
     const [year, month, day] = value.split('-').map(Number);
@@ -80,6 +88,9 @@
 
       {#if formMessage}
         <div class="alert" role="alert">{formMessage}</div>
+      {/if}
+      {#if formSuccessMessage}
+        <div class="alert success" role="status">{formSuccessMessage}</div>
       {/if}
 
       <div class="stats-grid">
