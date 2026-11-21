@@ -1,3 +1,9 @@
+## ILC-20 exact empty-value boundary regression — implementation added; CI pending
+
+- [x] Add a controller-level test with an explicitly present X-Correlation-ID key and zero parsed StringValues.
+- [x] Assert HTTP 400 and verify IEmployeeLifecycleService.ExecuteAsync is never called.
+- [ ] Verify the regression in GitHub Actions; no CI result is claimed yet.
+
 ## ILC-20 — explicit malformed correlation-header validation verified
 
 - [x] Detect X-Correlation-ID header presence independently of parsed StringValues count.

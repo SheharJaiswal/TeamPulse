@@ -1,3 +1,12 @@
+## Identity correlation-ID empty-value boundary regression — implementation added; CI pending
+
+- Strengthened ILC-20 beyond the HTTP-host whitespace test with a controller-level regression for a header key that is present but whose `StringValues` has zero parsed values. This reproduces the exact ambiguity that originally caused the empty header to be mistaken for an absent header.
+- The test asserts the header key remains present, the parsed value count is zero, the endpoint returns HTTP 400, and the lifecycle service is never invoked.
+- Added `EmployeeLifecycleControllerTests.Deactivate_RejectsPresentEmptyCorrelationHeaderEvenWhenItHasZeroParsedValues`. No production code or API behavior changed in this increment; CI verification is pending.
+- No schema, queue topology, persistent broker data or AWS resource changed.
+
+Updated: 2026-11-21
+
 ## Identity lifecycle correlation-ID validation — CI #241 passed
 
 - CI #241 passed against correction commit `68dae7896fb1cb264f7792c731b0558e3419e16a`. The corrected controller distinguishes an absent X-Correlation-ID header from a present empty/whitespace value; only absence generates a UUID, while a present malformed value returns HTTP 400 before mutation.
@@ -8,7 +17,7 @@
 
 Updated: 2026-11-21
 
-## Identity correlation-ID replay and empty-header validation — CI #239 passed; ILC-20 verification pending
+## Identity correlation-ID replay and empty-header validation — CI #239 passed; ILC-20 later verified by CI #241
 
 - CI #239 passed for test commit `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. ILC-19 verified same-command idempotent replay preserves the original event/correlation IDs even when the retry supplies a different correlation ID.
 - Full .NET results: Identity 108/108, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28, Insight 15/15 and Insight.QueueMigration.IntegrationTests 8/8 — **267 passed, 0 failed, 0 skipped**.
