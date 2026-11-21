@@ -1,8 +1,8 @@
 ## Insight queue migration — CI compile correction
 
 - Inspected GitHub Actions runs #217 and #218. Both failed during the solution Release build before tests ran, with the same two RabbitMQ.Client 7.2.2 compile errors: the publish helper accepted `IReadOnlyBasicProperties` although `BasicPublishAsync` requires its generic properties type to implement `IAmqpHeader`, and the delivery-mode property requires the `DeliveryModes` enum rather than an integer.
-- Updated `MandatoryPublisher.PublishAsync` to accept `BasicProperties`, set the migration copy to `DeliveryModes.Persistent`, and use `DeliveryModes.NonPersistent` / `DeliveryModes.Persistent` consistently in integration-test fixtures and assertions.
-- GitHub Actions run #221 (head `5618bfeaf73bcbad1b27fb3adea44f23d6c7fc64`) is the current verification attempt. Its result is pending; do not treat the utility as build-verified or operationally approved until the full run passes.
+- Updated `MandatoryPublisher.PublishAsync` to accept `BasicProperties`, set the migration copy to `DeliveryModes.Persistent`, and use `DeliveryModes.Transient` / `DeliveryModes.Persistent` consistently in integration-test fixtures and assertions.
+- GitHub Actions run #221 exposed one additional API-name mismatch: RabbitMQ.Client 7.2.2 names delivery mode `Transient`, not `NonPersistent`. The fixture was corrected. A fresh full CI run is pending; do not treat the utility as build-verified or operationally approved until it passes.
 - No queue definitions, persistent broker state, MySQL, DynamoDB Local or AWS resources were changed.
 
 Updated: 2026-11-21
