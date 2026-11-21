@@ -228,6 +228,7 @@ public sealed class NotificationRabbitMqMySqlReplayIntegrationTests(
     }
 
 
+    private async Task CreateProductionProcessorServicesAsync()
     {
         var services = new ServiceCollection();
         services.AddLogging();
