@@ -19,7 +19,10 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
                 ["EventTrackingConsumer:Enabled"] = (rabbitMqUri is not null).ToString(),
                 ["EventTrackingConsumer:Uri"] = rabbitMqUri ?? string.Empty,
                 ["EventTrackingConsumer:ReconnectDelayMilliseconds"] = "250",
-                ["EventTrackingConsumer:ConnectionTimeoutMilliseconds"] = "1000"
+                ["EventTrackingConsumer:ConnectionTimeoutMilliseconds"] = "1000",
+                // Keep broker-loss detection deterministic in integration tests. Production
+                // retains the five-second default unless explicitly configured.
+                ["EventTrackingConsumer:HeartbeatSeconds"] = "1"
             });
         });
     }

@@ -26,7 +26,7 @@
 - [x] Verify API-host startup with GitHub Actions CI #137: all 17 EventTracking tests passed, including the fresh MySQL 8.4 API-host migration/readback test; total solution tests 195 passed.
 - [x] Verify RabbitMQ consumer integration suite with GitHub Actions CI #140 attempt 2: EventTracking 24, Habit 24, Identity 100 and Challenge 54 tests passed; 14 Python topology tests passed.
 - [x] Verify production processor replay integration test against MySQL 8.4 inbox, including conflicting duplicate payload (CI #142: passed).
-- [ ] Verify actual API-host consumer health isolation against RabbitMQ and MySQL (CI #142 exposed heartbeat-based broker-loss detection gap; fix and rerun pending).
+- [ ] Verify actual API-host consumer health isolation against RabbitMQ and MySQL (CI #144 still did not observe HTTP 503 after graceful broker stop; next test-host attempt uses a one-second heartbeat; production default remains five seconds).
 - [ ] Add commit-before-ack broker interruption/replay integration test using the actual persistent inbox.
 - [ ] Review full CI test output and acceptance matrix before marking this SDD complete.
 
