@@ -179,3 +179,9 @@
 - The new concurrent equal-version Testcontainers regression passed. All 55 Challenge tests passed against MySQL 8.4, including the existing sequential lower/equal-version Stale assertions and the new one-Applied/one-Stale concurrent case.
 - The full workflow is still red for one unrelated EventTracking test: 25/26 EventTracking, 24/24 Habit and 100/100 Identity passed; 14/14 Python topology tests passed. The sole failure is `EventTrackingApiStartupIntegrationTests.ApiHost_ConsumerHealthIsIndependentFromDatabaseReadiness`, which did not observe HTTP 503 from `/health/consumer` after RabbitMQ shutdown. No Challenge tests failed.
 - The connection-scoped flag is initialized for the insert path, set by the duplicate-key conditional version comparison and read on the same transaction connection. No schema, projection fields, inbox retention policy or service boundary changed.
+
+## Cross-service regression confirmation — CI #193 attempt 2
+
+- [x] Re-run the full solution after CI #193 attempt 1 encountered Testcontainers cleanup failures. CI #193 attempt 2 passed for code commit `40b8e80d649af6b5d2eb8d4d14d6ec22b37601e0`: Challenge 56/56, Habit 24/24, Identity 100/100, Event Tracking 27/27, Notification 28/28 and Insight 15/15 — **250/250 .NET tests**, zero failed or skipped. All 19 Python RabbitMQ topology tests, Release build, Compose validation, RabbitMQ startup/topology and pinned DynamoDB Local image pull also passed. [CI #193](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44894055289).
+- This is regression confirmation, not a new Challenge feature. The established-session replay and sentinel/prefetch behavior remains covered by the Challenge suite; CEPS-11/CEPS-14 remain specifically evidenced by CI #122 and the complete Challenge acceptance checkpoint by CI #151. No Challenge business workflow scope changed.
+

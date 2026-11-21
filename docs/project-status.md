@@ -1,10 +1,12 @@
-## Insight consumer privacy regression verified; full-suite rerun underway
+## Insight consumer privacy regression and full-suite CI rerun verified
 
 - Added a broker-backed privacy regression test using sentinel raw payload, optional note, credential and connection-string values; the test captures consumer logs and asserts none of those values are emitted.
-- The Insight test project passed **15/15** in CI #193 attempt 1, including the new privacy test. The full workflow was marked failed because unrelated Habit and Challenge Testcontainers tests threw Docker API cancellation exceptions during container cleanup; the stack traces terminate in DockerContainer.DisposeAsync, not in application assertions.
-- CI #193 failed attempt 1 is being rerun to determine whether the Docker cleanup failures are transient. The full-workflow acceptance remains open until a complete passing run is available.
-- Privacy test commit: `40b8e80d649af6b5d2eb8d4d14d6ec22b37601e0`. [CI #193](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44894055289).
-- No production code, persistent RabbitMQ queue/volume, MySQL volume or AWS resource was changed in this verification increment.
+- CI #193 attempt 1 passed the Insight tests (15/15) but failed during unrelated Habit and Challenge Testcontainers cleanup. CI #193 attempt 2 completed successfully for code commit `40b8e80d649af6b5d2eb8d4d14d6ec22b37601e0` (run attempt 2).
+- The successful rerun passed restore, Release build, Docker Compose validation, RabbitMQ startup/topology, all **19/19 Python RabbitMQ topology tests**, the pinned DynamoDB Local image pull, the full .NET suite and test-result artifact upload.
+- .NET totals: Identity 100/100, Habit 24/24, Challenge 56/56, Event Tracking 27/27, Notification 28/28 and Insight 15/15 — **250/250 passed**, zero failed or skipped. The Challenge broker-loss replay/prefetch test remains green within its 56-test suite.
+- Build succeeded with two nullable warnings confined to EventTracking and Notification test helpers; no Challenge build warning or error was reported.
+- [CI #193, attempt 2](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44894055289). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44894055289/artifacts/14703730990).
+- This CI run validates code commit `40b8e80`; current branch HEAD at this update is a documentation-only descendant. No production code, persistent RabbitMQ queue/volume, MySQL volume or AWS resource was changed in this verification increment.
 
 Updated: 2026-11-21
 
