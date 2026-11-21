@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Net.Http;
 using EventTracking.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventTracking.UnitTests;
 
-public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null) : WebApplicationFactory<Program>
+public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null, Func<HttpMessageHandler>? habitApiHandlerFactory = null) : WebApplicationFactory<Program>
 {
     private const string JwtSigningKey = "event-tracking-integration-test-signing-key-32-bytes-minimum";
 
@@ -33,6 +34,8 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
         });
         builder.ConfigureServices(services =>
         {
+            if (habitApiHandlerFactory is not null)
+                services.AddHttpClient("HabitApi").ConfigurePrimaryHttpMessageHandler(habitApiHandlerFactory);
             services.RemoveAll<EventTrackingRabbitMqConsumerOptions>();
             services.AddSingleton(new EventTrackingRabbitMqConsumerOptions
             {
