@@ -184,7 +184,8 @@ static BasicProperties CopyProperties(IReadOnlyBasicProperties source)
     {
         ContentType = source.ContentType,
         ContentEncoding = source.ContentEncoding,
-        DeliveryMode = source.DeliveryMode,
+        // Queue migration always republishes durably; all other supported message properties are preserved.
+        DeliveryMode = 2,
         Priority = source.Priority,
         CorrelationId = source.CorrelationId,
         ReplyTo = source.ReplyTo,
@@ -269,7 +270,7 @@ static string ReadValue(string[] arguments, ref int index)
 {
     if (++index >= arguments.Length || arguments[index].StartsWith("--", StringComparison.Ordinal))
     {
-        throw new ArgumentException($"Missing value for {arguments[index - 1]}.");
+        return string.Empty;
     }
 
     return arguments[index];
