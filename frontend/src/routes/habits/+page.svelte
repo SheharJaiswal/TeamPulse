@@ -6,6 +6,18 @@
   export let form: ActionData;
 
   let editingHabitId: string | null = null;
+  let isSubmitting = false;
+
+  function handleEnhance() {
+    isSubmitting = true;
+    return async ({ update }: { update: () => Promise<void> }) => {
+      try {
+        await update();
+      } finally {
+        isSubmitting = false;
+      }
+    };
+  }
 
   $: activeHabits = data.habits.filter((habit) => habit.status === 1);
   $: archivedHabits = data.habits.filter((habit) => habit.status === 2);
@@ -138,7 +150,7 @@
                 <span class="active-indicator"><i></i> Active</span>
               </div>
               {#if editingHabitId === habit.id}
-                <form class="edit-form" method="POST" action="?/update" use:enhance>
+                <form class="edit-form" method="POST" action="?/update" use:enhance={handleEnhance} aria-busy={isSubmitting}>
                   <input type="hidden" name="habitId" value={habit.id} />
                   <div class="form-field full">
                     <label for={`edit-name-${habit.id}`}>Habit name</label>
@@ -172,7 +184,7 @@
                     <input id={`edit-end-${habit.id}`} name="endDate" type="date" value={habit.endDate || ''} />
                   </div>
                   <div class="edit-actions full">
-                    <button class="primary-button" type="submit">Save changes</button>
+                    <button class="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving…' : 'Save changes'}</button>
                     <button class="subtle-button" type="button" onclick={() => editingHabitId = null}>Cancel</button>
                   </div>
                 </form>
@@ -194,9 +206,9 @@
                   <div class="card-actions">
                     <a class="subtle-button" href={`/activities?habitId=${habit.id}`}>Log activity</a>
                     <button class="subtle-button" type="button" onclick={() => editingHabitId = habit.id}>Edit</button>
-                    <form method="POST" action="?/archive" use:enhance>
+                    <form method="POST" action="?/archive" use:enhance={handleEnhance} aria-busy={isSubmitting}>
                       <input type="hidden" name="habitId" value={habit.id} />
-                      <button class="subtle-button" type="submit">Archive</button>
+                      <button class="subtle-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Working…' : 'Archive'}</button>
                     </form>
                   </div>
                 </div>
@@ -214,7 +226,7 @@
           <div class="create-tip"><span>✦</span> A good habit starts small enough to repeat.</div>
         </div>
 
-        <form class="create-form" method="POST" action="?/create" use:enhance>
+        <form class="create-form" method="POST" action="?/create" use:enhance={handleEnhance} aria-busy={isSubmitting}>
           <div class="form-field full">
             <label for="habit-name">Habit name</label>
             <input id="habit-name" name="name" maxlength="100" placeholder="e.g. Take a mindful walk" required />
@@ -247,7 +259,7 @@
             <input id="habit-end" name="endDate" type="date" />
           </div>
           <div class="form-actions full">
-            <button class="primary-button" type="submit">Save habit <span aria-hidden="true">→</span></button>
+            <button class="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving…' : 'Save habit →'}</button>
           </div>
         </form>
       </section>
