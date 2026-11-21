@@ -5,7 +5,7 @@
 - Browser code never reads the JWT or calls service APIs directly. SvelteKit server actions/load functions call Identity and Habit with the cookie token; service URLs are private environment configuration.
 - Local ports: Identity `5101`, Habit `5102`, SvelteKit `5173`. See `frontend/README.md`.
 - Backend CI #247 passed: Release build, all 275 .NET tests (including 30 Habit tests), and all 19 RabbitMQ topology contract tests.
-- Initial SvelteKit CI run #1 passed Svelte/TypeScript checks and production build. The edit form increment is awaiting a fresh frontend CI run.
+- SvelteKit frontend CI #3 passed after adding edit support: Svelte/TypeScript checks and production build succeeded.
 - Activity completion, streaks, challenge participation, employee invitation and production hosting remain outside this increment. No AWS resources or persistent RabbitMQ data were changed.
 
 Updated: 2026-11-21

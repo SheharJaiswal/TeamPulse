@@ -7,4 +7,4 @@
 - [x] EHE-T05 Add create, update and archive actions with server-side validation.
 - [x] EHE-T06 Document local API and frontend startup.
 - [x] EHE-T07 Add dedicated frontend CI workflow.
-- [ ] EHE-T08 Verify Svelte check and production build in GitHub Actions after the edit workflow increment.
+- [x] EHE-T08 Verify Svelte check and production build in GitHub Actions.
