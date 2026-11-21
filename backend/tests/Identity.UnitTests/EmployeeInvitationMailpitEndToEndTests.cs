@@ -9,6 +9,11 @@ using System.Text.RegularExpressions;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.IdentityModel.Tokens;
+using Identity.API.BackgroundServices;
+using Identity.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Identity.UnitTests;
 
@@ -54,6 +59,12 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         using var client = factory.CreateClient();
         var ready = await client.GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        using (var scope = factory.Services.CreateScope())
+        {
+            Assert.True(scope.ServiceProvider.GetRequiredService<IOptions<InvitationEmailOptions>>().Value.Enabled);
+            Assert.Contains(scope.ServiceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>(),
+                service => service is InvitationDeliveryWorker);
+        }
 
         var email = $"mailpit-{Guid.NewGuid():N}@example.com";
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -76,7 +87,25 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         {
             BaseAddress = new Uri($"http://{mailpit.Hostname}:{apiPort}")
         };
-        var firstToken = await WaitForInvitationTokenAsync(mailpitClient, email);
+        string firstToken;
+        try
+        {
+            firstToken = await WaitForInvitationTokenAsync(mailpitClient, email);
+        }
+        catch (TimeoutException)
+        {
+            await using var diagnosticScope = factory.Services.CreateAsyncScope();
+            var database = diagnosticScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            var secret = await database.InvitationDeliverySecrets
+                .SingleOrDefaultAsync(item => item.InvitationId == invitationId);
+            var mailpitStatus = await mailpitClient.GetStringAsync("/api/v1/messages");
+            var messageCount = JsonDocument.Parse(mailpitStatus).RootElement
+                .GetProperty("total").GetInt32();
+            throw new Xunit.Sdk.XunitException(
+                $"Invitation delivery did not reach Mailpit. Attempts={secret?.AttemptCount}, " +
+                $"LastErrorCode={secret?.LastErrorCode ?? "none"}, LeaseActive={secret?.LeaseExpiresAtUtc > DateTime.UtcNow}, " +
+                $"MailpitMessageCount={messageCount}.");
+        }
         Assert.Matches("^[A-Za-z0-9_-]{43}$", firstToken);
 
         var resend = await client.PostAsync($"/api/identity/invitations/{invitationId}/resend", null);
@@ -118,8 +147,7 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
             using var listDocument = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
             var messages = listDocument.RootElement.GetProperty("messages");
             var matching = messages.EnumerateArray()
-                .Where(message => message.TryGetProperty("To", out var to) &&
-                    to.ToString().Contains(recipient, StringComparison.OrdinalIgnoreCase))
+                .Where(message => HasRecipient(message, recipient))
                 .ToArray();
 
             if (matching.Length >= expectedMessages)
@@ -147,6 +175,27 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         }
 
         throw new TimeoutException($"Mailpit did not receive {expectedMessages} invitation message(s) for {recipient}.");
+    }
+
+    private static bool HasRecipient(JsonElement message, string recipient)
+    {
+        if (!message.TryGetProperty("To", out var recipients))
+            return false;
+
+        if (recipients.ValueKind == JsonValueKind.Array)
+        {
+            return recipients.EnumerateArray().Any(address =>
+            {
+                if (address.ValueKind == JsonValueKind.String)
+                    return address.GetString()?.Contains(recipient, StringComparison.OrdinalIgnoreCase) == true;
+
+                return (address.TryGetProperty("Address", out var value) ||
+                        address.TryGetProperty("address", out value)) &&
+                       value.GetString()?.Equals(recipient, StringComparison.OrdinalIgnoreCase) == true;
+            });
+        }
+
+        return recipients.ToString().Contains(recipient, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CreateToken(Guid subject, string role)
