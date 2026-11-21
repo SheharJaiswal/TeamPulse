@@ -121,6 +121,39 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Create_WhenRequestContainsInvalidIdentifiersOrQuantity_ReturnsBadRequestBeforeCallingHabitApi()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(Guid.NewGuid()));
+
+        var validHabitId = Guid.NewGuid();
+        var validIdempotencyKey = Guid.NewGuid();
+        var invalidRequests = new object[]
+        {
+            new { habitId = validHabitId, activityDate = "2026-11-21", quantity = 0, idempotencyKey = validIdempotencyKey },
+            new { habitId = validHabitId, activityDate = "2026-11-21", quantity = 1001, idempotencyKey = validIdempotencyKey },
+            new { habitId = Guid.Empty, activityDate = "2026-11-21", quantity = 1, idempotencyKey = validIdempotencyKey },
+            new { habitId = validHabitId, activityDate = "2026-11-21", quantity = 1, idempotencyKey = Guid.Empty }
+        };
+
+        foreach (var invalidRequest in invalidRequests)
+        {
+            using var response = await client.PostAsJsonAsync("/api/habit-activities", invalidRequest);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        Assert.Equal(0, habitApi.RequestCount);
+
+        using var history = await client.GetAsync("/api/habit-activities");
+        history.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
+    [Fact]
     public async Task Create_WhenHabitApiIsUnavailable_ReturnsServiceUnavailable_AndDoesNotPersistSubmission()
     {
         var habitApi = new StubHabitApiHandler(throwNetworkError: true);
