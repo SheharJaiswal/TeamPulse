@@ -12,7 +12,7 @@ public sealed class DynamoDbLocalFixture : IAsyncLifetime
     private readonly IContainer _container = new ContainerBuilder()
         .WithImage("amazon/dynamodb-local:2.5.2")
         .WithPortBinding(8000, true)
-        .WithCommand("-inMemory", "-sharedDb")
+        .WithCommand("-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb")
         .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(8000))
         .Build();
 
