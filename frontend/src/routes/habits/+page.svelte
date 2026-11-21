@@ -35,6 +35,10 @@
       <span class="nav-icon">◷</span>
       My habits
     </a>
+    <a class="nav-link" href="/activities">
+      <span class="nav-icon">✓</span>
+      Activity history
+    </a>
     <div class="sidebar-note">
       <span class="note-icon">✳</span>
       <strong>Progress, not perfection.</strong>
@@ -57,6 +61,7 @@
     <header class="topbar">
       <div><span class="breadcrumb">Workspace / <strong>My habits</strong></span></div>
       <div class="topbar-right">
+        <a class="text-link" href="/activities">Activity history</a>
         <span class="status-dot"></span>
         <span>Personal space</span>
         <div class="avatar small">{data.employee.displayName.slice(0, 1).toUpperCase()}</div>
@@ -176,6 +181,7 @@
                 <div class="habit-footer">
                   <span>Started {dateLabel(habit.startDate)}</span>
                   <div class="card-actions">
+                    <a class="subtle-button" href="/activities">Log activity</a>
                     <button class="subtle-button" type="button" onclick={() => editingHabitId = habit.id}>Edit</button>
                     <form method="POST" action="?/archive" use:enhance>
                       <input type="hidden" name="habitId" value={habit.id} />

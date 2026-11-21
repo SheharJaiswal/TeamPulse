@@ -12,6 +12,10 @@ export function habitApiUrl(): string {
   return normalizeBaseUrl(env.HABIT_API_BASE_URL, 'http://localhost:5102');
 }
 
+export function eventTrackingApiUrl(): string {
+  return normalizeBaseUrl(env.EVENT_TRACKING_API_BASE_URL, 'http://localhost:5103');
+}
+
 export async function responseMessage(response: Response, fallback: string): Promise<string> {
   try {
     const body: { message?: string; title?: string } = await response.json();

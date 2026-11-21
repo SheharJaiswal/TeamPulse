@@ -10,20 +10,26 @@ namespace EventTracking.UnitTests;
 
 public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null) : WebApplicationFactory<Program>
 {
+    private const string JwtSigningKey = "event-tracking-integration-test-signing-key-32-bytes-minimum";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:EventTrackingDatabase", connectionString);
+        builder.UseSetting("Jwt:Issuer", "TeamPulse.Identity");
+        builder.UseSetting("Jwt:Audience", "TeamPulse.Services");
+        builder.UseSetting("Jwt:SigningKey", JwtSigningKey);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:EventTrackingDatabase"] = connectionString
+                ["ConnectionStrings:EventTrackingDatabase"] = connectionString,
+                ["Jwt:Issuer"] = "TeamPulse.Identity",
+                ["Jwt:Audience"] = "TeamPulse.Services",
+                ["Jwt:SigningKey"] = JwtSigningKey,
+                ["HabitApi:BaseUrl"] = "http://localhost:5102/"
             });
         });
-        // Configure the test consumer explicitly after the API's registrations. This avoids
-        // a false-healthy health endpoint when test-host configuration binding leaves the
-        // optional consumer disabled.
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<EventTrackingRabbitMqConsumerOptions>();

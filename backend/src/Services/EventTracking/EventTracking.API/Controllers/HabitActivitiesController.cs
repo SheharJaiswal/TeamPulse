@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
@@ -31,27 +32,27 @@ public sealed class HabitActivitiesController(
             request.Quantity is < 1 or > 1000)
             return BadRequest(new { message = "Choose a valid habit, idempotency key and quantity between 1 and 1,000." });
 
-        var status = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
-        if (status is { IsActive: false }) return Unauthorized();
+        var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
+        if (employeeStatus is { IsActive: false }) return Unauthorized();
 
-        var habit = await GetHabitAsync(request.HabitId, cancellationToken);
+        HabitEligibilityResponse? habit;
+        try { habit = await GetHabitAsync(request.HabitId, cancellationToken); }
+        catch (UnauthorizedAccessException) { return Unauthorized(); }
+        catch (HttpRequestException) { return StatusCode(503, new { message = "Habit service is temporarily unavailable." }); }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return StatusCode(503, new { message = "Habit service timed out. Please retry." }); }
+
         if (habit is null) return NotFound();
         if (request.ActivityDate < habit.StartDate || (habit.EndDate.HasValue && request.ActivityDate > habit.EndDate.Value))
             return BadRequest(new { message = "Activity date must be within the habit's configured date range." });
 
         var existing = await submissions.GetByIdempotencyKeyAsync(employeeId, request.IdempotencyKey, cancellationToken);
-        if (existing is not null)
-        {
-            if (existing.HabitId != request.HabitId || existing.ActivityDate != request.ActivityDate || existing.Quantity != request.Quantity)
-                return Conflict(new { message = "This idempotency key was already used for a different activity." });
-            return Ok(ToResponse(existing));
-        }
+        if (existing is not null) return ExistingResult(existing, request);
 
         var created = new HabitActivitySubmission(Guid.NewGuid(), employeeId, request.HabitId,
             request.ActivityDate, request.Quantity, request.IdempotencyKey, timeProvider.GetUtcNow().UtcDateTime);
         var saved = await submissions.AddAsync(created, cancellationToken);
-        if (saved.HabitId != request.HabitId || saved.ActivityDate != request.ActivityDate || saved.Quantity != request.Quantity)
-            return Conflict(new { message = "This idempotency key was already used for a different activity." });
+        if (saved.Id != created.Id) return ExistingResult(saved, request);
         return CreatedAtAction(nameof(Get), new { id = saved.Id }, ToResponse(saved));
     }
 
@@ -60,10 +61,10 @@ public sealed class HabitActivitiesController(
         [FromQuery] DateOnly? toDate, CancellationToken cancellationToken)
     {
         if (!TryGetEmployeeId(out var employeeId)) return Unauthorized();
-        if (fromDate.HasValue && toDate.HasValue && fromDate > toDate)
+        if (fromDate.HasValue && toDate.HasValue && fromDate.Value > toDate.Value)
             return BadRequest(new { message = "The from date cannot be after the to date." });
-        var status = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
-        if (status is { IsActive: false }) return Unauthorized();
+        var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
+        if (employeeStatus is { IsActive: false }) return Unauthorized();
         var results = await submissions.GetMineAsync(employeeId, habitId, fromDate, toDate, cancellationToken);
         return Ok(results.Select(ToResponse));
     }
@@ -72,10 +73,17 @@ public sealed class HabitActivitiesController(
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmployeeId(out var employeeId)) return Unauthorized();
-        var status = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
-        if (status is { IsActive: false }) return Unauthorized();
+        var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
+        if (employeeStatus is { IsActive: false }) return Unauthorized();
         var result = await submissions.GetAsync(employeeId, id, cancellationToken);
         return result is null ? NotFound() : Ok(ToResponse(result));
+    }
+
+    private IActionResult ExistingResult(HabitActivitySubmission existing, CreateHabitActivityRequest request)
+    {
+        if (existing.HabitId != request.HabitId || existing.ActivityDate != request.ActivityDate || existing.Quantity != request.Quantity)
+            return Conflict(new { message = "This idempotency key was already used for a different activity." });
+        return Ok(ToResponse(existing));
     }
 
     private async Task<HabitEligibilityResponse?> GetHabitAsync(Guid habitId, CancellationToken cancellationToken)
@@ -84,7 +92,7 @@ public sealed class HabitActivitiesController(
         if (!AuthenticationHeaderValue.TryParse(authorization, out var bearer) ||
             !string.Equals(bearer.Scheme, "Bearer", StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(bearer.Parameter))
-            return null;
+            throw new UnauthorizedAccessException();
         using var request = new HttpRequestMessage(HttpMethod.Get, $"api/habits/{habitId}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Parameter);
         using var response = await httpClientFactory.CreateClient("HabitApi").SendAsync(request, cancellationToken);
