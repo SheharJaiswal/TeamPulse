@@ -53,7 +53,7 @@ public sealed class EmployeeInvitationDomainTests
         Assert.False(invitation.Accept(CreatedAtUtc.AddHours(1)));
         Assert.Equal("Accepted", invitation.Status);
         Assert.Null(invitation.PendingNormalizedEmail);
-        Assert.Equal(string.Empty, invitation.TokenDigest);
+        Assert.Null(invitation.TokenDigest);
         Assert.Equal(CreatedAtUtc.AddHours(1), invitation.AcceptedAtUtc);
     }
 
