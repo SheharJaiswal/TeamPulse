@@ -1,3 +1,14 @@
+## Insight RabbitMQ migration utility — first implementation increment
+
+- Added a standalone .NET 8 console utility under `backend/src/Tools/Insight.QueueMigration`, using the repository-pinned RabbitMQ.Client 7.2.2.
+- The default mode performs passive preflight only; it does not declare or mutate queues. Execution requires both `--execute` and explicit `--confirm-quiesced` operator attestation, and refuses to copy while the source reports active consumers.
+- The copy path uses manual source acknowledgement, mandatory routing through the default exchange, publisher confirms, persistent delivery mode, supported basic-property/header copying and a payload SHA-256-only JSONL ledger. It never declares, deletes, purges or reconfigures queues.
+- At-least-once duplicate window is documented: a crash after destination confirmation but before source acknowledgement can result in a duplicate. The tool is intended for source-to-staging and staging-to-recreated-source invocations.
+- This increment has **not** been compiled or exercised against RabbitMQ Testcontainers; it is not yet approved for operational use. Next: add isolated integration tests, run Release build and full CI, review message-property preservation and ledger reconciliation, then update the runbook. Existing topology definitions and persistent broker remain unchanged.
+- No queue migration was executed and no persistent RabbitMQ, MySQL, DynamoDB Local or AWS resource was changed.
+
+Updated: 2026-11-21
+
 ## Next execution — Insight queue migration preparation
 
 - CI #195 passed for code commit `64879f7585fff2f6ad8dd2fb964582e7ab2ae9ca`: all 251 .NET tests and 19 Python RabbitMQ topology tests passed; Release build, Compose validation, RabbitMQ startup/topology and pinned DynamoDB Local image pull passed.
