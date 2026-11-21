@@ -37,7 +37,7 @@ var keyRingPathSetting = builder.Configuration["DataProtection:KeyRingPath"] ?? 
 var keyRingPath = Path.GetFullPath(keyRingPathSetting, builder.Environment.ContentRootPath);
 Directory.CreateDirectory(keyRingPath);
 if (OperatingSystem.IsLinux())
-    Directory.SetUnixFileMode(keyRingPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    File.SetUnixFileMode(keyRingPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 builder.Services.AddDataProtection()
     .SetApplicationName("TeamPulse.Identity")
     .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
