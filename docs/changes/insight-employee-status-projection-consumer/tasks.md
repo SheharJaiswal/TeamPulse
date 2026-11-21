@@ -1,6 +1,6 @@
 # Tasks: Insight Employee Status Projection Consumer
 
-**Status:** Draft — awaiting owner approval. No implementation may begin until the owner approves the SDD package.
+**Status:** Approved by project owner on 2026-11-21.
 
 ## SDD and contract review
 - [x] Read AGENTS.md, ADR-0001, service ownership, communication conventions and shared event/projection contracts.
@@ -8,12 +8,13 @@
 - [x] Confirm the repository currently has no Insight service projects and has an existing durable classic teampulse.insight.events queue without queue arguments or a DLQ.
 - [x] Confirm Insight persistence must use DynamoDB, not the MySQL/Pomelo pattern used by transactional services.
 - [x] Keep the increment limited to employee lifecycle projection/inbox; no analytics, dashboards, aggregates or employee-facing APIs.
-- [ ] Owner approval of proposal.md, spec.md, design.md and tasks.md.
+- [x] Owner approval of proposal.md, spec.md, design.md and tasks.md — approved 2026-11-21.
 
 ## Implementation — blocked pending approval
-- [ ] Add Insight.API, Insight.Application, Insight.Domain, Insight.Infrastructure and Insight.UnitTests with inward-only references.
+- [x] Add Insight.Application, Insight.Domain and Insight.UnitTests foundation with inward-only references.
+- [ ] Add Insight.API and Insight.Infrastructure hosts/adapters with inward-only references.
 - [ ] Add DynamoDB SDK abstractions and the Insight-owned single-table key/item model.
-- [ ] Implement schema-v1 envelope validation and transport-independent lifecycle processor, including Identity's optional-note type/1000-character constraint without persisting or logging the note.
+- [x] Implement schema-v1 envelope validation and transport-independent lifecycle processor, including Identity's optional-note type/1000-character constraint without persisting or logging the note.
 - [ ] Implement DynamoDB TransactWriteItems inbox/projection persistence with conditional version fences, duplicate detection and bounded optimistic-concurrency retries.
 - [ ] Add DynamoDB Local for local execution and isolated integration tests; no AWS account or credentials.
 - [ ] Add opt-in RabbitMQ consumer with manual ack after committed transaction, bounded transient retries, reconnect and separate consumer health.

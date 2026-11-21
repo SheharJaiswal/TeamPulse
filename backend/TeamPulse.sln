@@ -54,12 +54,30 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification.Infrastructure
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notification.API", "src/Services/Notification/Notification.API/Notification.API.csproj", "{E5E5E5E5-1111-4111-8111-111111111111}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Insight.Domain", "src/Services/Insight/Insight.Domain/Insight.Domain.csproj", "{F1F1F1F1-1111-4111-8111-111111111111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Insight.Application", "src/Services/Insight/Insight.Application/Insight.Application.csproj", "{F2F2F2F2-2222-4222-8222-222222222222}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Insight.UnitTests", "tests/Insight.UnitTests/Insight.UnitTests.csproj", "{F3F3F3F3-3333-4333-8333-333333333333}"
+EndProject
 Global
  GlobalSection(SolutionConfigurationPlatforms) = preSolution
   Debug|Any CPU = Debug|Any CPU
   Release|Any CPU = Release|Any CPU
  EndGlobalSection
- GlobalSection(ProjectConfigurationPlatforms) = postSolution
+ GlobalSection(ProjectConfigurationPlatforms)
+  {F1F1F1F1-1111-4111-8111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {F1F1F1F1-1111-4111-8111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {F1F1F1F1-1111-4111-8111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {F1F1F1F1-1111-4111-8111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+  {F2F2F2F2-2222-4222-8222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {F2F2F2F2-2222-4222-8222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {F2F2F2F2-2222-4222-8222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {F2F2F2F2-2222-4222-8222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+  {F3F3F3F3-3333-4333-8333-333333333333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {F3F3F3F3-3333-4333-8333-333333333333}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {F3F3F3F3-3333-4333-8333-333333333333}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {F3F3F3F3-3333-4333-8333-333333333333}.Release|Any CPU.Build.0 = Release|Any CPU = postSolution
   {A1A1A1A1-1111-4111-8111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
   {A1A1A1A1-1111-4111-8111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
   {A1A1A1A1-1111-4111-8111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
