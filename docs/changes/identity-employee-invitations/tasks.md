@@ -17,10 +17,10 @@
 - [x] Owner selected Option A: asynchronous delivery with a dedicated Data Protection-protected short-lived secret store (2026-11-21).
 - [x] Owner accepted persistent, Git-ignored local key-ring storage with restrictive filesystem permissions; production key protection/storage and backup/restore implementation are deferred to cloud infrastructure setup.
 - [x] Owner approved deleting the live secret after provider acceptance, with expiry cleanup as a backstop, and at-least-once delivery where duplicate emails may occur (2026-11-21).
-- [ ] Owner approval of policy defaults (24-hour expiry, resend/cancel semantics, activation directly creates an active Employee, generic activation failures and rate limiting).
-- [ ] Select/approve the development mail-catcher profile; production delivery provider remains deferred.
+- [x] Owner approved 24-hour expiry, resend/cancel semantics, direct activation to active Employee, generic activation failures and rate limiting (2026-11-21).
+- [x] Owner selected Mailpit as the local development mail catcher; production delivery provider remains deferred (2026-11-21).
 
-## Implementation — blocked pending approval
+## Implementation — authorized
 - [ ] Add invitation Domain/Application/API/Infrastructure components and MySQL migration.
 - [ ] Add cryptographic token generation, digest lookup, UTC expiry and atomic single-use redemption.
 - [ ] Implement HrAdmin create/get/resend/cancel endpoints and anonymous activation endpoint.
