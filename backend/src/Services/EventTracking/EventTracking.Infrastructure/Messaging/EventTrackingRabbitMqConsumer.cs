@@ -112,19 +112,28 @@ public sealed class EventTrackingRabbitMqConsumer(
         // Shutdown notifications and callback failures are handed back to the session owner.
         // The ReceivedAsync callback must never await closing its own consumer channel.
         var sessionEnded = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // Publish the disconnected state directly from broker shutdown notifications.
+        // Do not wait for the session loop or in-flight callback drain to finish before
+        // health checks observe that this consumer can no longer accept deliveries.
+        void MarkSessionDisconnected()
+        {
+            status.MarkDisconnected();
+            sessionEnded.TrySetResult(true);
+        }
+
         connection.ConnectionShutdownAsync += (_, _) =>
         {
-            sessionEnded.TrySetResult(true);
+            MarkSessionDisconnected();
             return Task.CompletedTask;
         };
         channel.ChannelShutdownAsync += (_, _) =>
         {
-            sessionEnded.TrySetResult(true);
+            MarkSessionDisconnected();
             return Task.CompletedTask;
         };
         deadLetterChannel.ChannelShutdownAsync += (_, _) =>
         {
-            sessionEnded.TrySetResult(true);
+            MarkSessionDisconnected();
             return Task.CompletedTask;
         };
 
