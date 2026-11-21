@@ -43,6 +43,28 @@ partial class EventTrackingDbContextModelSnapshot : ModelSnapshot
             b.HasIndex("EmployeeId", "IdempotencyKey").IsUnique().HasDatabaseName("ux_habit_activity_employee_idempotency");
             b.ToTable("habit_activity_submissions");
         });
+        modelBuilder.Entity("EventTracking.Domain.Entities.EventTrackingOutboxMessage", b =>
+        {
+            b.Property<Guid>("EventId").HasColumnType("char(36)").HasColumnName("EventId");
+            b.Property<string>("EventType").IsRequired().HasMaxLength(100).HasColumnType("varchar(100)");
+            b.Property<int>("SchemaVersion").HasColumnType("int");
+            b.Property<DateTime>("OccurredAtUtc").HasColumnType("datetime(6)");
+            b.Property<Guid>("CorrelationId").HasColumnType("char(36)");
+            b.Property<string>("Payload").IsRequired().HasColumnType("longtext");
+            b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime(6)");
+            b.Property<DateTime?>("PublishedAtUtc").HasColumnType("datetime(6)");
+            b.Property<int>("AttemptCount").HasColumnType("int");
+            b.Property<Guid?>("LeaseToken").HasColumnType("char(36)");
+            b.Property<DateTime?>("LeaseExpiresAtUtc").HasColumnType("datetime(6)");
+            b.Property<DateTime?>("NextAttemptAtUtc").HasColumnType("datetime(6)");
+            b.Property<DateTime?>("DeadLetteredAtUtc").HasColumnType("datetime(6)");
+            b.Property<string>("LastErrorCode").HasMaxLength(100).HasColumnType("varchar(100)");
+            b.HasKey("EventId");
+            b.HasIndex("PublishedAtUtc", "CreatedAtUtc");
+            b.HasIndex("PublishedAtUtc", "DeadLetteredAtUtc", "NextAttemptAtUtc", "LeaseExpiresAtUtc", "CreatedAtUtc")
+                .HasDatabaseName("IX_event_tracking_outbox_dispatch_queue");
+            b.ToTable("event_tracking_outbox_messages");
+        });
 #pragma warning restore 612, 618
     }
 }

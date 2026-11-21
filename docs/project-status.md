@@ -1,11 +1,12 @@
 ## Habit activity submissions — implementation in progress
 
-- Owner approved the Open Question 20 defaults on 2026-11-21; the resolved policy is recorded in ADR-0003.
-- Event Tracking now has an append-only `habit_activity_submissions` entity/table and an additive MySQL migration. The employee ID is derived from JWT `sub`; employee status projection denies explicitly inactive employees.
-- The authenticated Event Tracking API validates habit ownership by calling the Habit API with the caller's bearer token, checks the configured habit date range, persists quantities from 1–1,000, enforces employee-scoped GUID idempotency and provides owner-scoped chronological history.
-- The SvelteKit workspace now includes an Activity History page with a check-in form and personal timeline. JWT remains in the HTTP-only server cookie.
-- Frontend CI #5 passed Svelte/TypeScript checks and production build. Backend CI #251 Release build passed; the full .NET test step was still running at the time of this update.
-- Remaining before this increment is complete: transactional outbox persistence and local RabbitMQ publisher for `HabitActivityRecorded`, Event Tracking API integration tests for auth/ownership/idempotency/history, frontend polish for selecting the specific habit from the habit card, and final end-to-end CI verification.
-- This feature is not yet considered complete or production-ready. No Event Tracking activity event is published yet; no manager-facing individual activity data is exposed.
+- Owner approved submission cardinality, correction policy, activity-date/time-zone semantics, quantity and idempotency rules on 2026-11-21; recorded in ADR-0003.
+- Event Tracking owns an append-only `habit_activity_submissions` source of truth and validates habit ownership through the Habit API using the caller's bearer token.
+- Each accepted submission and its `HabitActivityRecorded` version 1 outbox event are persisted in the same MySQL transaction. The event includes employee and habit identifiers, activity date, quantity, UTC occurrence time and correlation ID.
+- The Event Tracking outbox uses lease tokens, bounded batch claiming with `FOR UPDATE SKIP LOCKED`, retry scheduling and quarantine after the configured attempt limit. RabbitMQ publishing uses persistent messages and publisher confirms on the existing `teampulse.domain.events` topic exchange with routing key `habit.activity.recorded`.
+- The dispatcher and publisher are configurable and disabled by default; enabling `EventTrackingOutbox:Enabled` starts local RabbitMQ delivery. EventBridge remains deferred until cloud infrastructure is provisioned.
+- SvelteKit includes the employee Activity History page. Frontend CI #5 passed Svelte/TypeScript checks and production build. The backend Release build passed in CI #251; its test step was still running at the last observed poll.
+- Remaining: full CI confirmation after the outbox increment, MySQL atomicity/idempotency/history tests, API auth/ownership integration tests and isolated RabbitMQ publisher integration coverage. Do not mark the vertical slice complete until those pass.
+- No manager-facing individual activity data or progress/streak calculations are exposed.
 
 Updated: 2026-11-21
