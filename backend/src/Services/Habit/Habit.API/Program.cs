@@ -1,10 +1,13 @@
 using System;
 using System.Linq;
+using System.Text;
 using Habit.API.HealthChecks;
+using Habit.API.Security;
 using Habit.Application;
 using Habit.Application.Abstractions;
 using Habit.Infrastructure.Messaging;
 using Habit.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +15,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("HabitDatabase")
     ?? throw new InvalidOperationException("HabitDatabase connection string is missing.");
+
+var jwtOptions = builder.Configuration.GetSection(HabitJwtOptions.SectionName).Get<HabitJwtOptions>()
+    ?? new HabitJwtOptions();
+jwtOptions.Validate();
 
 var habitConsumerOptions = builder.Configuration
     .GetSection(HabitRabbitMqConsumerOptions.SectionName)
@@ -29,8 +37,32 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(habitConsumerOptions);
 builder.Services.AddSingleton<HabitRabbitMqConsumerStatus>();
 builder.Services.AddScoped<IEmployeeStatusProjectionStore, EmployeeStatusProjectionStore>();
+builder.Services.AddScoped<IEmployeeStatusProjectionReader, EmployeeStatusProjectionStore>();
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
+builder.Services.AddScoped<IHabitRepository, HabitRepository>();
+builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddHostedService<HabitRabbitMqConsumer>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+            NameClaimType = "name",
+            RoleClaimType = "role",
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
@@ -52,7 +84,6 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Apply checked-in service-owned migrations before hosted consumers start or requests are accepted.
 await using (var database = await app.Services
     .GetRequiredService<IDbContextFactory<HabitDbContext>>()
     .CreateDbContextAsync())
@@ -60,6 +91,9 @@ await using (var database = await app.Services
     await database.Database.MigrateAsync();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live")
