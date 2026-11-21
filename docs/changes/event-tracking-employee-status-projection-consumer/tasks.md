@@ -1,6 +1,6 @@
 # Tasks: Event Tracking Employee Status Projection Consumer
 
-**Status:** Owner-approved SDD; implementation in progress.
+**Status:** Owner-approved SDD; implementation and CI verification in progress.
 
 ## SDD and contract review
 
@@ -17,14 +17,17 @@
 - [x] Document the explicit database/grant migration required for existing persistent MySQL volumes.
 - [x] Implement minimal employee-status projection, inbox, application processor and projection reader.
 - [x] Add checked-in EF migration/model snapshot and startup migration.
-- [x] Add initial processor unit tests and MySQL 8.4 Testcontainers store tests (CI verification pending).
-- [ ] Verify clean Release build and all existing/new tests in GitHub Actions.
-- [ ] Add production API-host startup integration test against fresh MySQL, proving migrations and production reader.
-- [ ] Add manual-ack RabbitMQ consumer, bounded retry/reconnect and independent consumer health.
-- [ ] Upgrade only the Event Tracking source queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; add dedicated quorum DLQ and exact routing-key contract test.
+- [x] Add initial processor unit tests and MySQL 8.4 Testcontainers store tests.
+- [x] Add opt-in manual-ack RabbitMQ consumer, bounded retry/reconnect and independent consumer health.
+- [x] Upgrade only the Event Tracking source queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; add dedicated quorum DLQ and exact routing-key contract tests.
 - [x] Document safe migration of the existing persistent RabbitMQ queue using a durable migration buffer and message-count verification; never silently discard messages or reset shared volume.
-- [ ] Add unit, MySQL 8.4 and RabbitMQ Testcontainers coverage for consumer acknowledgement, retry, DLQ, reconnect, replay and privacy. Initial retry/options unit tests are authored; consumer integration coverage remains pending.
-- [ ] Add local run documentation and update README/project status after consumer topology is complete.
+- [x] Add retry/options unit tests and topology contract tests.
+- [x] Verify consumer/topology increment with GitHub Actions CI #136: Release build, Compose validation, RabbitMQ startup/topology and 194 .NET tests plus 14 Python topology tests passed.
+- [x] Add production API-host startup integration test against fresh MySQL 8.4, proving startup migration and production reader registration (CI verification pending).
+- [ ] Verify API-host startup integration test and MySqlConnector security upgrade in GitHub Actions.
+- [ ] Add RabbitMQ Testcontainers coverage for acknowledgement, retry, DLQ, reconnect, replay and privacy.
+- [ ] Add consumer health isolation tests against the actual API host.
+- [ ] Add local run documentation and update README/project status after remaining consumer acceptance criteria are complete.
 
 ## Acceptance mapping
 
@@ -52,3 +55,5 @@
 - AWS EventBridge/SQS and cloud provisioning remain deferred until owner cloud setup.
 - Inbox retention is initially permanent and requires privacy/legal review before production.
 - Never log raw event bodies, optional notes, credentials or broker URIs.
+
+Updated: 2026-11-21
