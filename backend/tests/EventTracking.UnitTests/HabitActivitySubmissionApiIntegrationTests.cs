@@ -218,6 +218,60 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Create_WhenConcurrentRequestsReuseKeyWithDifferentPayload_ReturnsOneCreatedAndOneConflict()
+    {
+        var habitId = Guid.NewGuid();
+        var employeeId = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid();
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK, responseContent: JsonSerializer.Serialize(new
+        {
+            id = habitId,
+            status = 1,
+            startDate = "2026-11-20",
+            endDate = "2026-11-22"
+        }), waitForConcurrentRequests: true);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(employeeId));
+
+        var firstRequest = client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate = "2026-11-21",
+            quantity = 1,
+            idempotencyKey
+        });
+        var competingRequest = client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate = "2026-11-21",
+            quantity = 2,
+            idempotencyKey
+        });
+        using var firstResponse = await firstRequest;
+        using var competingResponse = await competingRequest;
+
+        Assert.Contains(new[] { firstResponse.StatusCode, competingResponse.StatusCode },
+            status => status == HttpStatusCode.Created);
+        Assert.Contains(new[] { firstResponse.StatusCode, competingResponse.StatusCode },
+            status => status == HttpStatusCode.Conflict);
+        Assert.Equal(2, habitApi.RequestCount);
+
+        using var history = await client.GetAsync("/api/habit-activities");
+        history.EnsureSuccessStatusCode();
+        using var historyDocument = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Single(historyDocument.RootElement.EnumerateArray());
+
+        using var scope = factory.Services.CreateScope();
+        var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+        await using var databaseContext = await contextFactory.CreateDbContextAsync();
+        Assert.Single(await databaseContext.HabitActivitySubmissions.Where(x =>
+            x.EmployeeId == employeeId && x.IdempotencyKey == idempotencyKey).ToListAsync());
+        Assert.Single(await databaseContext.EventTrackingOutboxMessages.ToListAsync());
+    }
+
+    [Fact]
     public async Task Create_WhenRequestContainsInvalidIdentifiersOrQuantity_ReturnsBadRequestBeforeCallingHabitApi()
     {
         var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
@@ -417,26 +471,35 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         HttpStatusCode statusCode = HttpStatusCode.OK,
         bool throwNetworkError = false,
         bool throwTimeoutError = false,
-        string? responseContent = null) : HttpMessageHandler
+        string? responseContent = null,
+        bool waitForConcurrentRequests = false) : HttpMessageHandler
     {
         private int requestCount;
+        private readonly TaskCompletionSource<bool>? requestGate = waitForConcurrentRequests
+            ? new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)
+            : null;
         public int RequestCount => Volatile.Read(ref requestCount);
         public string? LastRequestPath { get; private set; }
         public string? ForwardedAuthorizationScheme { get; private set; }
         public string? ForwardedAuthorizationParameter { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Interlocked.Increment(ref requestCount);
+            var currentRequestCount = Interlocked.Increment(ref requestCount);
             LastRequestPath = request.RequestUri?.PathAndQuery;
             ForwardedAuthorizationScheme = request.Headers.Authorization?.Scheme;
             ForwardedAuthorizationParameter = request.Headers.Authorization?.Parameter;
             if (throwNetworkError) throw new HttpRequestException("Simulated Habit API outage.");
             if (throwTimeoutError) throw new TaskCanceledException("Simulated Habit API timeout.");
-            return Task.FromResult(new HttpResponseMessage(statusCode)
+            if (requestGate is not null)
+            {
+                if (currentRequestCount >= 2) requestGate.TrySetResult(true);
+                await requestGate.Task.WaitAsync(cancellationToken);
+            }
+            return new HttpResponseMessage(statusCode)
             {
                 Content = responseContent is null ? null : new StringContent(responseContent, Encoding.UTF8, "application/json")
-            });
+            };
         }
     }
 }
