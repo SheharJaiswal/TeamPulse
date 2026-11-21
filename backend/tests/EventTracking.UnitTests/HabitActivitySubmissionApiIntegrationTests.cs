@@ -8,6 +8,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EventTracking.Application.Abstractions;
+using EventTracking.Domain.Entities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Testcontainers.MySql;
 using Xunit;
@@ -65,6 +68,44 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         history.EnsureSuccessStatusCode();
         using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
         Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Create_WhenIdempotencyKeyIsReusedWithDifferentPayload_ReturnsConflictWithoutCallingHabitApi()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        var employeeId = Guid.NewGuid();
+        var habitId = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(employeeId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IHabitActivitySubmissionStore>();
+            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId,
+                new DateOnly(2026, 11, 21), 1, idempotencyKey, DateTime.UtcNow), CancellationToken.None);
+        }
+
+        using var response = await client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate = "2026-11-21",
+            quantity = 2,
+            idempotencyKey
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("already used for a different activity.",
+            await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, habitApi.RequestCount);
+
+        using var history = await client.GetAsync("/api/habit-activities");
+        history.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Single(document.RootElement.EnumerateArray());
     }
 
     [Fact]
