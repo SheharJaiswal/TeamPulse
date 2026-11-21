@@ -262,7 +262,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
             Assert.Equal(1, employee.LifecycleVersion);
         }
 
-        var invalidKeys = new[] { "\\u001f", "\\u007f", "cl\\u00e9" };
+        var invalidKeys = new[] { "\u001f", "\u007f", "cl\u00e9" };
         var rejectedEmployeeIds = new List<Guid>();
         var correlationIds = new List<Guid>();
 
