@@ -35,7 +35,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         invitation.Property(x => x.DisplayName).HasMaxLength(150).IsRequired();
         invitation.Property(x => x.OrganizationId).HasMaxLength(100).IsRequired();
         invitation.Property(x => x.TeamId).HasMaxLength(100).IsRequired();
-        invitation.Property(x => x.TokenDigest).HasColumnType("char(64)").IsRequired();
+        invitation.Property(x => x.TokenDigest).HasColumnType("char(64)");
         invitation.Property(x => x.Status).HasMaxLength(20).IsRequired();
         invitation.HasIndex(x => x.TokenDigest).IsUnique();
         invitation.HasIndex(x => x.PendingNormalizedEmail).IsUnique();
