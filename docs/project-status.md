@@ -1,3 +1,14 @@
+## Identity JWT subject validation and CI Testcontainers image setup — 2026-11-21
+
+- Added ILC-16 API-host regression coverage: correctly signed HrAdmin tokens with a missing `sub` or a non-GUID `sub` are rejected with HTTP 401 before mutation. The test verifies the seeded employee remains active at lifecycle version 0 and that no audit or correlation-scoped outbox rows are created.
+- CI #236 Identity suite passed **105/105**, including ILC-16. The overall workflow failed only in `Insight.QueueMigration.IntegrationTests`: its `rabbitmq:4.0-alpine` Testcontainers image had not been pre-pulled on the runner (7/8 tests passed). Restore, Release build, Compose validation, RabbitMQ topology checks and all 19 Python topology tests passed.
+- Added an explicit CI step to pull `rabbitmq:4.0-alpine` before .NET tests. Workflow fix commit: `819242fe43a446fe1574e3025458d12a14331188`. Verification of this correction is pending.
+- [CI #236](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44901781762).
+- No production application code, database schema, persistent RabbitMQ topology/data, or AWS resource was changed by this CI correction.
+- Next: verify the workflow image pre-pull correction in CI, then continue with correlation-ID propagation/generation integration coverage.
+
+Updated: 2026-11-21
+
 ## Identity idempotency-key character boundary tests — implementation pending
 
 - Next focused regression: accept one-character and 128-character visible-ASCII idempotency keys; reject control, DEL and non-ASCII characters before any lifecycle mutation.
