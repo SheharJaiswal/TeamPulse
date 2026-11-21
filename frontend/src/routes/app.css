@@ -192,3 +192,5 @@ button { cursor: pointer; }
   .activity-filters { grid-template-columns: 1fr; }
   .activity-filter-actions { grid-column: auto; }
 }
+
+.alert.success { border-color: #c9e4d2; background: #f1faf4; color: #286342; }
