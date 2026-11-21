@@ -71,9 +71,13 @@ public sealed class InvitationDeliveryWorker(
                             item.SecretId, item.Generation, item.LeaseToken,
                             timeProvider.GetUtcNow().UtcDateTime.AddSeconds(retrySeconds),
                             ErrorCode(exception), stoppingToken);
+                        var smtpException = exception as SmtpException;
                         logger.LogWarning(
-                            "Invitation email delivery failed and was scheduled for retry. InvitationId={InvitationId} Generation={Generation} ErrorType={ErrorType} RetrySeconds={RetrySeconds}",
-                            item.InvitationId, item.Generation, exception.GetType().Name, retrySeconds);
+                            "Invitation email delivery failed and was scheduled for retry. InvitationId={InvitationId} Generation={Generation} ErrorType={ErrorType} InnerErrorType={InnerErrorType} SmtpStatus={SmtpStatus} SmtpHost={SmtpHost} SmtpPort={SmtpPort} RetrySeconds={RetrySeconds}",
+                            item.InvitationId, item.Generation, exception.GetType().Name,
+                            exception.InnerException?.GetType().Name ?? "none",
+                            smtpException?.StatusCode.ToString() ?? "not-smtp",
+                            _options.Host, _options.Port, retrySeconds);
                     }
                 }
 
