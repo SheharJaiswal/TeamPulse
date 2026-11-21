@@ -87,6 +87,26 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         Assert.Empty(document.RootElement.EnumerateArray());
     }
 
+    [Fact]
+    public async Task Create_WhenHabitApiTimesOut_ReturnsServiceUnavailable_AndDoesNotPersistSubmission()
+    {
+        var habitApi = new StubHabitApiHandler(throwTimeoutError: true);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(Guid.NewGuid()));
+
+        using var response = await client.PostAsJsonAsync("/api/habit-activities", NewSubmission());
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(1, habitApi.RequestCount);
+
+        using var history = await client.GetAsync("/api/habit-activities");
+        history.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Empty(document.RootElement.EnumerateArray());
+    }
+
     private EventTrackingApiFactory CreateFactory(StubHabitApiHandler handler) =>
         new(database.GetConnectionString(), habitApiHandlerFactory: () => handler);
 
@@ -111,8 +131,10 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private sealed class StubHabitApiHandler(HttpStatusCode statusCode = HttpStatusCode.OK, bool throwNetworkError = false)
-        : HttpMessageHandler
+    private sealed class StubHabitApiHandler(
+        HttpStatusCode statusCode = HttpStatusCode.OK,
+        bool throwNetworkError = false,
+        bool throwTimeoutError = false) : HttpMessageHandler
     {
         private int requestCount;
         public int RequestCount => Volatile.Read(ref requestCount);
@@ -127,6 +149,7 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
             ForwardedAuthorizationScheme = request.Headers.Authorization?.Scheme;
             ForwardedAuthorizationParameter = request.Headers.Authorization?.Parameter;
             if (throwNetworkError) throw new HttpRequestException("Simulated Habit API outage.");
+            if (throwTimeoutError) throw new TaskCanceledException("Simulated Habit API timeout.");
             return Task.FromResult(new HttpResponseMessage(statusCode));
         }
     }
