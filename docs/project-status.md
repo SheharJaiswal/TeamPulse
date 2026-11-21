@@ -1,3 +1,12 @@
+## Next increment prepared — Notification lifecycle projection SDD draft
+
+- Prepared `docs/changes/notification-employee-status-projection-consumer/` with proposal, spec, design and acceptance-mapped tasks on 2026-11-21.
+- Scope is limited to the Notification-owned employee-status projection/inbox and opt-in local RabbitMQ consumer. No notification sending, preference changes, delivery-history mutations, AWS provisioning or retention cleanup are included.
+- The current local Notification queue is durable but has no quorum/DLX arguments. The draft requires an explicit pending-message-preserving migration before changing its immutable queue type/arguments; no live broker was modified.
+- The SDD is **awaiting owner approval**. No Notification application code, database migration, Compose change or RabbitMQ topology change has been implemented. Implementation remains blocked until approval.
+
+Updated: 2026-11-21
+
 ## Event Tracking lifecycle projection consumer acceptance — CI #151 verified
 
 - Live implementation head: `d9402b56fd91ad59a1de34a8aee6fcfcde905db0` on `feature/backend-foundation`; current branch documentation is updated after that tested code commit.
