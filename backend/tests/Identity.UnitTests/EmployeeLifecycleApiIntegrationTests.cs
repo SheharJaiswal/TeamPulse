@@ -158,6 +158,51 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
+    public async Task Deactivate_ReplayWithDifferentCorrelationIdPreservesOriginalCorrelationAndEvent()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        var originalCorrelationId = Guid.NewGuid();
+        var replayCorrelationId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        using var firstResponse = await SendDeactivateAsync(
+            client, employeeId, "correlation-replay-key", "same-reason", originalCorrelationId);
+        using var replayResponse = await SendDeactivateAsync(
+            client, employeeId, "correlation-replay-key", "same-reason", replayCorrelationId);
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, replayResponse.StatusCode);
+        using var firstPayload = await ReadJsonAsync(firstResponse);
+        using var replayPayload = await ReadJsonAsync(replayResponse);
+
+        Assert.Equal("transitioned", firstPayload.RootElement.GetProperty("outcome").GetString());
+        Assert.Equal("replayed", replayPayload.RootElement.GetProperty("outcome").GetString());
+        var originalEventId = firstPayload.RootElement.GetProperty("eventId").GetString();
+        Assert.Equal(originalEventId, replayPayload.RootElement.GetProperty("eventId").GetString());
+        Assert.Equal(originalCorrelationId,
+            Guid.Parse(firstPayload.RootElement.GetProperty("correlationId").GetString()!));
+        Assert.Equal(originalCorrelationId,
+            Guid.Parse(replayPayload.RootElement.GetProperty("correlationId").GetString()!));
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var audit = await database.EmployeeLifecycleAudits.SingleAsync(x => x.EmployeeId == employeeId);
+        var outbox = await database.OutboxMessages.SingleAsync(x => x.EventId == audit.Id);
+
+        Assert.Equal(originalCorrelationId, audit.CorrelationId);
+        Assert.Equal(originalCorrelationId, outbox.CorrelationId);
+        Assert.Equal(1, await database.EmployeeLifecycleAudits.CountAsync(x => x.EmployeeId == employeeId));
+        Assert.Equal(1, await database.OutboxMessages.CountAsync(x => x.EventId == audit.Id));
+        using var envelope = JsonDocument.Parse(outbox.Payload);
+        Assert.Equal(originalCorrelationId,
+            Guid.Parse(envelope.RootElement.GetProperty("correlationId").GetString()!));
+    }
+
+    [Fact]
     public async Task Deactivate_ConcurrentSameKeyRequests_CreateOneTransitionAuditAndOutbox()
     {
         using var factory = _fixture.CreateFactory();
