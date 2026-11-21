@@ -585,3 +585,13 @@ Updated: 2026-11-21
 
 Updated: 2026-11-21
 
+
+
+## Identity lifecycle correlation-header validation — CI #240 failure and correction
+
+- CI #240 completed against `df805822b958cae6cd9580af019ca3cbf07d2558`. Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology tests and both pinned Testcontainers image pulls passed; test artifact uploaded.
+- .NET results: Identity **108/109** (one failure in the newly added ILC-20 test); Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8. The failure was specific: the test expected HTTP 400 for an explicitly empty header but received HTTP 200. This is not a passing ILC-20 verification.
+- Root cause was using parsed header value count to detect omission. Updated the controller to test header-key presence separately and reject a present header unless exactly one UUID value parses. Updated the regression to send a whitespace-only value. The correction is awaiting CI.
+- [CI #240](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903663508); [test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903663508/artifacts/14706973358).
+
+Updated: 2026-11-21

@@ -48,16 +48,15 @@ public sealed class EmployeeLifecycleController(IEmployeeLifecycleService lifecy
             return BadRequest(new { message = "A reasonCode (1–100 characters) is required; note must not exceed 1000 characters." });
         }
 
+        var hasCorrelationHeader = Request.Headers.ContainsKey("X-Correlation-ID");
         var correlationValues = Request.Headers["X-Correlation-ID"];
-        if (correlationValues.Count > 1)
-            return BadRequest(new { message = "X-Correlation-ID must be supplied at most once." });
-
         Guid correlationId;
-        if (correlationValues.Count == 0)
+        if (!hasCorrelationHeader)
         {
             correlationId = Guid.NewGuid();
         }
-        else if (!Guid.TryParse(correlationValues[0], out correlationId))
+        else if (correlationValues.Count != 1 ||
+                 !Guid.TryParse(correlationValues[0], out correlationId))
         {
             return BadRequest(new { message = "X-Correlation-ID must be a UUID." });
         }

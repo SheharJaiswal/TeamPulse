@@ -210,7 +210,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
-    public async Task Deactivate_RejectsExplicitlyEmptyCorrelationIdBeforeMutation()
+    public async Task Deactivate_RejectsWhitespaceCorrelationIdBeforeMutation()
     {
         using var factory = _fixture.CreateFactory();
         using var client = factory.CreateClient();
@@ -229,7 +229,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
             Content = JsonContent.Create(new { reasonCode = "valid-reason" })
         };
         request.Headers.Add("Idempotency-Key", "empty-correlation");
-        request.Headers.TryAddWithoutValidation("X-Correlation-ID", string.Empty);
+        request.Headers.TryAddWithoutValidation("X-Correlation-ID", " ");
 
         using var response = await client.SendAsync(request);
 

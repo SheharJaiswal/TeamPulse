@@ -122,3 +122,12 @@
 - Added a MySQL API-host regression test proving an explicitly empty correlation header returns 400 before changing employee status/version, creating a lifecycle audit or inserting an outbox row.
 - Added acceptance criterion ILC-20. CI verification is pending.
 - Controller commit: `62b84ee4a68c9fbca1b48c8329a029b6183dc4ee`; test commit: `df805822b958cae6cd9580af019ca3cbf07d2558`.
+
+
+## ILC-20 CI #240 failure analysis and correction
+
+- CI #240 completed with failure against `df805822b958cae6cd9580af019ca3cbf07d2558`. Identity passed 108/109; the new explicit-empty-header regression expected HTTP 400 but received HTTP 200. The other suites passed: Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8. The 19 Python topology tests, build, Compose validation, RabbitMQ startup/topology and pinned image pulls passed.
+- Root cause: the controller inferred header omission from `StringValues.Count == 0`. An explicitly present empty header can have zero parsed values, so this conflated header presence with value count. The test client's empty header serialization also did not preserve a distinguishable empty field.
+- Corrected controller to use `Request.Headers.ContainsKey("X-Correlation-ID")` to distinguish absence from presence, then require exactly one parseable UUID when present. Changed the API-host regression to send a whitespace-only value, which exercises a present malformed header.
+- Correction is committed for CI verification; do not mark ILC-20 accepted until the new workflow passes.
+- [CI #240](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903663508). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903663508/artifacts/14706973358).
