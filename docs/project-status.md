@@ -37,11 +37,11 @@ Updated: 2026-11-21
 Updated: 2026-11-21
 
 
-## HR-controlled employee invitations — SDD approval in progress
+## HR-controlled employee invitations — implementation in progress
 
-- Owner approved the HR invitation feature and selected Option A on 2026-11-21: asynchronous delivery using a dedicated, short-lived Data Protection-protected secret record, separate from ordinary outbox payloads.
+- Owner approved the HR invitation feature and selected Option A on 2026-11-21: asynchronous delivery using a dedicated, short-lived Data Protection-protected secret record, separate from ordinary outbox payloads. Initial invitation entities, EF Core persistence, migration, cryptographic token service and persistent local Data Protection key-ring setup are committed.
 - Owner approved deleting the live delivery secret after provider acceptance (with expiry cleanup as a backstop) and at-least-once delivery semantics; duplicate emails are possible.
 - Local development must use a persistent, Git-ignored Data Protection key ring with restrictive filesystem permissions. Production key protection/storage and backup/restore implementation are deferred until cloud infrastructure setup; no AWS/KMS choice is implied.
-- Owner approved the remaining policy defaults on 2026-11-21: 24-hour expiry, resend only while pending/unexpired with atomic token rotation, terminal cancellation, direct activation to active Employee, generic activation failures and rate limiting. Mailpit is approved for local development. Implementation is authorized; production email-provider selection and production key protection/storage remain deferred.
+- Owner approved the remaining policy defaults on 2026-11-21: 24-hour expiry, resend only while pending/unexpired with atomic token rotation, terminal cancellation, direct activation to active Employee, generic activation failures and rate limiting. Mailpit is approved for local development and is now available in root Docker Compose on SMTP 1025 / web UI 8025. HR invitation API, activation and delivery worker remain unimplemented. Production email-provider selection and production key protection/storage remain deferred.
 
 Updated: 2026-11-21
