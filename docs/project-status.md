@@ -1,3 +1,13 @@
+## Identity employee invitations — SDD drafted for owner review
+
+- Drafted `docs/changes/identity-employee-invitations/{proposal,spec,design,tasks}.md` as the next Identity increment. This is documentation only; no application code, database schema, API contract or runtime behavior was changed.
+- Proposed scope: HrAdmin-only invitation management, anonymous one-time activation, Employee-only role, 256-bit token, digest-only invitation lookup, proposed 24-hour expiry, resend rotation, cancellation, atomic Employee creation and password hashing. Public registration remains disabled outside Development.
+- Security/design blocker identified before implementation: hash-only token persistence cannot support retrying email delivery after process restart. The SDD explicitly blocks implementation until the owner approves either an encrypted short-lived delivery-secret store with key management/threat model, or a synchronous delivery model with explicit resend behavior. Plaintext tokens must not be placed in the ordinary outbox or logs.
+- Owner approval is still required for expiry/resend/cancel semantics, activation behavior, local mail-catcher approach and delivery-secret handling. Elevated-role assignment remains separately blocked by open question 11.
+- No AWS resource, persistent RabbitMQ topology, MySQL data or service runtime was changed.
+
+Updated: 2026-11-21
+
 ## Insight queue migration — CI #228 passed; review completed
 
 - CI #228 completed successfully for code commit `5bf2b0e97b5234af4c9dd438b0742e119623582b`: Release restore/build, Docker Compose validation, RabbitMQ startup/topology checks, all 19 Python RabbitMQ topology contract tests, pinned DynamoDB Local image pull and the complete .NET test step passed.
