@@ -99,7 +99,7 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
     {
         const string note = "privacy-sentinel-note";
         const string credential = "privacy-sentinel-password";
-        const string body = "{\\"eventId\\":\\"privacy-sentinel-event\\",\\"note\\":\\"privacy-sentinel-note\\",\\"credential\\":\\"privacy-sentinel-password\\",\\"connectionString\\":\\"amqp://user:privacy-sentinel-password@private-host:5672/private\\"}";
+        const string body = "{\"eventId\":\"privacy-sentinel-event\",\"note\":\"privacy-sentinel-note\",\"credential\":\"privacy-sentinel-password\",\"connectionString\":\"amqp://user:privacy-sentinel-password@private-host:5672/private\"}";
         var processor = new BlockingProcessor();
         var logger = new CapturingLogger<InsightRabbitMqConsumer>();
         await StartConsumerAsync(processor, logger: logger);
@@ -111,7 +111,7 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
 
         // The sentinel delivery proves the sensitive message was acknowledged before
         // the consumer moved on; the logger snapshot is taken after both callbacks.
-        await PublishAsync("{\\"eventId\\":\\"after-privacy-sentinel\\"}");
+        await PublishAsync("{\"eventId\":\"after-privacy-sentinel\"}");
         await processor.SentinelProcessed.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         var logs = string.Join(Environment.NewLine, logger.Entries);
