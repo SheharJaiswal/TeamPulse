@@ -22,6 +22,9 @@
   $: habitNames = new Map(data.habits.map((habit) => [habit.id, habit.name]));
   $: formMessage = form && 'message' in form ? form.message : undefined;
   $: idempotencyKey = form && 'idempotencyKey' in form ? form.idempotencyKey : data.idempotencyKey;
+  $: selectedHabitId = form && 'habitId' in form ? form.habitId : data.filters.habitId;
+  $: activityDateValue = form && 'activityDate' in form ? form.activityDate : toLocalDateInputValue();
+  $: activityQuantity = form && 'quantity' in form ? form.quantity : '1';
 
   function dateLabel(value: string): string {
     const [year, month, day] = value.split('-').map(Number);
@@ -87,17 +90,17 @@
               <label for="activity-habit">Habit</label>
               <select id="activity-habit" name="habitId" required>
                 {#each activeHabits as habit (habit.id)}
-                  <option value={habit.id} selected={habit.id === data.filters.habitId}>{habit.name}</option>
+                  <option value={habit.id} selected={habit.id === selectedHabitId}>{habit.name}</option>
                 {/each}
               </select>
             </div>
             <div class="form-field">
               <label for="activity-date">Activity date</label>
-              <input id="activity-date" name="activityDate" type="date" value={toLocalDateInputValue()} required />
+              <input id="activity-date" name="activityDate" type="date" value={activityDateValue} required />
             </div>
             <div class="form-field">
               <label for="activity-quantity">Quantity</label>
-              <input id="activity-quantity" name="quantity" type="number" min="1" max="1000" value="1" required />
+              <input id="activity-quantity" name="quantity" type="number" min="1" max="1000" value={activityQuantity} required />
             </div>
             <div class="form-actions full"><button class="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Recording…' : 'Record activity →'}</button></div>
           </form>
