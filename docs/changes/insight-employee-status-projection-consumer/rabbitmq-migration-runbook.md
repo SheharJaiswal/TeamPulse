@@ -17,6 +17,7 @@ Never use `docker compose down -v`, `rabbitmqctl purge_queue`, or any command th
 3. Confirm the migration utility is available and reviewed. It must preserve message bodies and supported AMQP basic properties/headers, deliberately force delivery mode to persistent (`2`), use mandatory routing and publisher confirms, and acknowledge each source message only after the destination confirms it and its digest is appended to the ledger.
 4. Confirm a durable temporary quorum queue named `teampulse.insight.events.migration` can be created, is initially empty, has no consumers and has sufficient disk capacity. For the reverse restore, the recreated Insight source queue must also be empty before copying back.
 5. Ensure no other tool or consumer is consuming the Insight source queue.
+6. Inspect the source messages' non-null AMQP `user_id` values using an approved, privacy-safe method. RabbitMQ validates this property against the authenticated publisher identity. The migration utility preserves `user_id`, so every non-null value must be compatible with the identity used by `RABBITMQ_URI`; otherwise mandatory publication will fail safely and the source message will remain unacknowledged. If values are incompatible or vary across users, stop and obtain an explicitly approved property-handling strategy. Do not silently remove or rewrite `user_id`.
 
 If any precondition is not met, stop. Do not attempt an in-place redeclaration.
 
