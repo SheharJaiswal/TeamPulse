@@ -96,6 +96,68 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
+    public async Task Deactivate_PreservesSuppliedCorrelationIdAcrossResponseAuditAndOutbox()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        var correlationId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        using var response = await SendDeactivateAsync(
+            client, employeeId, "explicit-correlation", "explicit-correlation-test", correlationId);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var payload = await ReadJsonAsync(response);
+        Assert.Equal(correlationId,
+            Guid.Parse(payload.RootElement.GetProperty("correlationId").GetString()!));
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var audit = await database.EmployeeLifecycleAudits.SingleAsync(x => x.EmployeeId == employeeId);
+        var outbox = await database.OutboxMessages.SingleAsync(x => x.EventId == audit.Id);
+
+        Assert.Equal(correlationId, audit.CorrelationId);
+        Assert.Equal(correlationId, outbox.CorrelationId);
+        using var envelope = JsonDocument.Parse(outbox.Payload);
+        Assert.Equal(correlationId,
+            Guid.Parse(envelope.RootElement.GetProperty("correlationId").GetString()!));
+    }
+
+    [Fact]
+    public async Task Deactivate_GeneratesOneCorrelationIdAcrossResponseAuditAndOutboxWhenHeaderIsOmitted()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var employeeId = await SeedEmployeeAsync(factory);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        using var response = await SendDeactivateAsync(
+            client, employeeId, "generated-correlation", "generated-correlation-test");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var payload = await ReadJsonAsync(response);
+        var responseCorrelationId = Guid.Parse(
+            payload.RootElement.GetProperty("correlationId").GetString()!);
+        Assert.NotEqual(Guid.Empty, responseCorrelationId);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var audit = await database.EmployeeLifecycleAudits.SingleAsync(x => x.EmployeeId == employeeId);
+        var outbox = await database.OutboxMessages.SingleAsync(x => x.EventId == audit.Id);
+
+        Assert.Equal(responseCorrelationId, audit.CorrelationId);
+        Assert.Equal(responseCorrelationId, outbox.CorrelationId);
+        using var envelope = JsonDocument.Parse(outbox.Payload);
+        Assert.Equal(responseCorrelationId,
+            Guid.Parse(envelope.RootElement.GetProperty("correlationId").GetString()!));
+    }
+
+    [Fact]
     public async Task Deactivate_ConcurrentSameKeyRequests_CreateOneTransitionAuditAndOutbox()
     {
         using var factory = _fixture.CreateFactory();
@@ -449,7 +511,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     private static Task<HttpResponseMessage> SendDeactivateAsync(
-        HttpClient client, Guid employeeId, string? key, string reason)
+        HttpClient client, Guid employeeId, string? key, string reason, Guid? correlationId = null)
     {
         var request = new HttpRequestMessage(
             HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
@@ -458,6 +520,8 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         };
         if (key is not null)
             request.Headers.Add("Idempotency-Key", key);
+        if (correlationId.HasValue)
+            request.Headers.Add("X-Correlation-ID", correlationId.Value.ToString());
         return client.SendAsync(request);
     }
 
