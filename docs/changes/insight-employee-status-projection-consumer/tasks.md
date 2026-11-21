@@ -1,3 +1,11 @@
+## Latest verification checkpoint — CI #227 completed with one test assertion failure
+
+- CI #227 completed for code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`. Restore/Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology tests and pinned DynamoDB Local image pull passed.
+- Existing service suites passed 251/251: Identity 100, Habit 24, Challenge 57, Event Tracking 27, Notification 28 and Insight 15; zero failures/skips in those projects.
+- Queue-migration integration suite: 7/8 passed. The only failure was the successful-copy header assertion: RabbitMQ.Client returned AMQP header value `"1"` as UTF-8 bytes `[49]`, but the test expected a string. The utility's header-copy implementation copies the received value unchanged.
+- Corrected the assertion to compare `Encoding.UTF8.GetBytes("1")` with the returned byte[] using `Assert.IsType<byte[]>`. Fix commit: `5bf2b0e97b5234af4c9dd438b0742e119623582b`. Fresh CI verification is pending.
+- Do not mark migration acceptance complete or execute the utility against the persistent broker until the full test suite passes and the utility/runbook/topology review is completed.
+
 ## Latest verification checkpoint — CI #227 pending
 
 - CI #227 is running against code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`; latest branch HEAD is documentation-only commit `22539aa448e94a62ab38cd98e40919525c596662`.
