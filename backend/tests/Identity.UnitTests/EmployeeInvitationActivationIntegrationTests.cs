@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
 using Identity.Application.Abstractions;
 using Identity.Application.Contracts;
@@ -157,7 +158,7 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
     }
 
     private static async Task<(Guid Id, string Email, string Token)> CreateInvitationAsync(
-        IdentityApiFactory factory)
+        WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<IEmployeeInvitationService>();
