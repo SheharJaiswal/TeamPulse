@@ -6,7 +6,7 @@
 
 The invitation flow needs a recoverable activation token for asynchronous delivery retries. The preferred candidate is a dedicated, short-lived delivery-secret record containing an ASP.NET Core Data Protection-protected token, separate from the ordinary lifecycle/business outbox. The invitation table continues to store only the SHA-256 token digest used for redemption lookup.
 
-The alternative is synchronous delivery after the invitation transaction commits. That avoids recoverable token storage but makes delivery outages require an explicit resend/token rotation and leaves a commit-to-send failure window. The owner selected Option A on 2026-11-21. Production key protection/storage and backup/restore implementation remain deployment decisions deferred until cloud setup.
+The alternative is synchronous delivery after the invitation transaction commits. That avoids recoverable token storage but makes delivery outages require an explicit resend/token rotation and leaves a commit-to-send failure window. The owner selected Option A on 2026-11-21. Production key protection/storage and backup/restore implementation remain deployment decisions deferred until cloud setup. The owner approved the full invitation policy and Mailpit local development adapter on 2026-11-21.
 
 ## Candidate Option A — protected short-lived secret
 
