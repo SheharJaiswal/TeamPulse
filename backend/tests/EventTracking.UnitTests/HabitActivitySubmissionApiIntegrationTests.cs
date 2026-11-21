@@ -272,6 +272,60 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Create_WhenConcurrentRequestsReuseKeyWithSamePayload_ReturnsCreatedAndIdempotentSuccess()
+    {
+        var habitId = Guid.NewGuid();
+        var employeeId = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid();
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK, responseContent: JsonSerializer.Serialize(new
+        {
+            id = habitId,
+            status = 1,
+            startDate = "2026-11-20",
+            endDate = "2026-11-22"
+        }), waitForConcurrentRequests: true);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(employeeId));
+
+        var firstRequest = client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate = "2026-11-21",
+            quantity = 1,
+            idempotencyKey
+        });
+        var retryRequest = client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate = "2026-11-21",
+            quantity = 1,
+            idempotencyKey
+        });
+        using var firstResponse = await firstRequest;
+        using var retryResponse = await retryRequest;
+
+        Assert.Contains(new[] { firstResponse.StatusCode, retryResponse.StatusCode },
+            status => status == HttpStatusCode.Created);
+        Assert.Contains(new[] { firstResponse.StatusCode, retryResponse.StatusCode },
+            status => status == HttpStatusCode.OK);
+        Assert.Equal(2, habitApi.RequestCount);
+
+        using var firstDocument = JsonDocument.Parse(await firstResponse.Content.ReadAsStringAsync());
+        using var retryDocument = JsonDocument.Parse(await retryResponse.Content.ReadAsStringAsync());
+        Assert.Equal(firstDocument.RootElement.GetProperty("id").GetGuid(),
+            retryDocument.RootElement.GetProperty("id").GetGuid());
+
+        using var scope = factory.Services.CreateScope();
+        var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+        await using var databaseContext = await contextFactory.CreateDbContextAsync();
+        Assert.Single(await databaseContext.HabitActivitySubmissions.Where(x =>
+            x.EmployeeId == employeeId && x.IdempotencyKey == idempotencyKey).ToListAsync());
+        Assert.Single(await databaseContext.EventTrackingOutboxMessages.ToListAsync());
+    }
+
+    [Fact]
     public async Task Create_WhenRequestContainsInvalidIdentifiersOrQuantity_ReturnsBadRequestBeforeCallingHabitApi()
     {
         var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
