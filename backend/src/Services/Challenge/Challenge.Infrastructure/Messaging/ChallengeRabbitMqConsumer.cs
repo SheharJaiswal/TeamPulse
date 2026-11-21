@@ -66,6 +66,9 @@ public sealed class ChallengeRabbitMqConsumer(
         var factory = new ConnectionFactory
         {
             Uri = new Uri(options.Uri, UriKind.Absolute),
+            RequestedConnectionTimeout = TimeSpan.FromMilliseconds(options.ConnectionTimeoutMilliseconds),
+            HandshakeContinuationTimeout = TimeSpan.FromMilliseconds(options.ConnectionTimeoutMilliseconds),
+            ContinuationTimeout = TimeSpan.FromMilliseconds(options.ConnectionTimeoutMilliseconds),
             ClientProvidedName = ConnectionName,
             AutomaticRecoveryEnabled = false,
             TopologyRecoveryEnabled = false

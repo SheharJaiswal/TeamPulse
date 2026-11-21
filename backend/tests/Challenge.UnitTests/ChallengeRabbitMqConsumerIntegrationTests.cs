@@ -47,6 +47,16 @@ public sealed class ChallengeRabbitMqConsumerOptionsTests
         Assert.Throws<InvalidOperationException>(options.Validate);
     }
 
+    [Theory]
+    [InlineData(999)]
+    [InlineData(30001)]
+    public void Validate_RejectsInvalidConnectionTimeout(int timeoutMilliseconds)
+    {
+        var options = ValidOptions();
+        options.ConnectionTimeoutMilliseconds = timeoutMilliseconds;
+        Assert.Throws<InvalidOperationException>(options.Validate);
+    }
+
     internal static ChallengeRabbitMqConsumerOptions ValidOptions() => new()
     {
         Enabled = true,

@@ -1,6 +1,19 @@
 # Project Status
 Updated: 2026-11-21
 
+## Latest continuation checkpoint — bound RabbitMQ reconnect handshake (CI pending)
+
+- Live branch HEAD before this increment was `0fb898e0c95a3448d78c07e92fd65bf4c0bf80d7` (tree `bdf5da62b1a19aa22383866980c28add363ceb73`). The latest CI run #114 for code commit `6cadec8c2f9bd44c5ec1553c286ee847b9845762` failed: restore and Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 164/165 (41/42 Challenge, 24 Habit, 100 Identity), with zero Habit/Identity failures. The sole failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`, timing out while waiting for the consumer to reconnect after broker restart. [CI run #114](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44838518946).
+- The failure occurs in the post-restart connected-state wait, not in the commit-before-ack cancellation assertion. The consumer's reconnect loop can be blocked inside `CreateConnectionAsync` while the restarted RabbitMQ process is accepting TCP but not yet completing AMQP startup. RabbitMQ.Client 7.2.2 defaults the connection-attempt timeout to 30 seconds, longer than the integration test's reconnect window.
+- Added `ChallengeConsumer:ConnectionTimeoutMilliseconds` (default 5000; allowed 1000–30000) and apply it to the RabbitMQ connection-attempt, AMQP handshake and protocol continuation timeouts. Added deterministic options-validation tests for out-of-range values. This bounds one failed connection iteration so the existing reconnect loop can retry while the broker finishes startup.
+- The existing established-session broker-loss/commit-before-ack Testcontainers test remains the end-to-end verification; no CEPS-11 or CEPS-14 checkbox is closed. CI for this focused correction is pending.
+- Updated the approved SDD design/tasks with the connection-timeout policy and exact CI #114 failure evidence.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+- Scope remains the owner-approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially; privacy/legal sign-off remains a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
 ## Latest continuation checkpoint — session-owned teardown after DLQ/connection failure (CI #114 pending)
 
 - CI #112 for `acd34c9fa35fa34c77be4bcdfd8aac150e2c98fd` failed. Restore and Release build passed; Release build had 0 warnings/errors. Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. The .NET suite had 162/165 tests pass (38/41 Challenge, 24 Habit, 100 Identity). Two Challenge tests for failed mandatory DLQ publication timed out waiting for consumer disconnection; the commit-before-ack replay test timed out waiting for reconnect after broker restart. [CI run #112](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44831788475).

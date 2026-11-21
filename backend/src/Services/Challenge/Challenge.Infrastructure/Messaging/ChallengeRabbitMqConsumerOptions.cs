@@ -13,6 +13,7 @@ public sealed class ChallengeRabbitMqConsumerOptions
     public int RetryBaseDelayMilliseconds { get; set; } = 250;
     public int RetryMaxDelayMilliseconds { get; set; } = 2000;
     public int ReconnectDelayMilliseconds { get; set; } = 5000;
+    public int ConnectionTimeoutMilliseconds { get; set; } = 5000;
 
     public void Validate()
     {
@@ -31,5 +32,7 @@ public sealed class ChallengeRabbitMqConsumerOptions
             throw new InvalidOperationException("ChallengeConsumer retry delay bounds are invalid.");
         if (ReconnectDelayMilliseconds is < 250 or > 60000)
             throw new InvalidOperationException("ChallengeConsumer:ReconnectDelayMilliseconds must be between 250 and 60000.");
+        if (ConnectionTimeoutMilliseconds is < 1000 or > 30000)
+            throw new InvalidOperationException("ChallengeConsumer:ConnectionTimeoutMilliseconds must be between 1000 and 30000.");
     }
 }
