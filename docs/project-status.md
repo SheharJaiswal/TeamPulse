@@ -1,3 +1,14 @@
+## Latest continuation checkpoint — CI #125 found test timing race; corrected wait added
+
+- CI #125 for code commit `7f226457ba604848a143062e2d9cb78ebb36d09a` failed only one test: `Consumer_LeavesOriginalUnacknowledgedWhenDeadLetterPublishCannotBeConfirmed`. Release build passed with 0 warnings/errors, Docker Compose validation and RabbitMQ topology passed, all 11 Python topology tests passed; .NET totals were Challenge 48/49, Habit 24/24 and Identity 100/100. [CI #125](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44874441259).
+- Root cause is test synchronization: `IsConnected` is cleared in the session core's finally block before async-disposable RabbitMQ channels/connection finish disposal. The test queried the source queue before broker-side requeue completed. Production teardown already increments `CompletedSessionCount` only after disposal. Updated the test to wait for that count to advance before checking redelivery; no production behavior was changed.
+- The inbox metadata/no-expiry integration test and health-check isolation integration test were included in the same run; the 48 passing Challenge tests include them. They remain pending a clean full-workflow pass before acceptance is closed.
+- Current scope remains projection-only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. EventBridge/SQS and AWS provisioning remain deferred until owner cloud setup. Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+
+Updated: 2026-11-21
+
+---
+
 # Project Status
 
 ## Latest continuation checkpoint — CI #125 executing new Challenge integration tests

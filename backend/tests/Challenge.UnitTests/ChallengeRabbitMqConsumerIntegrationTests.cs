@@ -316,6 +316,12 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         // The mandatory publish is returned because no DLQ binding exists. The consumer must
         // close its source channel without acknowledging, allowing RabbitMQ to requeue the body.
         await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
+        // IsConnected becomes false before the session's async-disposable channels finish
+        // closing. Wait for the completed-session signal so RabbitMQ has requeued the
+        // unacknowledged source delivery before inspecting the queue from this test channel.
+        var completedSessionsBeforeFailure = status.CompletedSessionCount;
+        await WaitUntilAsync(() => Task.FromResult(
+            status.CompletedSessionCount > completedSessionsBeforeFailure));
         var redelivered = await _channel.BasicGetAsync(QueueName, autoAck: false);
         Assert.NotNull(redelivered);
         Assert.Equal(body, Encoding.UTF8.GetString(redelivered!.Body.ToArray()));
