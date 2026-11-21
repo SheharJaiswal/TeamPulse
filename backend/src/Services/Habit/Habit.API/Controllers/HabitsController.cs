@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,15 +19,30 @@ public sealed class HabitsController(IHabitService habits) : ControllerBase
     public async Task<IActionResult> GetMine([FromQuery] HabitStatus? status, CancellationToken cancellationToken)
     {
         if (!TryGetEmployeeId(out var employeeId)) return Unauthorized();
-        return Ok(await habits.GetMineAsync(employeeId, status, cancellationToken));
+        if (status.HasValue && !Enum.IsDefined(status.Value)) return BadRequest(new { message = "Unknown habit status." });
+        try
+        {
+            return Ok(await habits.GetMineAsync(employeeId, status, cancellationToken));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmployeeId(out var employeeId)) return Unauthorized();
-        var result = await habits.GetAsync(employeeId, id, cancellationToken);
-        return result is null ? NotFound() : Ok(result);
+        try
+        {
+            var result = await habits.GetAsync(employeeId, id, cancellationToken);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
     }
 
     [HttpPost]

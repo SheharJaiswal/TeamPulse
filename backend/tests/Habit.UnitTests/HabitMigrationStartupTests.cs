@@ -12,7 +12,7 @@ public sealed class HabitMigrationStartupTests(HabitMySqlFixture fixture)
     : IClassFixture<HabitMySqlFixture>
 {
     [Fact]
-    public async Task Startup_AppliesMigration_AndRepeatedStartupIsSafe()
+    public async Task Startup_AppliesMigrations_AndRepeatedStartupIsSafe()
     {
         using (var firstFactory = fixture.CreateFactory())
         using (var firstClient = firstFactory.CreateClient())
@@ -26,9 +26,11 @@ public sealed class HabitMigrationStartupTests(HabitMySqlFixture fixture)
             var applied = (await database.Database.GetAppliedMigrationsAsync()).ToArray();
 
             Assert.Contains("20261120170000_InitialHabitProjection", applied);
+            Assert.Contains("20261121150000_AddHabitDefinitions", applied);
             Assert.True(await database.Database.CanConnectAsync());
             Assert.Empty(await database.EmployeeStatusProjections.ToListAsync());
             Assert.Empty(await database.ProcessedDomainEvents.ToListAsync());
+            Assert.Empty(await database.Habits.ToListAsync());
         }
 
         using (var secondFactory = fixture.CreateFactory())
@@ -43,6 +45,7 @@ public sealed class HabitMigrationStartupTests(HabitMySqlFixture fixture)
             var applied = (await database.Database.GetAppliedMigrationsAsync()).ToArray();
 
             Assert.Equal(1, applied.Count(x => x == "20261120170000_InitialHabitProjection"));
+            Assert.Equal(1, applied.Count(x => x == "20261121150000_AddHabitDefinitions"));
         }
     }
 }
