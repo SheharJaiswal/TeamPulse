@@ -52,4 +52,6 @@
 - Inbox retention is initially permanent and requires privacy/legal review before production.
 - Never log raw event bodies, optional notes, credentials or broker URIs.
 
+- [ ] Resolve and verify the first RabbitMQ integration-test compile failure (CI #138 exposed unsigned queue-count assertion overloads); corrected assertions use explicit uint expected values.
+
 Updated: 2026-11-21

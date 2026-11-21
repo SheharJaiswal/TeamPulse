@@ -120,7 +120,7 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
         await WaitUntilAsync(() => Task.FromResult(Volatile.Read(ref processor.CallCount) == 2));
         await WaitUntilAsync(async () => await GetMessageCountAsync(QueueName) == 0);
         Assert.Equal(2, processor.CallCount);
-        Assert.Equal(0, await GetMessageCountAsync(DeadLetterQueueName));
+        Assert.Equal(0u, await GetMessageCountAsync(DeadLetterQueueName));
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
         Assert.NotNull(redelivered);
         Assert.Equal(body, Encoding.UTF8.GetString(redelivered!.Body.ToArray()));
         await _channel.BasicAckAsync(redelivered.DeliveryTag, multiple: false);
-        Assert.Equal(0, await GetMessageCountAsync(DeadLetterQueueName));
+        Assert.Equal(0u, await GetMessageCountAsync(DeadLetterQueueName));
     }
 
     private async Task<EventTrackingRabbitMqConsumerStatus> StartConsumerAsync(
