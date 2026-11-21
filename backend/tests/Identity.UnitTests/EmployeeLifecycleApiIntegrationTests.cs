@@ -233,6 +233,78 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
     }
 
     [Fact]
+    public async Task LifecycleEndpoint_AcceptsIdempotencyKeyLengthBoundariesAndRejectsInvalidCharactersWithoutMutation()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        var validKeys = new[] { "a", new string('z', 128) };
+        foreach (var key in validKeys)
+        {
+            var employeeId = await SeedEmployeeAsync(factory);
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+            {
+                Content = JsonContent.Create(new { reasonCode = "valid-reason" })
+            };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+
+            using var response = await client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await using var scope = factory.Services.CreateAsyncScope();
+            var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            var employee = await database.Employees.SingleAsync(x => x.Id == employeeId);
+            Assert.False(employee.IsActive);
+            Assert.Equal(1, employee.LifecycleVersion);
+        }
+
+        var invalidKeys = new[] { "\\u001f", "\\u007f", "cl\\u00e9" };
+        var rejectedEmployeeIds = new List<Guid>();
+        var correlationIds = new List<Guid>();
+
+        foreach (var key in invalidKeys)
+        {
+            var employeeId = await SeedEmployeeAsync(factory);
+            var correlationId = Guid.NewGuid();
+            rejectedEmployeeIds.Add(employeeId);
+            correlationIds.Add(correlationId);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/identity/employees/{employeeId}/deactivate")
+            {
+                Content = JsonContent.Create(new { reasonCode = "valid-reason" })
+            };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId.ToString());
+
+            using var response = await client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        await using var verifyScope = factory.Services.CreateAsyncScope();
+        var verifyDatabase = verifyScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var rejectedEmployees = await verifyDatabase.Employees
+            .Where(x => rejectedEmployeeIds.Contains(x.Id))
+            .ToListAsync();
+
+        Assert.Equal(rejectedEmployeeIds.Count, rejectedEmployees.Count);
+        Assert.All(rejectedEmployees, employee =>
+        {
+            Assert.True(employee.IsActive);
+            Assert.Equal(0, employee.LifecycleVersion);
+        });
+        Assert.False(await verifyDatabase.EmployeeLifecycleAudits
+            .AnyAsync(x => rejectedEmployeeIds.Contains(x.EmployeeId)));
+        Assert.False(await verifyDatabase.OutboxMessages
+            .AnyAsync(x => correlationIds.Contains(x.CorrelationId)));
+    }
+
+    [Fact]
     public async Task LifecycleEndpoint_RejectsInvalidReasonAndNoteWithoutMutation()
     {
         using var factory = _fixture.CreateFactory();
