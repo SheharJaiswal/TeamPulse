@@ -1,3 +1,15 @@
+## Insight queue migration — CI #223 failure analysis and corrections
+
+- GitHub Actions run #223 for code commit `607ed2f64be41a3fa295045c2177c4519027fa2a` completed with failure in the .NET test step. Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests and pinned DynamoDB Local image pull passed.
+- Existing service suites passed: Identity 100/100, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28 and Insight 15/15 (**251/251**). The new Insight queue-migration Testcontainers suite passed 6/8.
+- Failure 1: RabbitMQ.Client 7.2.2 surfaces an unroutable mandatory publish as `PublishReturnException` directly from `BasicPublishAsync`, before the helper's post-await event check. `MandatoryPublisher` now catches this client exception and wraps it in the documented `InvalidOperationException`, preserving the original exception as inner detail.
+- Failure 2: RabbitMQ rejects a copied AMQP `user_id` property when it differs from the authenticated broker username. The integration fixture now sets the property to its Testcontainers authentication username and still verifies it is copied unchanged.
+- The bounded-resume test now uses a temporary digest-ledger file and deletes it after assertions rather than leaving the utility's default ledger in the repository workspace.
+- Fix commits: `e806e899c33018cdc9161f8707ccae589c8150ab` and `ca88300cf2d85fc47512489dc37a66fcd778d6fd`. A fresh CI run is required before marking the utility verified or proceeding to the joint operational review.
+- The Insight queue definitions remain durable classic with no arguments and the existing lifecycle binding; no persistent/shared RabbitMQ, MySQL, DynamoDB Local or AWS resources were changed.
+
+Updated: 2026-11-21
+
 ## Insight queue migration — Release build and runbook reconciliation
 
 - GitHub Actions run #222 for code commit `607ed2f64be41a3fa295045c2177c4519027fa2a` has successfully completed the Release solution build, Docker Compose validation, local RabbitMQ startup/topology verification, all Python RabbitMQ topology contract tests, and the pinned DynamoDB Local image pull.
