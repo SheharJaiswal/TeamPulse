@@ -11,16 +11,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using MySqlConnector;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var configuredConnectionString = builder.Configuration.GetConnectionString("ChallengeDatabase")
+var connectionString = builder.Configuration.GetConnectionString("ChallengeDatabase")
     ?? throw new InvalidOperationException("ChallengeDatabase connection string is missing.");
-var connectionString = new MySqlConnectionStringBuilder(configuredConnectionString)
-{
-    UseAffectedRows = true
-}.ConnectionString;
 var consumerOptions = builder.Configuration.GetSection(ChallengeRabbitMqConsumerOptions.SectionName)
     .Get<ChallengeRabbitMqConsumerOptions>() ?? new ChallengeRabbitMqConsumerOptions();
 consumerOptions.Validate();

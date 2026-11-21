@@ -49,24 +49,37 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
                 : ProjectionProcessingOutcome.DuplicateEventIntegrityViolation;
         }
 
-        // UseAffectedRows=true makes the upsert report 1 for insert, 2 for a changed
-        // row and 0 when an equal/lower lifecycle version leaves the projection unchanged.
-        var affectedRows = await database.Database.ExecuteSqlInterpolatedAsync($"""
+        // The session-scoped flag reports whether the atomic upsert actually applied
+        // a strictly newer version. Initialize it to 1 for the insert path; the
+        // duplicate-key path overwrites it before the projection columns are assigned.
+        await database.Database.ExecuteSqlRawAsync(
+            "SET @teampulse_challenge_projection_applied = 1;",
+            cancellationToken);
+
+        await database.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO employee_status_projections
                 (employee_id, is_active, lifecycle_version, updated_at_utc)
             VALUES
                 ({lifecycleEvent.EmployeeId}, {lifecycleEvent.IsActive},
                  {lifecycleEvent.LifecycleVersion}, {processedAtUtc}) AS incoming
             ON DUPLICATE KEY UPDATE
-                is_active = IF(incoming.lifecycle_version > employee_status_projections.lifecycle_version,
+                is_active = IF(
+                    (@teampulse_challenge_projection_applied := IF(
+                        incoming.lifecycle_version > employee_status_projections.lifecycle_version, 1, 0)) = 1,
                     incoming.is_active, employee_status_projections.is_active),
                 updated_at_utc = IF(incoming.lifecycle_version > employee_status_projections.lifecycle_version,
                     incoming.updated_at_utc, employee_status_projections.updated_at_utc),
                 lifecycle_version = GREATEST(employee_status_projections.lifecycle_version, incoming.lifecycle_version);
             """, cancellationToken);
 
+        var projectionApplied = await database.Database.SqlQueryRaw<int>(
+            "SELECT CAST(@teampulse_challenge_projection_applied AS SIGNED) AS Value")
+            .SingleAsync(cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
-        return affectedRows > 0 ? ProjectionProcessingOutcome.Applied : ProjectionProcessingOutcome.Stale;
+        return projectionApplied == 1
+            ? ProjectionProcessingOutcome.Applied
+            : ProjectionProcessingOutcome.Stale;
     }
 
     public async Task<EmployeeStatusProjection?> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken)
