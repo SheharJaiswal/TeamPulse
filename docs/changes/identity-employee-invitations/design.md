@@ -50,7 +50,7 @@ No committed credentials or provider secrets. Local mail catcher is development-
 - Inject `TimeProvider` for deterministic expiry and race tests.
 - Verify token entropy/encoding and that persisted state contains only digest/protected ciphertext, never raw token.
 - Test Data Protection round-trip, purpose isolation, tampered ciphertext, missing/rotated keys, and failure-closed behavior.
-- Test current-generation checks, retry after process restart, resend races, duplicate delivery behavior and secret deletion/expiry.
+- Test current-generation checks, retry after process restart, resend races, duplicate delivery behavior and secret deletion/expiry. A MySQL integration test now simulates worker termination after lease acquisition and verifies that a new queue instance reclaims the expired lease while the old lease token cannot acknowledge it.
 - Test atomic first redemption, concurrent duplicate redemption, resend-vs-redemption and cancel-vs-redemption.
 - Test duplicate normalized email, existing employee conflict and transaction rollback.
 - Test delivery retry without leaking token and token invalidation after resend.
