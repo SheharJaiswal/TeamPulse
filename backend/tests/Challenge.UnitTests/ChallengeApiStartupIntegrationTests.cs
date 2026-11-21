@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -7,9 +6,7 @@ using System.Threading.Tasks;
 using Challenge.Application.Abstractions;
 using Challenge.Application.Contracts;
 using Challenge.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -21,13 +18,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
     [Fact]
     public async Task ApiHost_AppliesMigrationsOnStartupAndProjectionReaderReadsMigratedDatabase()
     {
-        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
-            webHost.ConfigureAppConfiguration((_, configuration) =>
-                configuration.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:ChallengeDatabase"] = fixture.ConnectionString,
-                    ["ChallengeConsumer:Enabled"] = "false"
-                })));
+        using var factory = fixture.CreateFactory();
 
         using (factory)
         using (var client = factory.CreateClient())

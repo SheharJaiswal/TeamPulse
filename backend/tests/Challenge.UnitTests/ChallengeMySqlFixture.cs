@@ -14,6 +14,8 @@ public sealed class ChallengeMySqlFixture : IAsyncLifetime
         .Build();
 
     public string ConnectionString => _database.GetConnectionString();
+
+    public ChallengeApiFactory CreateFactory() => new(ConnectionString);
     public Task InitializeAsync() => _database.StartAsync();
     public async Task DisposeAsync() => await _database.DisposeAsync();
 }

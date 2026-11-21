@@ -118,3 +118,11 @@
 - The test starts the actual Challenge API host with its RabbitMQ consumer disabled, calls the production readiness endpoint, asserts both checked-in EF migrations are applied, then writes and reads an employee projection through the registered production store.
 - Added `Microsoft.AspNetCore.Mvc.Testing` 8.0.11 to the Challenge test project.
 - Keep this acceptance item unchecked until GitHub Actions confirms package restore, host startup, migration execution and projection read.
+
+
+## CI #130 failure analysis and test-host configuration correction
+
+- CI #130 (`8dca20f026034f1fff18939e3c8441754b392337`) passed restore, Release build, Compose, RabbitMQ topology and Python tests. .NET result: 230 passed / 1 failed (Challenge 53/54, Habit 24/24, Identity 100/100).
+- The only failure was the new API-host startup test. Stack trace showed `ServerVersion.AutoDetect` attempted to connect using the appsettings localhost connection string, not the Testcontainers connection string. The existing Habit API integration factory establishes test settings with both `UseSetting` and `ConfigureAppConfiguration`, and sets Testing environment.
+- Applied the same proven test-host configuration pattern in a dedicated `ChallengeApiFactory`; disabled the consumer in the in-memory test configuration. The test logic and production API startup path remain unchanged.
+- Re-run pending. Keep API-host acceptance unchecked until CI verifies host startup, migrations and projection read.

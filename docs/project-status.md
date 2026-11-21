@@ -630,3 +630,10 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - The test calls `/health/ready`, asserts both checked-in EF migrations are applied by the production startup path, then writes and reads a projection using the production `IEmployeeStatusProjectionStore` registration.
 - Added `Microsoft.AspNetCore.Mvc.Testing` 8.0.11 to the Challenge test project.
 - This is the remaining acceptance gap identified after CI #129. It is authored but not yet verified; no passing result is claimed until the workflow completes.
+
+
+## CI #130 diagnosis and correction — rerun pending
+
+- CI #130 failed only in the new Challenge API-host startup test (230/231 .NET tests passed). The failure occurred in `ServerVersion.AutoDetect` while opening a connection using the appsettings localhost endpoint; it did not reach migration assertions.
+- Compared the existing Habit API integration setup and aligned Challenge with its established `WebApplicationFactory` pattern: set Testing environment, override the connection string through `UseSetting`, and add the same connection string via in-memory app configuration. The RabbitMQ consumer is disabled for the test.
+- Added a dedicated `ChallengeApiFactory`; production code is unchanged. CI rerun is pending; the API-host migration/projection-reader acceptance remains unverified until that run passes.
