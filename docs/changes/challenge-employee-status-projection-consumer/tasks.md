@@ -48,8 +48,8 @@
 - [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
 - [x] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert; concurrent same-fingerprint and conflicting-fingerprint tests passed CI #128.
 - [x] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation (existing integration tests passed CI #127).
-- [x] Add a deterministic concurrent equal-version MySQL 8.4 regression test and classify Applied/Stale from the atomic upsert's affected-row count; CI verification pending.
-- [ ] Verify concurrent equal-version outcome classification against MySQL 8.4 in GitHub Actions.
+- [x] Add a deterministic concurrent equal-version MySQL 8.4 regression test and classify Applied/Stale from the atomic upsert's connection-scoped result flag; verified in CI #145 (55/55 Challenge tests passed).
+- [x] Verify concurrent equal-version outcome classification against MySQL 8.4 in GitHub Actions CI #145; the full workflow remains red only because of the unrelated EventTracking health test.
 - [x] RabbitMQ Testcontainers: duplicate redelivery after commit-before-ack and idempotent replay; verified by CI #122 after stable endpoint correction (47 Challenge tests passed).
 - [x] RabbitMQ Testcontainers: invalid event and integrity-violation classifications, mandatory DLQ confirmation, and unacknowledged source delivery when DLQ publication cannot be confirmed; verified in CI #107/#108/#127.
 - [x] RabbitMQ Testcontainers: bounded retry then success, retry exhaustion, non-transient no-retry classification, and unacknowledged source delivery when retry-exhaustion DLQ publication cannot be confirmed; verified in CI #108/#129.
@@ -161,3 +161,11 @@
 - Three Challenge failures exposed that `ExecuteSqlInterpolatedAsync` still returned a positive affected-row result for equal/lower-version no-op upserts through the Pomelo/MySqlConnector configuration: sequential lower-version Stale, sequential equal-version Stale, and the concurrent equal-version one-Applied/one-Stale assertion. The projection itself remained protected by the conditional upsert; the returned outcome was incorrect.
 - The fourth failure was the existing out-of-scope EventTracking API-host consumer-health test waiting for HTTP 503 after RabbitMQ shutdown. [CI #144](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44882416187).
 - Replaced the affected-row heuristic with a connection-scoped MySQL result flag set by the duplicate-key upsert itself. The flag is initialized for the insert path, set from the strict version comparison on duplicate, and read on the same transaction connection before commit. This adds no table/column and keeps inbox plus projection atomic. The concurrent equal-version regression test remains the verification gate.
+
+
+## CI #145 verification — concurrent equal-version outcome — 2026-11-21
+
+- CI #145 ran against `5fb1d41f6a775af88968d3277414fe77627edc10`: [GitHub Actions run #145](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44882807000).
+- The new concurrent equal-version Testcontainers regression passed. All 55 Challenge tests passed against MySQL 8.4, including the existing sequential lower/equal-version Stale assertions and the new one-Applied/one-Stale concurrent case.
+- The full workflow is still red for one unrelated EventTracking test: 25/26 EventTracking, 24/24 Habit and 100/100 Identity passed; 14/14 Python topology tests passed. The sole failure is `EventTrackingApiStartupIntegrationTests.ApiHost_ConsumerHealthIsIndependentFromDatabaseReadiness`, which did not observe HTTP 503 from `/health/consumer` after RabbitMQ shutdown. No Challenge tests failed.
+- The connection-scoped flag is initialized for the insert path, set by the duplicate-key conditional version comparison and read on the same transaction connection. No schema, projection fields, inbox retention policy or service boundary changed.
