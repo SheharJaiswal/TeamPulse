@@ -40,13 +40,17 @@ public sealed class EmployeeInvitationService(
 
         var employeeExists = await database.Employees.AnyAsync(
             employee => employee.NormalizedEmail == normalizedEmail, cancellationToken);
-        var invitationExists = await database.EmployeeInvitations.AnyAsync(
+        var pendingInvitation = await database.EmployeeInvitations.SingleOrDefaultAsync(
             invitation => invitation.PendingNormalizedEmail == normalizedEmail, cancellationToken);
-        if (employeeExists || invitationExists)
+        if (employeeExists ||
+            (pendingInvitation is not null && pendingInvitation.IsPendingAndUnexpired(nowUtc)))
         {
             await transaction.RollbackAsync(cancellationToken);
             return new EmployeeInvitationCommandResult(EmployeeInvitationCommandStatus.Conflict, null);
         }
+
+        if (pendingInvitation is not null && pendingInvitation.MarkExpired(nowUtc))
+            await RemoveDeliverySecretAsync(pendingInvitation.Id, cancellationToken);
 
         var material = tokenService.Create();
         var invitation = new EmployeeInvitation(
