@@ -116,7 +116,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         Assert.Equal("teampulse-test", copied.BasicProperties.UserId);
         Assert.Equal("teampulse-tests", copied.BasicProperties.AppId);
         Assert.Equal("cluster-a", copied.BasicProperties.ClusterId);
-        Assert.Equal("1", copied.BasicProperties.Headers!["x-contract-version"]);
+        Assert.Equal(Encoding.UTF8.GetBytes("1"), Assert.IsType<byte[]>(copied.BasicProperties.Headers!["x-contract-version"]));
 
         var ledgerLines = await File.ReadAllLinesAsync(ledger);
         Assert.Equal(2, ledgerLines.Length);
