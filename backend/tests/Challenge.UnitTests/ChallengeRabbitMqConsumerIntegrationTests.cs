@@ -57,6 +57,18 @@ public sealed class ChallengeRabbitMqConsumerOptionsTests
         Assert.Throws<InvalidOperationException>(options.Validate);
     }
 
+    [Fact]
+    public void Status_MarkSessionEndedIncrementsCompletedSessionCount()
+    {
+        var status = new ChallengeRabbitMqConsumerStatus();
+
+        Assert.Equal(0, status.CompletedSessionCount);
+        status.MarkSessionEnded();
+        status.MarkSessionEnded();
+
+        Assert.Equal(2, status.CompletedSessionCount);
+    }
+
     internal static ChallengeRabbitMqConsumerOptions ValidOptions() => new()
     {
         Enabled = true,
@@ -165,6 +177,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         var processor = new CommitBeforeAckReplayProcessor(committedBody, sentinelBody);
         var status = await StartConsumerAsync(processor, reconnectDelayMilliseconds: 250);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+        var completedSessionsBeforeBrokerStop = status.CompletedSessionCount;
 
         await PublishAsync(committedBody);
         await processor.FirstCommitCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -175,8 +188,11 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         await _container.StopAsync();
         await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
         await processor.SessionCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await WaitUntilAsync(() => Task.FromResult(
+            status.CompletedSessionCount > completedSessionsBeforeBrokerStop));
 
-        // Restart the same durable broker. The unacknowledged delivery must be redelivered.
+        // The completed-session signal is raised only after the old channels and connection
+        // have been disposed. Restarting now cannot race the previous session's teardown.
         await _container.StartAsync();
         await OpenTestChannelAsync();
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));

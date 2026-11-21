@@ -63,6 +63,20 @@ public sealed class ChallengeRabbitMqConsumer(
 
     private async Task RunConsumerSessionAsync(CancellationToken stoppingToken)
     {
+        try
+        {
+            await RunConsumerSessionCoreAsync(stoppingToken);
+        }
+        finally
+        {
+            // This counter advances only after the core method's async-disposable session
+            // resources (channels and connection) have completed disposal.
+            status.MarkSessionEnded();
+        }
+    }
+
+    private async Task RunConsumerSessionCoreAsync(CancellationToken stoppingToken)
+    {
         var factory = new ConnectionFactory
         {
             Uri = new Uri(options.Uri, UriKind.Absolute),

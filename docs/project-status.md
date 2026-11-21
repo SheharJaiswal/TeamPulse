@@ -1,6 +1,19 @@
 # Project Status
 Updated: 2026-11-21
 
+## Latest continuation checkpoint — wait for completed RabbitMQ session teardown before reconnect (CI pending)
+
+- Live branch HEAD before this increment was `caaa8108c330e004e0446775d626246a46817b85` (tree `12cee8e9c7e64d22dbf844867a7bed48925394a0`). CI #115 for that exact commit failed: Restore and Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 167/168 (43/44 Challenge, 24 Habit, 100 Identity). The only failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`, timing out at test line 182 while waiting for `status.IsConnected` after broker restart. [CI run #115](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44845945644).
+- The 5-second RabbitMQ connection/handshake/protocol timeout option and its validation tests passed compilation and the rest of CI but did not resolve the reconnect test. The test observed the consumer's disconnected flag before the old session's `await using` channels/connection had necessarily finished disposal, then restarted RabbitMQ; this left a race between broker restart and prior-session cleanup.
+- Added `CompletedSessionCount` to Challenge consumer status. The session owner increments it only after the session core returns and its channels/connection have completed async disposal. The broker-stop/replay test captures the count before broker shutdown and waits for it to advance before restarting the same broker. `IsConnected` still becomes false promptly on broker loss, so the consumer health endpoint is not held healthy while the broker is down.
+- Added a deterministic status-counter unit test. The existing Testcontainers scenario remains the end-to-end verifier for commit-before-ack replay, Duplicate outcome and prefetch release; CEPS-11/CEPS-14 remain unchecked pending CI.
+- Updated the approved SDD design/tasks with the teardown-complete synchronization contract and exact CI #115 evidence.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+- Scope remains the owner-approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially; privacy/legal sign-off remains a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
 ## Latest continuation checkpoint — bound RabbitMQ reconnect handshake (CI pending)
 
 - Live branch HEAD before this increment was `0fb898e0c95a3448d78c07e92fd65bf4c0bf80d7` (tree `bdf5da62b1a19aa22383866980c28add363ceb73`). The latest CI run #114 for code commit `6cadec8c2f9bd44c5ec1553c286ee847b9845762` failed: restore and Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 164/165 (41/42 Challenge, 24 Habit, 100 Identity), with zero Habit/Identity failures. The sole failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`, timing out while waiting for the consumer to reconnect after broker restart. [CI run #114](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44838518946).
