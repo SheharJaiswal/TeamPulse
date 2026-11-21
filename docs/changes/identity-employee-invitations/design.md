@@ -10,7 +10,7 @@ All invitation state, canonical employee creation and password hashing remain in
 - Application: transactional invitation commands, atomic activation and delivery queue/email sender abstractions.
 - Domain: invitation state transitions and invariants.
 - Infrastructure: EF mappings/migrations, transactional invitation repository, token generator/hash service, durable MySQL delivery queue and SMTP Mailpit adapter.
-- Tests: unit tests, MySQL 8.4 Testcontainers, API-host activation integration and delivery queue integration coverage. SMTP provider acceptance still needs a local Mailpit smoke test.
+- Tests: unit tests, MySQL 8.4 Testcontainers, API-host activation integration and delivery queue integration coverage. Hosted-worker SMTP delivery remains unverified: a direct SMTP probe succeeds in CI, but the worker has not yet delivered an invitation to Mailpit. Use the captured safe diagnostics before changing delivery behavior.
 
 ## Token lifecycle
 Generate 32 random bytes with `RandomNumberGenerator`; encode for a URL-safe link. Persist only SHA-256(token bytes) as the activation lookup value. The raw token must never enter logs, exception text, API response bodies, telemetry or ordinary business/lifecycle outbox records. Store UTC creation and expiry timestamps. Use fixed-length digest values and an approved constant-time comparison or indexed digest lookup.
@@ -38,7 +38,7 @@ The preferred candidate is a dedicated short-lived delivery-secret row containin
 
 Only the delivery worker may read/unprotect the secret. Before each send it must verify the invitation is still Pending, unexpired and on the same generation as the outbox item. Resend atomically rotates the digest and protected secret. Delete the live secret after the provider accepts the message or after cancellation/expiry cleanup; provider acceptance does not prove recipient receipt. Email is at-least-once and duplicates may occur. Missing/invalid ciphertext or unavailable keys fail closed and require HR-initiated resend after recovery.
 
-This is a proposed operating model only. The owner must choose between this model and synchronous post-commit delivery with explicit resend on failure. Production key protection/storage, backup/restore and worker identity remain deployment decisions; no AWS/KMS integration is selected or provisioned.
+The owner approved this operating model on 2026-11-21. Production key protection/storage, backup/restore and worker identity remain deployment decisions; no AWS/KMS integration is selected or provisioned.
 
 ## Rate limiting and responses
 Apply ASP.NET Core rate limiting to anonymous activation by IP and a privacy-safe token-derived key where feasible. Use a generic invalid-invitation response for invalid, expired, cancelled and used tokens. Do not reveal whether a matching email or employee exists. HR endpoints can return actionable conflict details because the caller is authenticated and authorized.

@@ -35,7 +35,8 @@
 - [x] Add a Mailpit Testcontainers end-to-end test covering HR invitation creation, real SMTP delivery, resend generation rotation, rejection of the old link, activation through the anonymous API and successful Employee login.
 - [x] Capture the hosted worker's existing safe warning diagnostics in the Mailpit test timeout (exception types, SMTP status and configured endpoint only); do not capture exception messages, email bodies, tokens or URLs.
 - [ ] Re-run backend CI and use the captured worker diagnostics to identify the SMTP failure before changing delivery behavior.
-- [ ] Update the broader Identity API contract and runbooks; invitation SDD design/spec and project status reflect the implemented API and delivery worker. Add operational verification for application restart during a leased delivery and SMTP outage recovery.
+- [x] Update the broader Identity API contract and add the local Mailpit invitation-delivery runbook; document that hosted-worker SMTP delivery remains unverified.
+- [ ] Add operational verification for application restart during a leased delivery and SMTP outage recovery.
 - [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits after the SMTP failure is diagnosed and corrected.
 
 ## Deferred

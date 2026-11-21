@@ -47,7 +47,63 @@ The employee state, immutable lifecycle audit row and schema-v1 outbox record ar
 
 Events: `EmployeeDeactivated` and `EmployeeReactivated`, schema version 1. The outbox is durable storage only; it is not proof of EventBridge delivery. See [Domain Event Envelope](event-envelope.md) and [Employee Status Projection Contract](employee-status-projection.md).
 
-Organization Admins have no direct employee profile or lifecycle write endpoint. They may request HR changes, but request intake/approval is not yet specified. Employee provisioning/invitation and profile/role mutation are separate future contracts.
+## HR employee invitations — implemented; delivery verification pending
+
+All invitation-management routes require a bearer token whose validated `role` claim is `HrAdmin`. The actor is taken from validated JWT `sub`; no caller-supplied actor ID or role is accepted. There is no invitation list endpoint.
+
+### POST /invitations
+
+Creates a pending invitation.
+
+Request JSON:
+- `email`: valid email address, maximum 320 characters.
+- `displayName`: required, maximum 150 characters.
+- `organizationId`: required, maximum 100 characters.
+- `teamId`: required, maximum 100 characters.
+
+Success: 201 Created with an invitation summary containing `invitationId`, `email`, `displayName`, `organizationId`, `teamId`, `status`, `createdAtUtc`, `expiresAtUtc` and `deliveryGeneration`. The response contains no activation token or URL.
+
+Errors: 400 invalid fields; 401 unauthenticated; 403 non-HrAdmin; 409 an employee or pending invitation already exists for the normalized email.
+
+### GET /invitations/{invitationId}
+
+Returns the non-secret invitation summary described above.
+
+Errors: 401 unauthenticated; 403 non-HrAdmin; 404 unknown invitation ID.
+
+### POST /invitations/{invitationId}/resend
+
+For a pending, unexpired invitation, atomically rotates the token digest, protected delivery secret, generation and expiry; the previous link becomes invalid.
+
+Success: 200 OK with the updated non-secret invitation summary.
+
+Errors: 401 unauthenticated; 403 non-HrAdmin; 404 unknown invitation; 410 expired invitation; 409 invitation is already accepted or cancelled.
+
+### POST /invitations/{invitationId}/cancel
+
+Cancels a pending invitation. Cancellation is terminal and prevents activation.
+
+Success: 200 OK with the updated non-secret invitation summary.
+
+Errors: 401 unauthenticated; 403 non-HrAdmin; 404 unknown invitation; 410 expired invitation; 409 invitation is already accepted or cancelled.
+
+### POST /invitations/activate
+
+Anonymous invitee activation; no bearer token is required.
+
+Request JSON:
+- `token`: URL-safe invitation token.
+- `password`: 12–256 characters.
+
+Success: 200 with the generic message `Your account is active. Sign in to continue.`; no JWT or token material is returned.
+
+Errors: 400 for malformed request/password or the generic message `This invitation is invalid or can no longer be used.` for invalid, expired, cancelled or already-used tokens; 429 when the IP-based limit of five attempts per minute is exceeded.
+
+A successful activation atomically consumes the invitation and creates an active employee with the fixed `Employee` role. Activation failures do not disclose whether an email or employee exists. The existing Development-only registration route remains unchanged and returns 404 outside Development.
+
+Delivery is asynchronous through the Identity worker and configured SMTP adapter. The ordinary event outbox does not contain the activation token, URL or protected token ciphertext. The dedicated Data Protection-protected delivery-secret row is deleted after SMTP acceptance; at-least-once delivery means duplicate emails are possible. SMTP delivery is not yet CI-verified; see [Invitation Delivery Runbook](../runbooks/identity-employee-invitations.md) before local testing.
+
+Organization Admins have no direct employee profile or lifecycle write endpoint. They may request HR changes, but request intake/approval is not yet specified. Profile/role mutation remains outside this contract.
 
 ## Health endpoints
 

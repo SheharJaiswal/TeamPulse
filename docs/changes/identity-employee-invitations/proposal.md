@@ -6,7 +6,7 @@ Production self-registration is disabled and Identity owns canonical employee re
 ## Proposed change
 Add an Identity-owned invitation workflow. An authenticated HrAdmin creates an invitation for a new employee, Identity stores a pending invitation and sends a one-time activation link through a pluggable delivery adapter, and the invitee redeems it to create an active Employee account and establish a password. HR can resend or cancel a pending invitation and inspect its non-secret status.
 
-The owner approved the invitation feature on 2026-11-21 and selected asynchronous delivery with a dedicated Data Protection-protected secret store (Option A). The remaining policy defaults and development mail-catcher profile still require explicit approval before implementation.
+The owner approved the invitation feature on 2026-11-21, including asynchronous delivery with a dedicated Data Protection-protected secret store (Option A), 24-hour expiry, resend/cancel semantics, direct activation to Employee, generic failures/rate limiting and Mailpit for local development. Production email provider and production key protection/storage remain deferred.
 
 ## Scope
 - HR-only create, resend, cancel and status endpoints in Identity.
@@ -27,7 +27,7 @@ The owner approved the invitation feature on 2026-11-21 and selected asynchronou
 - Employee profile editing or lifecycle transition changes.
 - Changes to the existing HR lifecycle audit/outbox event contract unless a separately approved design establishes a required event.
 
-## Proposed security defaults (pending explicit policy approval)
+## Approved security defaults (owner approval: 2026-11-21)
 - Token: 32 bytes from a cryptographically secure random generator, URL-safe encoded; only SHA-256 digest stored.
 - Lifetime: 24 hours from issuance, evaluated using UTC.
 - Single use: consume exactly once in the same transaction that creates the employee.

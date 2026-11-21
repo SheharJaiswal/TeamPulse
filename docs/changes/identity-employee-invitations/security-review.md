@@ -1,6 +1,6 @@
 # Security review: invitation delivery-secret handling
 
-**Status:** Option A approved by owner on 2026-11-21, including provider-acceptance secret deletion and at-least-once delivery with possible duplicate messages. Production key protection/storage and backup/restore implementation remain deferred to cloud infrastructure setup. This document does not authorize implementation.
+**Status:** Option A and the local-development requirements were approved by the owner on 2026-11-21 and implemented. Provider-acceptance secret deletion and at-least-once delivery with possible duplicate messages are approved. Production key protection/storage and backup/restore remain deferred to cloud infrastructure setup.
 
 ## Decision under review
 
@@ -52,11 +52,8 @@ The alternative is synchronous delivery after the invitation transaction commits
 - Tests cover protect/unprotect round-trip, wrong purpose, tampered ciphertext, missing/rotated key, expired secret, stale generation, resend races, retry after process restart, log redaction and failure-closed behavior.
 - Production key storage, key protection, worker identity and backup/restore must be reviewed before production use.
 
-## Owner decisions still required
+## Decisions and deferred production controls
 
-1. Choose Option A (dedicated protected short-lived secret) or Option B (synchronous post-commit delivery with resend on failure).
-2. If Option A is selected, approve the Data Protection key-ring operating requirements and the production key-protection boundary; do not infer AWS/KMS selection.
-3. Approve whether provider acceptance is the deletion point for the live secret, with expiry cleanup as a backstop.
-4. Approve the stated at-least-once email behavior and possibility of duplicate messages.
+The owner approved Option A, the local persistent ignored key-ring requirements, provider-acceptance deletion with expiry cleanup as a backstop, and at-least-once email behavior (duplicate messages may occur) on 2026-11-21. The implementation is committed; this review is the security rationale and invariant record.
 
-No code, schema, key material, provider configuration or infrastructure is created by this review.
+Before production use, review and implement protected key storage, shared key-ring access, backup/restore, rotation/retention, worker identity and provider-specific operational controls. Production email provider selection and AWS/KMS integration remain deferred and are not implied by this approval.
