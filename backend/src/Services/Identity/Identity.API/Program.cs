@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.IO;
 using System.Text;
 using Amazon.EventBridge;
 using Identity.API.BackgroundServices;
@@ -10,6 +11,7 @@ using Identity.Infrastructure.Messaging;
 using Identity.Infrastructure.Persistence;
 using Identity.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +33,16 @@ var connectionString = builder.Configuration.GetConnectionString("IdentityDataba
 
 builder.Services.AddDbContextFactory<IdentityDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+var keyRingPathSetting = builder.Configuration["DataProtection:KeyRingPath"] ?? "./.keys";
+var keyRingPath = Path.GetFullPath(keyRingPathSetting, builder.Environment.ContentRootPath);
+Directory.CreateDirectory(keyRingPath);
+if (OperatingSystem.IsLinux())
+    Directory.SetUnixFileMode(keyRingPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+builder.Services.AddDataProtection()
+    .SetApplicationName("TeamPulse.Identity")
+    .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+
+builder.Services.AddScoped<IInvitationTokenService, InvitationTokenService>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
