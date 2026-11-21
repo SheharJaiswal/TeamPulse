@@ -22,6 +22,22 @@ services:
       retries: 20
       start_period: 20s
 
+  dynamodb-local:
+    image: amazon/dynamodb-local:2.5.2
+    container_name: teampulse-dynamodb-local
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "./data"]
+    working_dir: /home/dynamodblocal
+    ports:
+      - "8000:8000"
+    volumes:
+      - teampulse-dynamodb-data:/home/dynamodblocal/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/shell/ >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
   rabbitmq:
     image: rabbitmq:4.1-management
     container_name: teampulse-rabbitmq
@@ -46,3 +62,4 @@ services:
 volumes:
   teampulse-mysql-data:
   teampulse-rabbitmq-data:
+  teampulse-dynamodb-data:
