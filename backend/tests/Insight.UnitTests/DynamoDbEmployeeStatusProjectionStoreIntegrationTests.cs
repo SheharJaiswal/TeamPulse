@@ -30,8 +30,8 @@ public sealed class DynamoDbEmployeeStatusProjectionStoreIntegrationTests(Dynamo
         });
         Assert.Equal(new[] { "PK", "SK", "employeeId", "isActive", "lifecycleVersion", "updatedAtUtc" },
             projection.Item.Keys.OrderBy(x => x).ToArray());
-        Assert.Equal($"EMPLOYEE#{employeeId:D}".ToLowerInvariant(), projection.Item["PK"].S);
-        Assert.Equal("false", projection.Item["isActive"].BOOL.ToString().ToLowerInvariant());
+        Assert.Equal($"EMPLOYEE#{employeeId.ToString("D").ToLowerInvariant()}", projection.Item["PK"].S);
+        Assert.False(projection.Item["isActive"].BOOL);
         Assert.Equal("1", projection.Item["lifecycleVersion"].N);
 
         var inbox = await client.GetItemAsync(new GetItemRequest
@@ -104,7 +104,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStoreIntegrationTests(Dynamo
 
     private static Dictionary<string, AttributeValue> InboxKey(Guid eventId) => new()
     {
-        ["PK"] = new() { S = $"EVENT#{eventId:D}".ToLowerInvariant() },
+        ["PK"] = new() { S = $"EVENT#{eventId.ToString("D").ToLowerInvariant()}" },
         ["SK"] = new() { S = "INBOX" }
     };
 }
