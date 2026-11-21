@@ -44,8 +44,10 @@
 - GitHub Actions CI #231 passed against code commit `55c192484534a54dd2aad62ccd2f1c0d26ab3774`; the full .NET suite passed: Identity 102, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **261 passed, 0 failed, 0 skipped**.
 - [CI #231](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900300510).
 
-## Additional header-validation regression coverage — CI pending
+## Additional header-validation regression coverage — CI #233 passed
 
 - Added a MySQL API-host integration test for whitespace-only and overlength idempotency keys, repeated Idempotency-Key values, and repeated X-Correlation-ID values.
 - Rejected requests are checked for unchanged employee status/version, no audit rows, and no outbox rows for the supplied correlation IDs.
-- Added acceptance criterion ILC-14 to the lifecycle specification. GitHub Actions verification is pending.
+- Added acceptance criterion ILC-14 to the lifecycle specification; the test passed in GitHub Actions CI #233.
+- CI #233 passed against code commit `d7dc8b8663e28e25c9beec395acd0ae48c628185`: Identity 103, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **262 passed, 0 failed, 0 skipped**.
+- [CI #233](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522/artifacts/14706141699).
