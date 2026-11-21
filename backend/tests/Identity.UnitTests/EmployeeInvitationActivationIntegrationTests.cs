@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Identity.Application.Abstractions;
 using Identity.Application.Contracts;
 using Identity.Infrastructure.Persistence;
@@ -18,7 +21,10 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
     [Fact]
     public async Task Activate_CreatesActiveEmployeeWithEmployeeRoleAndConsumesInvitationAtomically()
     {
-        using var factory = _fixture.CreateFactory();
+        var diagnostics = new ConcurrentQueue<string>();
+        using var baseFactory = _fixture.CreateFactory();
+        using var factory = baseFactory.WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.AddProvider(new ActivationLogProvider(diagnostics))));
         using var client = factory.CreateClient();
         await EnsureDatabaseAsync(client);
         var invitation = await CreateInvitationAsync(factory);
@@ -27,7 +33,9 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
             "/api/identity/invitations/activate",
             new { token = invitation.Token, password = "Strong-password-2026!" });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.OK,
+            $"Expected activation success but received {(int)response.StatusCode} {response.StatusCode}. " +
+            $"Activation diagnostics: {string.Join(" || ", diagnostics)}");
         Assert.Contains("account is active", await response.Content.ReadAsStringAsync());
 
         await using var scope = factory.Services.CreateAsyncScope();
@@ -164,6 +172,27 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
         var secret = await scope.ServiceProvider.GetRequiredService<IdentityDbContext>()
             .InvitationDeliverySecrets.SingleAsync(item => item.InvitationId == result.Invitation!.InvitationId);
         return (result.Invitation.InvitationId, email, tokenService.Unprotect(secret.ProtectedToken));
+    }
+
+
+    private sealed class ActivationLogProvider(ConcurrentQueue<string> entries) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new ActivationLogger(categoryName, entries);
+        public void Dispose() { }
+
+        private sealed class ActivationLogger(string categoryName, ConcurrentQueue<string> entries) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Error;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+                Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (IsEnabled(logLevel) && categoryName.Contains("EmployeeInvitationActivationController",
+                        StringComparison.Ordinal))
+                    entries.Enqueue(formatter(state, null));
+            }
+        }
     }
 
     private static Task<HttpResponseMessage> ActivateAsync(HttpClient client, string token) =>

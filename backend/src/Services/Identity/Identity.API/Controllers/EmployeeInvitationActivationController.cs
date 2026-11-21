@@ -39,8 +39,9 @@ public sealed class EmployeeInvitationActivationController(
         catch (Exception exception)
         {
             logger.LogError(
-                "Employee invitation activation failed unexpectedly. ErrorType={ErrorType}",
-                exception.GetType().Name);
+                "Employee invitation activation failed unexpectedly. ErrorType={ErrorType} InnerErrorType={InnerErrorType}",
+                exception.GetType().Name,
+                exception.InnerException?.GetType().Name ?? "none");
             throw;
         }
 
