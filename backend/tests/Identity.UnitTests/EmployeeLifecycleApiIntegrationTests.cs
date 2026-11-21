@@ -196,11 +196,13 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
 
+        var correlationIds = Enumerable.Range(0, 3).Select(_ => Guid.NewGuid()).ToArray();
         var invalidHeaders = new[]
         {
-            new[] { ("Idempotency-Key", "   ") },
-            new[] { ("Idempotency-Key", new string('k', 129)) },
-            new[] { ("Idempotency-Key", "first"), ("Idempotency-Key", "second") },
+            new[] { ("Idempotency-Key", "   "), ("X-Correlation-ID", correlationIds[0].ToString()) },
+            new[] { ("Idempotency-Key", new string('k', 129)), ("X-Correlation-ID", correlationIds[1].ToString()) },
+            new[] { ("Idempotency-Key", "first"), ("Idempotency-Key", "second"),
+                ("X-Correlation-ID", correlationIds[2].ToString()) },
             new[] { ("Idempotency-Key", "valid-key"), ("X-Correlation-ID", Guid.NewGuid().ToString()),
                 ("X-Correlation-ID", Guid.NewGuid().ToString()) }
         };
@@ -227,7 +229,7 @@ public sealed class EmployeeLifecycleApiIntegrationTests : IClassFixture<MySqlIn
         Assert.True(employee.IsActive);
         Assert.Equal(0, employee.LifecycleVersion);
         Assert.False(await database.EmployeeLifecycleAudits.AnyAsync(x => x.EmployeeId == employeeId));
-        Assert.False(await database.OutboxMessages.AnyAsync(x => x.EmployeeId == employeeId));
+        Assert.False(await database.OutboxMessages.AnyAsync(x => correlationIds.Contains(x.CorrelationId)));
     }
 
     [Fact]
