@@ -73,7 +73,7 @@ public sealed class EventTrackingOutboxDispatcher(
                             var exponent = Math.Min(message.AttemptCount - 1, 20);
                             var ceiling = Math.Min(_options.BaseRetryDelaySeconds * Math.Pow(2, exponent), _options.MaxRetryDelaySeconds);
                             var multiplier = result.Outcome == EventTrackingPublishOutcome.SystemicFailure ? 1d : Random.Shared.NextDouble();
-                            await store.ScheduleRetryAsync(message.EventId, message.LeaseToken, now.AddSeconds(Math.Max(1, ceiling * multiplier)), result.ErrorCode, stoppingToken);
+                            await store.ScheduleRetryAsync(message.EventId, message.LeaseToken, now, now.AddSeconds(Math.Max(1, ceiling * multiplier)), result.ErrorCode, stoppingToken);
                             if (result.Outcome == EventTrackingPublishOutcome.SystemicFailure)
                                 delay = TimeSpan.FromSeconds(Math.Min(_options.MaxRetryDelaySeconds, _options.BaseRetryDelaySeconds * 2));
                         }
