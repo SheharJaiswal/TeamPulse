@@ -28,7 +28,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStoreIntegrationTests(Dynamo
             Key = ProjectionKey(employeeId),
             ConsistentRead = true
         });
-        Assert.Equal(new[] { "PK", "SK", "employeeId", "isActive", "lifecycleVersion", "updatedAtUtc" },
+        Assert.Equal(new[] { "PK", "SK", "employeeId", "isActive", "lifecycleVersion", "updatedAtUtc" }.OrderBy(x => x).ToArray(),
             projection.Item.Keys.OrderBy(x => x).ToArray());
         Assert.Equal($"EMPLOYEE#{employeeId.ToString("D").ToLowerInvariant()}", projection.Item["PK"].S);
         Assert.False(projection.Item["isActive"].BOOL);
@@ -40,7 +40,7 @@ public sealed class DynamoDbEmployeeStatusProjectionStoreIntegrationTests(Dynamo
             Key = InboxKey(lifecycleEvent.EventId),
             ConsistentRead = true
         });
-        Assert.Equal(new[] { "PK", "SK", "employeeId", "eventId", "eventType", "lifecycleVersion", "processedAtUtc", "schemaVersion" },
+        Assert.Equal(new[] { "PK", "SK", "employeeId", "eventId", "eventType", "lifecycleVersion", "processedAtUtc", "schemaVersion" }.OrderBy(x => x).ToArray(),
             inbox.Item.Keys.OrderBy(x => x).ToArray());
         Assert.Equal(8, inbox.Item.Count);
     }
