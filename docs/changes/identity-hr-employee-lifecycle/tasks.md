@@ -21,6 +21,7 @@
 - [x] Add unit tests for lifecycle version transitions.
 - [x] Add MySQL integration tests for deactivate/reactivate, atomic rollback, no-op, replay, conflicting key reuse and concurrent retries.
 - [x] Add API integration tests for anonymous, Employee, OrganizationAdmin and HrAdmin authorization, JWT actor attribution and request validation.
+- [x] Add MySQL API-host tests for blank/overlength reason codes, overlength notes, no-mutation guarantees on 400 responses, and accepted maximum-length values with reason-code trimming.
 - [x] Run restore, Release build, Compose validation and full Testcontainers suite in GitHub Actions run #72.
 - [x] Record exact CI evidence: restore passed; Release build had 0 warnings/0 errors; Compose validation passed; 56 tests passed, 0 failed, 0 skipped.
 - [x] Update Identity API/service contracts and project checkpoint with resulting code commit SHA.
