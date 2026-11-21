@@ -35,7 +35,7 @@ ORDER BY CreatedAtUtc, EventId LIMIT {batchSize} FOR UPDATE SKIP LOCKED").ToList
         return result;
     }
     public Task<bool> MarkPublishedAsync(Guid id, Guid token, DateTime atUtc, CancellationToken ct) => UpdateAsync(id, row => row.TryMarkPublished(token, atUtc), ct);
-    public Task<bool> ScheduleRetryAsync(Guid id, Guid token, DateTime atUtc, string code, CancellationToken ct) => UpdateAsync(id, row => row.TryScheduleRetry(token, atUtc, code), ct);
+    public Task<bool> ScheduleRetryAsync(Guid id, Guid token, DateTime attemptedAtUtc, DateTime retryAtUtc, string code, CancellationToken ct) => UpdateAsync(id, row => row.TryScheduleRetry(token, attemptedAtUtc, retryAtUtc, code), ct);
     public Task<bool> QuarantineAsync(Guid id, Guid token, DateTime atUtc, string code, CancellationToken ct) => UpdateAsync(id, row => row.TryQuarantine(token, atUtc, code), ct);
     private async Task<bool> UpdateAsync(Guid id, Func<EventTrackingOutboxMessage, bool> transition, CancellationToken ct)
     {
