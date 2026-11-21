@@ -1,3 +1,12 @@
+## Identity lifecycle header-validation tests — CI pending
+
+- Added API-host integration coverage for whitespace-only and overlength idempotency keys, repeated idempotency headers and repeated correlation headers. Rejected requests must leave employee state/version, audit and correlation-scoped outbox unchanged.
+- Added specification acceptance criterion ILC-14 and updated the lifecycle task checklist.
+- Code commits: `7c36d77a4a82c705ee3976ee6582ba51ac882562` and `d7dc8b8663e28e25c9beec395acd0ae48c628185`. CI verification is pending; no local .NET test result is available.
+- No production code, schema, queue topology, persistent broker or AWS resource was changed.
+
+Updated: 2026-11-21
+
 ## Identity lifecycle request-validation boundary tests — CI #231 passed
 
 - Added MySQL API-host integration coverage for blank and overlength reason codes, overlength notes, and the guarantee that rejected requests do not mutate employee status, lifecycle audit or outbox rows.
