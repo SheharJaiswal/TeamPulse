@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace EventTracking.UnitTests;
 
-public sealed class EventTrackingApiFactory(string connectionString) : WebApplicationFactory<Program>
+public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -16,7 +16,10 @@ public sealed class EventTrackingApiFactory(string connectionString) : WebApplic
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:EventTrackingDatabase"] = connectionString,
-                ["EventTrackingConsumer:Enabled"] = "false"
+                ["EventTrackingConsumer:Enabled"] = (rabbitMqUri is not null).ToString(),
+                ["EventTrackingConsumer:Uri"] = rabbitMqUri ?? string.Empty,
+                ["EventTrackingConsumer:ReconnectDelayMilliseconds"] = "250",
+                ["EventTrackingConsumer:ConnectionTimeoutMilliseconds"] = "1000"
             });
         });
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -10,6 +11,8 @@ using EventTracking.Application.Contracts;
 using EventTracking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RabbitMQ.Client;
+using Testcontainers.RabbitMq;
 using Xunit;
 
 namespace EventTracking.UnitTests;
@@ -122,5 +125,58 @@ public sealed class EventTrackingApiStartupIntegrationTests(EventTrackingMySqlFi
         Assert.False(projection.IsActive);
         Assert.Equal(3, projection.LifecycleVersion);
         Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == replayOnlyEmployeeId));
+    }
+
+    [Fact]
+    public async Task ApiHost_ConsumerHealthIsIndependentFromDatabaseReadiness()
+    {
+        await using var broker = new RabbitMqBuilder()
+            .WithImage("rabbitmq:4.1-management")
+            .WithUsername("teampulse")
+            .WithPassword("local_rabbitmq_password")
+            .Build();
+        await broker.StartAsync();
+
+        var brokerUri = broker.GetConnectionString();
+        var connectionFactory = new ConnectionFactory { Uri = new Uri(brokerUri) };
+        await using (var connection = await connectionFactory.CreateConnectionAsync("TeamPulse.EventTracking.HealthTests"))
+        await using (var channel = await connection.CreateChannelAsync())
+        {
+            await channel.QueueDeclareAsync(
+                "teampulse.event-tracking.events",
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: new Dictionary<string, object?> { ["x-queue-type"] = "quorum" });
+        }
+
+        using var factory = new EventTrackingApiFactory(fixture.ConnectionString, brokerUri);
+        using var client = factory.CreateClient();
+
+        await WaitForStatusAsync(client, "/health/consumer", HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
+
+        await broker.StopAsync();
+
+        await WaitForStatusAsync(client, "/health/consumer", HttpStatusCode.ServiceUnavailable);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
+    }
+
+    private static async Task WaitForStatusAsync(
+        HttpClient client,
+        string path,
+        HttpStatusCode expectedStatus,
+        int timeoutSeconds = 20)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+        while (DateTime.UtcNow < deadline)
+        {
+            using var response = await client.GetAsync(path);
+            if (response.StatusCode == expectedStatus)
+                return;
+            await Task.Delay(100);
+        }
+
+        Assert.Fail($"Endpoint {path} did not reach expected status {(int)expectedStatus}.");
     }
 }

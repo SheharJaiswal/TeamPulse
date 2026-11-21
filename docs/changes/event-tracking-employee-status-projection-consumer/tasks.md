@@ -25,9 +25,9 @@
 - [x] Add RabbitMQ Testcontainers coverage for post-processing acknowledgement, terminal-outcome DLQ confirmation, transient retry success/exhaustion, failed DLQ route redelivery and log privacy.
 - [x] Verify API-host startup with GitHub Actions CI #137: all 17 EventTracking tests passed, including the fresh MySQL 8.4 API-host migration/readback test; total solution tests 195 passed.
 - [x] Verify RabbitMQ consumer integration suite with GitHub Actions CI #140 attempt 2: EventTracking 24, Habit 24, Identity 100 and Challenge 54 tests passed; 14 Python topology tests passed.
-- [x] Add production processor replay integration test against MySQL 8.4 inbox, including a conflicting duplicate payload proving duplicate delivery does not mutate projection state (CI #141 pending).
+- [ ] Verify production processor replay integration test against MySQL 8.4 inbox, including conflicting duplicate payload (CI #141 running).
+- [ ] Verify actual API-host consumer health isolation against RabbitMQ and MySQL (CI #142 pending).
 - [ ] Add commit-before-ack broker interruption/replay integration test using the actual persistent inbox.
-- [ ] Add actual-host consumer health isolation test.
 - [ ] Review full CI test output and acceptance matrix before marking this SDD complete.
 
 ## Acceptance mapping
