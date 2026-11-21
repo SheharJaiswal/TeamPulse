@@ -46,6 +46,25 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
 
 builder.Services.AddSingleton(TimeProvider.System);
+var invitationEmailOptions = builder.Configuration.GetSection(InvitationEmailOptions.SectionName)
+    .Get<InvitationEmailOptions>() ?? new InvitationEmailOptions();
+invitationEmailOptions.Validate();
+builder.Services.Configure<InvitationEmailOptions>(
+    builder.Configuration.GetSection(InvitationEmailOptions.SectionName));
+builder.Services.AddScoped<IInvitationDeliveryQueue, InvitationDeliveryQueue>();
+if (invitationEmailOptions.Enabled)
+{
+    builder.Services.AddSingleton<IInvitationEmailSender>(_ => new SmtpInvitationEmailSender(
+        invitationEmailOptions.Host,
+        invitationEmailOptions.Port,
+        invitationEmailOptions.EnableSsl,
+        invitationEmailOptions.UserName,
+        invitationEmailOptions.Password,
+        invitationEmailOptions.FromAddress,
+        invitationEmailOptions.FromName,
+        invitationEmailOptions.ActivationBaseUrl));
+    builder.Services.AddHostedService<InvitationDeliveryWorker>();
+}
 builder.Services.AddScoped<IInvitationTokenService, InvitationTokenService>();
 builder.Services.AddScoped<IEmployeeInvitationService, EmployeeInvitationService>();
 builder.Services.AddScoped<IEmployeeInvitationActivationService, EmployeeInvitationActivationService>();
