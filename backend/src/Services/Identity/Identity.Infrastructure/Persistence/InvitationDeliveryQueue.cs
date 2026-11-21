@@ -28,9 +28,10 @@ public sealed class InvitationDeliveryQueue(
         var secrets = await database.InvitationDeliverySecrets
             .FromSqlInterpolated($@"
 SELECT s.* FROM invitation_delivery_secrets s
-INNER JOIN employee_invitations i ON i.Id = s.InvitationId
-WHERE i.Status = 'Pending'
-  AND i.ExpiresAtUtc > {nowUtc}
+WHERE EXISTS (
+    SELECT 1 FROM employee_invitations i
+    WHERE i.Id = s.InvitationId AND i.Status = 'Pending' AND i.ExpiresAtUtc > {nowUtc}
+  )
   AND (s.NextAttemptAtUtc IS NULL OR s.NextAttemptAtUtc <= {nowUtc})
   AND (s.LeaseExpiresAtUtc IS NULL OR s.LeaseExpiresAtUtc <= {nowUtc})
 ORDER BY s.CreatedAtUtc, s.Id
