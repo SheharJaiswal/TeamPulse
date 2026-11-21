@@ -4,6 +4,18 @@
 
   export let data: PageData;
   export let form: ActionData;
+  let isSubmitting = false;
+
+  function handleEnhance() {
+    isSubmitting = true;
+    return async ({ update }: { update: () => Promise<void> }) => {
+      try {
+        await update();
+      } finally {
+        isSubmitting = false;
+      }
+    };
+  }
 
   $: activeHabits = data.habits.filter((habit) => habit.status === 1);
   $: habitNames = new Map(data.habits.map((habit) => [habit.id, habit.name]));
@@ -47,7 +59,7 @@
       </div>
 
       {#if formMessage}<div class="alert" role="alert">{formMessage}</div>{/if}
-      {#if form && 'success' in form && form.success}<div class="alert" role="status">Activity recorded successfully.</div>{/if}
+      {#if form && 'success' in form && form.success}<div class="alert success" role="status">Activity recorded successfully.</div>{/if}
 
       <section class="create-section">
         <div class="create-copy">
@@ -59,7 +71,7 @@
         {#if activeHabits.length === 0}
           <div class="empty-state"><h3>No active habits yet</h3><p>Create a habit before recording activity.</p><a class="primary-button" href="/habits#create-habit">Create a habit →</a></div>
         {:else}
-          <form class="create-form" method="POST" action="?/submit" use:enhance>
+          <form class="create-form" method="POST" action="?/submit" use:enhance={handleEnhance} aria-busy={isSubmitting}>
             <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
             <div class="form-field full">
               <label for="activity-habit">Habit</label>
@@ -77,7 +89,7 @@
               <label for="activity-quantity">Quantity</label>
               <input id="activity-quantity" name="quantity" type="number" min="1" max="1000" value="1" required />
             </div>
-            <div class="form-actions full"><button class="primary-button" type="submit">Record activity →</button></div>
+            <div class="form-actions full"><button class="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Recording…' : 'Record activity →'}</button></div>
           </form>
         {/if}
       </section>
