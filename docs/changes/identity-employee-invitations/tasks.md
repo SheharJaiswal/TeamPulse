@@ -38,6 +38,7 @@
 - [x] Capture the hosted-worker socket error: CI #44927595688 reports ConnectionRefused (native code 111) on all three SMTP attempts, while the direct SMTP probe succeeds; add a post-timeout TCP reachability check to distinguish a stopped listener from worker-only connection behavior.
 - [x] CI #44928325765 confirms the SMTP port is reachable after all three worker failures (post-timeout TCP probe says Connected); add bounded Mailpit container-log capture to the failure diagnostic to determine whether the listener restarted or observed the worker's connection attempts.
 - [ ] Identify the underlying endpoint/connectivity failure before changing delivery behavior.
+- [ ] Compare real SMTP sends before API-host startup, after hosted-worker startup, and after worker failure to determine whether the mapped endpoint becomes intermittently unavailable or only fails from the hosted worker.
 - [x] Update the broader Identity API contract and add the local Mailpit invitation-delivery runbook; document that hosted-worker SMTP delivery remains unverified.
 - [ ] Add operational verification for application restart during a leased delivery and SMTP outage recovery.
 - [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits after the SMTP failure is diagnosed and corrected.

@@ -46,26 +46,9 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         var smtpPort = mailpit.GetMappedPublicPort(1025);
         var apiPort = mailpit.GetMappedPublicPort(8025);
 
-        // Prove the mapped SMTP endpoint accepts a real message before involving
-        // the hosted worker; this separates container/network failures from worker failures.
-        var smtpProbe = new SmtpInvitationEmailSender(
-            "127.0.0.1", smtpPort, false, null, null,
-            "no-reply@teampulse.local", "TeamPulse");
-        try
-        {
-            await smtpProbe.SendAsync(
-                $"smtp-probe-{Guid.NewGuid():N}@example.com",
-                "SMTP connectivity probe",
-                "http://localhost:5173/activate?token=probe",
-                CancellationToken.None);
-        }
-        catch (Exception exception)
-        {
-            throw new Xunit.Sdk.XunitException(
-                $"Mailpit SMTP endpoint rejected a direct probe. ErrorType={exception.GetType().Name}, " +
-                $"InnerErrorType={exception.InnerException?.GetType().Name ?? "none"}, " +
-                $"SmtpStatus={(exception is System.Net.Mail.SmtpException smtp ? smtp.StatusCode.ToString() : "not-smtp")}.");
-        }
+        // Verify the mapped SMTP endpoint before starting the API host.
+        var smtpProbeBeforeHost = await SendSmtpProbeAsync(smtpPort, "smtp-probe-before-host");
+        Assert.Equal("Accepted", smtpProbeBeforeHost);
 
         var settings = new Dictionary<string, string?>
         {
@@ -100,6 +83,11 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
                 service => service is InvitationDeliveryWorker);
         }
 
+        // Repeat the real SMTP send after the hosted worker has started but before
+        // an invitation is queued. This isolates endpoint changes caused by host startup.
+        var smtpProbeAfterHostStartup = await SendSmtpProbeAsync(smtpPort, "smtp-probe-after-host");
+        Assert.Equal("Accepted", smtpProbeAfterHostStartup);
+
         var email = $"mailpit-{Guid.NewGuid():N}@example.com";
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
@@ -128,6 +116,7 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         }
         catch (TimeoutException)
         {
+            var smtpProbeAfterTimeout = await SendSmtpProbeAsync(smtpPort, "smtp-probe-after-timeout");
             await using var diagnosticScope = factory.Services.CreateAsyncScope();
             var database = diagnosticScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
             var secret = await database.InvitationDeliverySecrets
@@ -142,7 +131,8 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
                 $"Invitation delivery did not reach Mailpit. Attempts={secret?.AttemptCount}, " +
                 $"LastErrorCode={secret?.LastErrorCode ?? "none"}, LeaseActive={secret?.LeaseExpiresAtUtc > DateTime.UtcNow}, " +
                 $"MailpitMessageCount={messageCount}, SmtpEndpointAfterTimeout={smtpEndpointAfterTimeout}, " +
-                $"MailpitLogs={mailpitLogs}, WorkerDiagnostics={string.Join(" || ", workerLogCapture.Messages)}.");
+                $"MailpitLogs={mailpitLogs}, SmtpProbeAfterHostStartup={smtpProbeAfterHostStartup}, " +
+                $"SmtpProbeAfterTimeout={smtpProbeAfterTimeout}, WorkerDiagnostics={string.Join(" || ", workerLogCapture.Messages)}.");
         }
         Assert.Matches("^[A-Za-z0-9_-]{43}$", firstToken);
 
@@ -173,6 +163,33 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         using var loginDocument = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
         Assert.Equal("Employee",
             loginDocument.RootElement.GetProperty("employee").GetProperty("role").GetString());
+    }
+
+    private static async Task<string> SendSmtpProbeAsync(int smtpPort, string recipientPrefix)
+    {
+        var probe = new SmtpInvitationEmailSender(
+            "127.0.0.1", smtpPort, false, null, null,
+            "no-reply@teampulse.local", "TeamPulse");
+        try
+        {
+            await probe.SendAsync(
+                $"{recipientPrefix}-{Guid.NewGuid():N}@example.com",
+                "SMTP connectivity probe",
+                "http://localhost:5173/activate?token=probe",
+                CancellationToken.None);
+            return "Accepted";
+        }
+        catch (Exception exception)
+        {
+            var smtpException = exception as System.Net.Mail.SmtpException;
+            var socketException = exception as SocketException ??
+                exception.InnerException as SocketException;
+            return $"Failed:ErrorType={exception.GetType().Name}," +
+                $"InnerErrorType={exception.InnerException?.GetType().Name ?? "none"}," +
+                $"SmtpStatus={smtpException?.StatusCode.ToString() ?? "not-smtp"}," +
+                $"SocketError={socketException?.SocketErrorCode.ToString() ?? "not-socket"}," +
+                $"SocketNativeErrorCode={socketException?.NativeErrorCode.ToString() ?? "none"}";
+        }
     }
 
     private static string Tail(string value, int maxLength) =>
