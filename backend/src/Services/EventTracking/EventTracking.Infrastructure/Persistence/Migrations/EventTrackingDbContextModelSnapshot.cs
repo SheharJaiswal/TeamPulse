@@ -29,6 +29,20 @@ partial class EventTrackingDbContextModelSnapshot : ModelSnapshot
             b.Property<DateTime>("ProcessedAtUtc").HasColumnType("datetime(6)").HasColumnName("processed_at_utc");
             b.HasKey("EventId"); b.ToTable("processed_domain_events");
         });
+        modelBuilder.Entity("EventTracking.Domain.Entities.HabitActivitySubmission", b =>
+        {
+            b.Property<Guid>("Id").HasColumnType("char(36)").HasColumnName("id");
+            b.Property<Guid>("EmployeeId").IsRequired().HasColumnType("char(36)").HasColumnName("employee_id");
+            b.Property<Guid>("HabitId").IsRequired().HasColumnType("char(36)").HasColumnName("habit_id");
+            b.Property<DateOnly>("ActivityDate").HasColumnType("date").HasColumnName("activity_date");
+            b.Property<int>("Quantity").HasColumnType("int").HasColumnName("quantity");
+            b.Property<Guid>("IdempotencyKey").IsRequired().HasColumnType("char(36)").HasColumnName("idempotency_key");
+            b.Property<DateTime>("SubmittedAtUtc").HasColumnType("datetime(6)").HasColumnName("submitted_at_utc");
+            b.HasKey("Id");
+            b.HasIndex("EmployeeId", "HabitId", "ActivityDate").HasDatabaseName("ix_habit_activity_employee_habit_date");
+            b.HasIndex("EmployeeId", "IdempotencyKey").IsUnique().HasDatabaseName("ux_habit_activity_employee_idempotency");
+            b.ToTable("habit_activity_submissions");
+        });
 #pragma warning restore 612, 618
     }
 }

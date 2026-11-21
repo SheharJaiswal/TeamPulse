@@ -5,6 +5,7 @@ public sealed class EventTrackingDbContext(DbContextOptions<EventTrackingDbConte
 {
     public DbSet<EmployeeStatusProjection> EmployeeStatusProjections => Set<EmployeeStatusProjection>();
     public DbSet<ProcessedDomainEvent> ProcessedDomainEvents => Set<ProcessedDomainEvent>();
+    public DbSet<HabitActivitySubmission> HabitActivitySubmissions => Set<HabitActivitySubmission>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var projection = modelBuilder.Entity<EmployeeStatusProjection>();
@@ -23,5 +24,17 @@ public sealed class EventTrackingDbContext(DbContextOptions<EventTrackingDbConte
         inbox.Property(x => x.EmployeeId).HasColumnName("employee_id").HasColumnType("char(36)").IsRequired();
         inbox.Property(x => x.LifecycleVersion).HasColumnName("lifecycle_version").HasColumnType("bigint").IsRequired();
         inbox.Property(x => x.ProcessedAtUtc).HasColumnName("processed_at_utc").HasColumnType("datetime(6)").IsRequired();
+        var activity = modelBuilder.Entity<HabitActivitySubmission>();
+        activity.ToTable("habit_activity_submissions");
+        activity.HasKey(x => x.Id);
+        activity.Property(x => x.Id).HasColumnName("id").HasColumnType("char(36)");
+        activity.Property(x => x.EmployeeId).HasColumnName("employee_id").HasColumnType("char(36)").IsRequired();
+        activity.Property(x => x.HabitId).HasColumnName("habit_id").HasColumnType("char(36)").IsRequired();
+        activity.Property(x => x.ActivityDate).HasColumnName("activity_date").HasColumnType("date").IsRequired();
+        activity.Property(x => x.Quantity).HasColumnName("quantity").IsRequired();
+        activity.Property(x => x.IdempotencyKey).HasColumnName("idempotency_key").HasColumnType("char(36)").IsRequired();
+        activity.Property(x => x.SubmittedAtUtc).HasColumnName("submitted_at_utc").HasColumnType("datetime(6)").IsRequired();
+        activity.HasIndex(x => new { x.EmployeeId, x.IdempotencyKey }).IsUnique().HasDatabaseName("ux_habit_activity_employee_idempotency");
+        activity.HasIndex(x => new { x.EmployeeId, x.HabitId, x.ActivityDate }).HasDatabaseName("ix_habit_activity_employee_habit_date");
     }
 }

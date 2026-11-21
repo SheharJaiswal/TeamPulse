@@ -1,16 +1,21 @@
 using System;
 using System.Linq;
+using System.Text;
 using EventTracking.API.HealthChecks;
+using EventTracking.API.Security;
 using EventTracking.Application;
 using EventTracking.Application.Abstractions;
 using EventTracking.Infrastructure.Persistence;
 using EventTracking.Infrastructure.Messaging;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
+
 var builder = WebApplication.CreateBuilder(args);
 var consumerOptions = builder.Configuration.GetSection(EventTrackingRabbitMqConsumerOptions.SectionName)
     .Get<EventTrackingRabbitMqConsumerOptions>() ?? new EventTrackingRabbitMqConsumerOptions();
@@ -18,8 +23,33 @@ consumerOptions.Validate();
 
 var connectionString = builder.Configuration.GetConnectionString("EventTrackingDatabase")
     ?? throw new InvalidOperationException("EventTrackingDatabase connection string is missing.");
+var jwtOptions = builder.Configuration.GetSection(EventTrackingJwtOptions.SectionName).Get<EventTrackingJwtOptions>()
+    ?? new EventTrackingJwtOptions();
+jwtOptions.Validate();
+
 builder.Services.AddDbContextFactory<EventTrackingDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
+builder.Services.AddHttpClient("HabitApi", client =>
+{
+    var baseUrl = builder.Configuration["HabitApi:BaseUrl"] ?? "http://localhost:5102/";
+    client.BaseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/", UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true, ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true, ValidAudience = jwtOptions.Audience,
+            ValidateLifetime = true, ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+            NameClaimType = "name", RoleClaimType = "role", ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(consumerOptions);
 builder.Services.AddSingleton<EventTrackingRabbitMqConsumerStatus>();
@@ -28,6 +58,7 @@ builder.Services.AddScoped<EmployeeStatusProjectionStore>();
 builder.Services.AddScoped<IEmployeeStatusProjectionStore>(sp => sp.GetRequiredService<EmployeeStatusProjectionStore>());
 builder.Services.AddScoped<IEmployeeStatusProjectionReader>(sp => sp.GetRequiredService<EmployeeStatusProjectionStore>());
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
+builder.Services.AddScoped<IHabitActivitySubmissionStore, HabitActivitySubmissionStore>();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .Add(new HealthCheckRegistration("event-tracking-database",
@@ -43,6 +74,9 @@ await using (var database = await app.Services.GetRequiredService<IDbContextFact
 {
     await database.Database.MigrateAsync();
 }
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.MapHealthChecks("/health/consumer", new HealthCheckOptions { Predicate = check => check.Tags.Contains("consumer") });
