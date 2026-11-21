@@ -69,6 +69,21 @@ public sealed class ChallengeRabbitMqConsumerOptionsTests
         Assert.Equal(2, status.CompletedSessionCount);
     }
 
+    [Fact]
+    public void Status_TracksConnectionAttemptsAndEstablishedSessions()
+    {
+        var status = new ChallengeRabbitMqConsumerStatus();
+
+        status.MarkConnectionAttempt();
+        status.MarkConnectionAttempt();
+        status.MarkConnected();
+        status.MarkConnected();
+
+        Assert.Equal(2, status.ConnectionAttemptCount);
+        Assert.Equal(2, status.EstablishedSessionCount);
+        Assert.True(status.IsConnected);
+    }
+
     internal static ChallengeRabbitMqConsumerOptions ValidOptions() => new()
     {
         Enabled = true,
@@ -181,6 +196,8 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
             connectionTimeoutMilliseconds: 1000);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
         var completedSessionsBeforeBrokerStop = status.CompletedSessionCount;
+        var connectionAttemptsBeforeBrokerStop = status.ConnectionAttemptCount;
+        var establishedSessionsBeforeBrokerStop = status.EstablishedSessionCount;
 
         await PublishAsync(committedBody);
         await processor.FirstCommitCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -201,7 +218,24 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         // The duplicate outcome proves a new broker session has re-established a usable consumer
         // channel. Avoid polling IsConnected here: it is a point-in-time health signal, while replay
         // and the following sentinel prove the behavior required by this acceptance test.
-        await processor.DuplicateReplayObserved.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        var replayDeadline = DateTime.UtcNow.AddSeconds(30);
+        while (!processor.DuplicateReplayObserved.Task.IsCompleted && DateTime.UtcNow < replayDeadline)
+            await Task.Delay(25);
+
+        if (!processor.DuplicateReplayObserved.Task.IsCompleted)
+        {
+            var queueState = await _channel!.QueueDeclarePassiveAsync(QueueName);
+            throw new TimeoutException(
+                "Challenge replay did not occur. Connection attempts before/after: " +
+                connectionAttemptsBeforeBrokerStop + "/" + status.ConnectionAttemptCount +
+                "; established sessions before/after: " +
+                establishedSessionsBeforeBrokerStop + "/" + status.EstablishedSessionCount +
+                "; completed sessions: " + status.CompletedSessionCount +
+                "; source queue messages: " + queueState.MessageCount +
+                "; consumers: " + queueState.ConsumerCount + ".");
+        }
+
+        await processor.DuplicateReplayObserved.Task;
 
         // With prefetch=1, this sentinel can be processed only after the duplicate replay
         // completed and its source delivery was acknowledged.

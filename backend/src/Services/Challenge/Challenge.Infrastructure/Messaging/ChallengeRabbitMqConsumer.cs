@@ -77,6 +77,8 @@ public sealed class ChallengeRabbitMqConsumer(
 
     private async Task RunConsumerSessionCoreAsync(CancellationToken stoppingToken)
     {
+        status.MarkConnectionAttempt();
+
         var factory = new ConnectionFactory
         {
             Uri = new Uri(options.Uri, UriKind.Absolute),

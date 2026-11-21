@@ -1,5 +1,18 @@
 # Project Status
 
+## Latest continuation checkpoint — add reconnect progress diagnostics after duplicate replay timeout (CI pending)
+
+- Live branch HEAD before this increment: `aa602bdb3b99098827d9b07485c54d96f55d987c` (tree `af6a47b561addee81c9f1c7a0ef5d4aee37ee465`). CI #118 for test commit `6ffd928966659f228851f95cc1137d8f6bb6e145` failed: restore and Release build passed (0 warnings/errors); Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (44/45 Challenge, 24 Habit, 100 Identity), with zero skipped. [CI run #118](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44862518699).
+- The sole failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`, timing out at line 204 while awaiting `DuplicateReplayObserved` within 30 seconds after broker restart. The test had already observed cancellation of the in-flight callback and completion/disposal of the previous session. Replacing the transient `IsConnected` poll with the duplicate outcome did not resolve the failure; do not mark CEPS-11/CEPS-14 complete.
+- Added monotonic in-memory `ConnectionAttemptCount` and `EstablishedSessionCount` diagnostics. The consumer increments the attempt counter before each connection attempt and the established-session counter after `BasicConsumeAsync` succeeds. The bounded replay timeout now reports before/after counters and RabbitMQ source queue message/consumer counts, distinguishing failed reconnect attempts from a connected consumer that is not receiving the redelivery.
+- Added a deterministic unit test for both counters. The counters are not persisted or exposed through HTTP health responses; `IsConnected` remains the instantaneous consumer-health signal. No broker, acknowledgement, retry or DLQ semantics were changed.
+- Updated the approved SDD design/tasks with this diagnostic increment and the exact CI #118 evidence. The next CI run must be used to identify whether the consumer is failing to establish a new session or whether the redelivered message is not being delivered to an established consumer.
+- Local recheck: .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+- Scope remains the owner-approved Challenge employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially; privacy/legal sign-off remains a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
 ## Latest continuation checkpoint — assert replay behavior instead of transient reconnect health snapshot (CI pending)
 
 - Live branch HEAD before this increment: `cc5be875c398c5bf67de82a094a7b2af24494edc` (tree `a4e1a568e5cec059da7264dfb1c8fdf23c611e33`). CI #117 for that exact commit failed: Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (44/45 Challenge, 24 Habit, 100 Identity). [CI run #117](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44857671950).
