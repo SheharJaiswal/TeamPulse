@@ -110,6 +110,7 @@ The projection is a status signal, not a replacement for each service's resource
 | ILC-11 | Existing login guard continues to reject inactive employees. | Existing login integration test remains green. |
 | ILC-12 | Checked-in EF migration applies at startup and can be applied to a clean MySQL 8.4 database. | GitHub Actions MySQL Testcontainers suite, run #72. |
 | ILC-13 | Blank/overlength reason codes and overlength notes return 400 without mutating employee, audit or outbox; maximum accepted lengths succeed and the reason code is trimmed. | MySQL API-host integration tests. |
+| ILC-14 | Whitespace/overlength/repeated idempotency headers and repeated correlation headers return 400 before mutation. | MySQL API-host integration test verifies employee, audit and correlation-scoped outbox state remain unchanged. |
 
 ## Deferred work (not acceptance criteria for this increment)
 
