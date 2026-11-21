@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Challenge.Application.Abstractions;
 using Challenge.Application.Contracts;
 using Challenge.Infrastructure.Persistence;
+using Challenge.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -59,5 +60,38 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         Assert.True(projection.IsActive);
         Assert.Equal(7, projection.LifecycleVersion);
         Assert.Equal(processedAtUtc, projection.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public async Task ApiHost_ReportsHealthRoutesIndependentlyWhenRabbitMqIsUnavailable()
+    {
+        using var portReservation = new System.Net.Sockets.TcpListener(
+            System.Net.IPAddress.Loopback, 0);
+        portReservation.Start();
+        var brokerPort = ((System.Net.IPEndPoint)portReservation.LocalEndpoint).Port;
+        portReservation.Stop();
+
+        var brokerUri = $"amqp://guest:guest@127.0.0.1:{brokerPort}/";
+        using var factory = new ChallengeApiFactory(
+            fixture.ConnectionString,
+            consumerEnabled: true,
+            rabbitMqUri: brokerUri);
+        using var client = factory.CreateClient();
+
+        var consumerStatus = factory.Services.GetRequiredService<ChallengeRabbitMqConsumerStatus>();
+        var connectionDeadline = DateTime.UtcNow.AddSeconds(5);
+        while (consumerStatus.ConnectionAttemptCount == 0 && DateTime.UtcNow < connectionDeadline)
+            await Task.Delay(25);
+
+        Assert.True(consumerStatus.ConnectionAttemptCount > 0);
+        Assert.False(consumerStatus.IsConnected);
+
+        using var liveness = await client.GetAsync("/health/live");
+        using var readiness = await client.GetAsync("/health/ready");
+        using var consumer = await client.GetAsync("/health/consumer");
+
+        Assert.Equal(HttpStatusCode.OK, liveness.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, consumer.StatusCode);
     }
 }

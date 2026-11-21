@@ -5,7 +5,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace Challenge.UnitTests;
 
-public sealed class ChallengeApiFactory(string connectionString) : WebApplicationFactory<Program>
+public sealed class ChallengeApiFactory(
+    string connectionString,
+    bool consumerEnabled = false,
+    string? rabbitMqUri = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -16,7 +19,10 @@ public sealed class ChallengeApiFactory(string connectionString) : WebApplicatio
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:ChallengeDatabase"] = connectionString,
-                ["ChallengeConsumer:Enabled"] = "false"
+                ["ChallengeConsumer:Enabled"] = consumerEnabled ? "true" : "false",
+                ["ChallengeConsumer:Uri"] = rabbitMqUri ?? string.Empty,
+                ["ChallengeConsumer:ReconnectDelayMilliseconds"] = "250",
+                ["ChallengeConsumer:ConnectionTimeoutMilliseconds"] = "1000"
             });
         });
     }

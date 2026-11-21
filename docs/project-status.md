@@ -1,3 +1,12 @@
+## Challenge API health routes — HTTP-level independence regression added
+
+- Added a real `WebApplicationFactory` integration test using the Challenge MySQL 8.4 fixture and an enabled consumer pointed at a reserved-but-closed loopback AMQP port.
+- The test waits until the consumer has attempted a broker connection, then asserts `/health/live` and MySQL-only `/health/ready` return HTTP 200 while `/health/consumer` returns HTTP 503.
+- This strengthens CEPS-15 at the actual HTTP route/host boundary; it does not change production health-check behavior or enable the consumer by default.
+- CI verification is pending. No persistent RabbitMQ topology, MySQL volume or AWS resource was changed.
+
+Updated: 2026-11-21
+
 ## Insight consumer privacy regression and full-suite CI rerun verified
 
 - Added a broker-backed privacy regression test using sentinel raw payload, optional note, credential and connection-string values; the test captures consumer logs and asserts none of those values are emitted.

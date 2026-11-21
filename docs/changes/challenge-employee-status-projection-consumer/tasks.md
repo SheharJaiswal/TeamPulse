@@ -64,6 +64,7 @@
 - [x] Add a completed-session counter that advances after RabbitMQ channels/connection finish disposal; the established-session replay test waits for this signal before restarting the broker. Established-session disposal and replay were verified end-to-end in CI #122.
 - [x] RabbitMQ Testcontainers: restore the Challenge DLQ binding after a mandatory publish failure and verify the original unacknowledged delivery is processed and dead-lettered after reconnect; verified by `Consumer_ReconnectsAndDeadLettersRedeliveryAfterDeadLetterRouteIsRestored` in CI #129.
 - [x] Host health integration tests prove DB readiness is independent of RabbitMQ and consumer health is separately observable; CI #127.
+- [ ] Add a real Challenge API-host HTTP route regression: `/health/live` and MySQL-only `/health/ready` return 200 while the enabled RabbitMQ consumer cannot connect, and `/health/consumer` returns 503; CI verification pending.
 - [x] MySQL schema and consumer log privacy tests prove no raw event body/note is persisted or emitted, no broker credentials/URI are logged, and inbox retention has no automatic cleanup; CI #127/#129.
 - [x] CI #103 passed: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 10 Python tests and 144 .NET tests.
 - [x] CI #104 passed: Release build (0 warnings/errors), Compose validation, RabbitMQ topology, 10 Python tests and 146 .NET tests.
