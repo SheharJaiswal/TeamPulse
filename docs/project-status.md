@@ -687,3 +687,14 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - No local .NET/Docker test is claimed. Scope remains the approved projection-only SDD; open question 19, permanent inbox retention pending privacy/legal review, and deferred AWS EventBridge/SQS/CloudWatch remain unchanged.
 
 Updated: 2026-11-21
+
+
+## Event Tracking implementation checkpoint — foundation committed, CI pending
+
+- Owner explicitly approved the Event Tracking employee-status projection SDD on 2026-11-21. The approved proposal/spec/design/tasks are the implementation authority.
+- Added EventTracking API, Application, Domain, Infrastructure and UnitTests projects to `backend/TeamPulse.sln`.
+- Implemented the minimal four-field employee-status projection, processed-event inbox, schema-v1 lifecycle envelope validation, projection processor, transactional inbox/projection store with conditional lifecycle-version upsert, and projection reader.
+- Added the checked-in initial EF migration/model snapshot and API startup migration. Liveness and MySQL-only readiness endpoints are present; no activity/evidence/audit business endpoints were introduced.
+- Added `infra/mysql/init/03-event-tracking-database.sql` and its Compose mount for `teampulse_event_tracking`. Existing persistent MySQL volumes still require an explicit database/grant migration; init scripts only run on first data-directory initialization.
+- Added initial processor tests and MySQL 8.4 Testcontainers store tests. RabbitMQ consumer/topology migration has not been changed in this increment.
+- CI verification is pending. Local .NET/Docker execution is unavailable; use GitHub Actions as verification source.
