@@ -48,13 +48,18 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         using var factory = CreateFactory(habitApi);
         using var client = factory.CreateClient();
         var employeeId = Guid.NewGuid();
+        var habitId = Guid.NewGuid();
+        var bearerToken = CreateToken(employeeId);
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-            "Bearer", CreateToken(employeeId));
+            "Bearer", bearerToken);
 
-        using var response = await client.PostAsJsonAsync("/api/habit-activities", NewSubmission());
+        using var response = await client.PostAsJsonAsync("/api/habit-activities", NewSubmission(habitId));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal(1, habitApi.RequestCount);
+        Assert.Equal($"/api/habits/{habitId}", habitApi.LastRequestPath);
+        Assert.Equal("Bearer", habitApi.ForwardedAuthorizationScheme);
+        Assert.Equal(bearerToken, habitApi.ForwardedAuthorizationParameter);
 
         using var history = await client.GetAsync("/api/habit-activities");
         history.EnsureSuccessStatusCode();
@@ -85,9 +90,9 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     private EventTrackingApiFactory CreateFactory(StubHabitApiHandler handler) =>
         new(database.GetConnectionString(), habitApiHandlerFactory: () => handler);
 
-    private static object NewSubmission() => new
+    private static object NewSubmission(Guid? habitId = null) => new
     {
-        habitId = Guid.NewGuid(),
+        habitId = habitId ?? Guid.NewGuid(),
         activityDate = "2026-11-21",
         quantity = 1,
         idempotencyKey = Guid.NewGuid()
@@ -111,10 +116,16 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     {
         private int requestCount;
         public int RequestCount => Volatile.Read(ref requestCount);
+        public string? LastRequestPath { get; private set; }
+        public string? ForwardedAuthorizationScheme { get; private set; }
+        public string? ForwardedAuthorizationParameter { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref requestCount);
+            LastRequestPath = request.RequestUri?.PathAndQuery;
+            ForwardedAuthorizationScheme = request.Headers.Authorization?.Scheme;
+            ForwardedAuthorizationParameter = request.Headers.Authorization?.Parameter;
             if (throwNetworkError) throw new HttpRequestException("Simulated Habit API outage.");
             return Task.FromResult(new HttpResponseMessage(statusCode));
         }
