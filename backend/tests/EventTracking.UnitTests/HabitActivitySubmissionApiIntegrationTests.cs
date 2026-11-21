@@ -78,8 +78,8 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
 
         using var history = await client.GetAsync("/api/habit-activities");
         history.EnsureSuccessStatusCode();
-        var body = await history.Content.ReadAsStringAsync();
-        Assert.Equal("[]", body);
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        Assert.Empty(document.RootElement.EnumerateArray());
     }
 
     private EventTrackingApiFactory CreateFactory(StubHabitApiHandler handler) =>
