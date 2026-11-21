@@ -44,7 +44,7 @@
 
 ## Verification gaps
 
-- [ ] Dedicated API-host startup integration test authored in `ChallengeApiStartupIntegrationTests.cs`: starts the real `Program` against the fixture's fresh MySQL 8.4 database with the RabbitMQ consumer disabled, calls `/health/ready`, asserts both checked-in migrations were applied, writes through the production projection store and reads through its production reader. Awaiting CI runtime verification. Lower-level repeated migration-history and fresh-database health/readiness checks passed CI #128/#127.
+- [x] Dedicated API-host startup integration test authored in `ChallengeApiStartupIntegrationTests.cs`: starts the real `Program` against the fixture's fresh MySQL 8.4 database with the RabbitMQ consumer disabled, calls `/health/ready`, asserts both checked-in migrations were applied, writes through the production projection store and reads through its production reader. Verified in CI #133 after aligning the test timestamp to MySQL `datetime(6)` microsecond precision.
 - [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
 - [x] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert; concurrent same-fingerprint and conflicting-fingerprint tests passed CI #128.
 - [x] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation (existing integration tests passed CI #127).
@@ -134,3 +134,11 @@
 - The API-host integration test successfully started the real Challenge API against the fresh MySQL 8.4 Testcontainers database, returned HTTP 200 from `/health/ready`, observed both production-startup migrations, and successfully wrote/read the projection through the production store. Its sole assertion failure was timestamp precision: the .NET expected value retained 100-nanosecond ticks while MySQL `datetime(6)` stores microseconds (actual value differed by 8 ticks).
 - Corrected only test data precision by truncating the generated UTC timestamp to MySQL microsecond precision before passing it to the production store. Removed redundant double-disposal of the WebApplicationFactory while keeping deterministic disposal of factory and client.
 - The API-host acceptance remains unchecked until the corrected full CI run passes. No production behavior or schema was changed.
+
+
+## CI #133 passed — API-host startup/migration/projection acceptance closed
+
+- CI #133 for `adaef8ef7d9aeb8af05ce9a48278647e0bf4ad43` completed successfully: restore and Release build passed (0 warnings/errors), Docker Compose validation passed, RabbitMQ startup/topology passed, all 11 Python topology tests passed, and all 178 .NET tests passed (Challenge 54, Habit 24, Identity 100), with zero failures or skips. [CI #133](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44877124400).
+- The corrected API-host integration test passed against a fresh MySQL 8.4 Testcontainers database. It starts the real Challenge API, receives HTTP 200 from `/health/ready`, confirms both checked-in migrations were applied during host startup, and successfully writes/reads the employee-status projection through production DI registrations.
+- The original assertion mismatch was test-only: .NET timestamps carry 100-nanosecond ticks while MySQL `datetime(6)` persists microseconds. Test input is now aligned to the database precision; no production code or schema changed.
+- No local .NET/Docker execution is claimed; CI is the verification source. Projection-only scope remains unchanged. Open question 19, permanent inbox retention pending privacy/legal review, and deferred AWS EventBridge/SQS/CloudWatch remain unchanged.

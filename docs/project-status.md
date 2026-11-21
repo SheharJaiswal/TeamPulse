@@ -1,3 +1,17 @@
+## Latest continuation checkpoint — CI #133 passed; Challenge API-host acceptance verified
+
+- Branch: `feature/backend-foundation`; verified HEAD `adaef8ef7d9aeb8af05ce9a48278647e0bf4ad43`.
+- CI #133 completed successfully for that exact commit. Restore and Release build passed with 0 warnings/errors; Docker Compose configuration, RabbitMQ startup/topology and all 11 Python topology tests passed. All .NET tests passed: Challenge 54/54, Habit 24/24 and Identity 100/100 (178 total, zero failed/skipped). [CI #133](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44877124400).
+- The previously outstanding real Challenge API-host integration test is now verified against a fresh MySQL 8.4 Testcontainers database: host startup applied both checked-in migrations, `/health/ready` returned HTTP 200, and the production projection store/reader successfully wrote and read a projection.
+- CI #131 had reached the migration and projection assertions; its sole failure was a test timestamp retaining 100-nanosecond ticks beyond MySQL `datetime(6)` precision. The test timestamp was aligned to microseconds. CI #133 confirms the correction; no production behavior or schema was changed.
+- The Challenge employee-status projection consumer's approved SDD acceptance work is now verified through the API-host startup gap. Do not expand into Challenge programme/task/eligibility/participation APIs without a separate approved SDD.
+- Open question 19 (inactive employee historical reads versus new mutations) remains unresolved. Inbox retention remains permanent initially and requires privacy/legal review before production. EventBridge/SQS, CloudWatch and AWS provisioning remain deferred until owner cloud setup.
+- No local .NET or Docker execution is claimed; GitHub Actions is the verification source.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — CI #128 passed; consumer log-privacy test added
 
 - CI #128 passed for `0833da57289080ed8cdabe8c97fe98d1f12a7da5`: Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology, 11 Python topology tests and all 176 .NET tests (Challenge 52, Habit 24, Identity 100), zero failed/skipped. [CI #128](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44875036205).
