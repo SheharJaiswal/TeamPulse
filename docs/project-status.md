@@ -1,3 +1,14 @@
+## Notification lifecycle consumer and broker topology added
+
+- Added the opt-in Notification RabbitMQ consumer with manual ack after MySQL commit, bounded transient retry/backoff, reconnect, dedicated publisher-confirmed DLQ publishing and independent `/health/consumer`.
+- Added Notification quorum source/DLQ topology with delivery limit 5 and at-least-once dead-lettering. Updated only Notification topology; all other service queues retain their prior definitions.
+- Added Notification RabbitMQ/MySQL replay integration coverage, consumer options/retry tests, API-host consumer health coverage and Python topology contract assertions.
+- Added `docs/runbooks/notification-rabbitmq-queue-migration.md`. It requires a maintenance window, stopping publisher/consumer, buffering pending messages, recreating only Notification's immutable queue, restoring messages, and verifying before resuming. No live RabbitMQ queue or shared volume was modified.
+- Implementation commit containing consumer and topology: `b580ca14308d25cd72f63083a9839c62ef509998` and `22598c2d58e9befd537c29578c62f5e6f10017f6`; replay tests and checklist are included in the current execution.
+- CI verification pending. The last confirmed Notification API build was CI #158 before consumer addition; CI #161 is running against the consumer/topology increment.
+
+Updated: 2026-11-21
+
 ## Notification projection — MySQL persistence increment added
 
 - Added Notification.Infrastructure with EF Core 8/Pomelo, a checked-in initial migration/model snapshot, a transactional inbox + conditional lifecycle-version upsert store, and a read-only projection reader abstraction.

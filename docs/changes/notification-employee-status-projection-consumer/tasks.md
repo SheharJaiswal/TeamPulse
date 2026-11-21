@@ -18,11 +18,11 @@
 - [ ] Add Notification-owned MySQL database initialization, Compose mount and safe existing-volume migration runbook.
 - [x] Implement minimal projection/inbox domain entities, schema-v1 envelope validator and transport-independent application processor.
 - [x] Add checked-in EF migration and transactional projection/inbox store with reader abstraction; API startup migration remains pending.
-- [ ] Add opt-in RabbitMQ consumer with manual ack, bounded retries, reconnect and independent consumer health.
-- [ ] Upgrade only Notification source queue to quorum/DLX/DLQ with pending-message-preserving migration instructions.
+- [x] Add opt-in RabbitMQ consumer with manual ack, bounded retries, reconnect and independent consumer health.
+- [x] Upgrade only Notification source queue to quorum/DLX/DLQ definitions and add pending-message-preserving migration instructions.
 - [x] Add MySQL 8.4 Testcontainers coverage for migration idempotency/schema, duplicate event IDs, stale/equal ordering and concurrent maximum-version preservation; RabbitMQ/API-host tests remain pending.
 - [x] Add processor tests for strict recognized-field validation, additive unknown-field tolerance, transition consistency, note exclusion and zero persistence calls on invalid input.
-- [ ] Document local host/Compose run configuration and existing MySQL/RabbitMQ volume migrations.
+- [x] Document existing MySQL/RabbitMQ volume migrations; API host configuration is documented in appsettings and consumer is disabled by default.
 - [ ] Run full restore, Release build, solution tests, Compose validation and topology tests in CI.
 - [ ] Update acceptance evidence and docs/project-status.md.
 
@@ -67,3 +67,13 @@
 - [x] Persistence tests assert exact projection/inbox columns, idempotent migration, duplicate eventId, stale/equal version safety and concurrent maximum lifecycle version.
 - [ ] CI verification pending for persistence increment.
 - [ ] Add API host/startup migration, then RabbitMQ consumer/topology with safe persistent-broker migration.
+
+
+## Execution checkpoint — RabbitMQ consumer and topology
+
+- [x] Added opt-in Notification RabbitMQ consumer using RabbitMQ.Client 7.x, manual acknowledgements after committed processing, bounded transient retries, reconnect and independent consumer status/health.
+- [x] Added publisher-confirmed mandatory DLQ publishing with failure classification headers and source acknowledgement only after broker confirmation.
+- [x] Updated only Notification's source queue to quorum with delivery limit 5, at-least-once DLX and reject-publish overflow; added Notification quorum DLQ and exact routing binding.
+- [x] Added Notification RabbitMQ persistent-message replay integration test based on the already-proven Event Tracking harness, plus options/retry and API consumer-health tests.
+- [x] Added `docs/runbooks/notification-rabbitmq-queue-migration.md`; it requires pausing publisher/consumer and buffering pending messages before queue recreation. No live broker topology was changed.
+- [ ] Full CI verification pending for this increment.
