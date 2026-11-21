@@ -57,3 +57,17 @@ For local development only, Identity publishes the same complete envelope direct
 - Publisher-confirm tracking and mandatory routing must succeed before the outbox row is marked published.
 
 The local broker has one durable queue for each of Habit, Challenge, Event Tracking, Insight and Notification. The shared local definitions file only seeds development topology; each production service owns its queue and consumer access/failure policy. RabbitMQ and EventBridge are alternative transport adapters for the same immutable event envelope, not simultaneous publishers for one outbox worker.
+
+
+## Habit activity event schema v1
+
+Event Tracking emits `HabitActivityRecorded` when an employee's append-only activity submission is committed. The schema-v1 envelope uses the same top-level fields as the domain event contract. Its `payload` contains:
+- `employeeId` (UUID derived from the validated caller identity)
+- `submissionId` (UUID of the immutable activity submission)
+- `habitId` (UUID owned by Habit)
+- `activityDate` (employee-selected calendar date, serialized as ISO 8601 date)
+- `quantity` (integer from 1 through 1,000)
+
+The event is a private domain integration contract, not authorization to expose individual activity to managers or organization dashboards. Consumers must not infer streak or target-completion rules from this event; those remain separately undefined. The outbox row and activity submission commit in one Event Tracking MySQL transaction.
+
+For local RabbitMQ only, Event Tracking publishes the complete envelope to the existing durable topic exchange `teampulse.domain.events` with routing key `habit.activity.recorded`. A dedicated bounded quorum queue `teampulse.activity.events` is seeded by local definitions for future consumers; it has a separate DLQ and does not reuse lifecycle queues. Production transport remains deferred until cloud infrastructure and retention/privacy approvals are in place.

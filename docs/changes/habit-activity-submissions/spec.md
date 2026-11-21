@@ -2,39 +2,45 @@
 
 ## Status
 
-Draft / blocked by Open Question 20. The requirements below describe the intended capability; rules dependent on unresolved product decisions are deliberately not asserted.
+Approved by the project owner on 2026-11-21. See ADR-0003. The first implementation is in progress; remaining verification tasks are tracked in `tasks.md`.
 
 ## Actors and ownership
 
 - An authenticated employee may submit and view only their own activity.
-- Event Tracking owns submission records and history.
+- Event Tracking owns immutable activity submissions, history and the corresponding domain event outbox.
 - Habit owns habit definitions and validates ownership, status and configured date range.
 - Challenge owns challenge task completion and scoring; this change does not create or mutate challenge completion state.
 
 ## Functional requirements
 
-- HAS-01: An authenticated employee can submit a self-reported activity against a habit they own.
-- HAS-02: The employee identity is derived from the validated JWT `sub`; request data cannot select an employee.
-- HAS-03: Event Tracking validates the referenced habit through the Habit API and never accesses the Habit database directly.
-- HAS-04: A caller cannot submit activity against another employee's habit; inaccessible habits return a non-disclosing not-found response.
-- HAS-05: Event Tracking persists activity submissions in its own database.
-- HAS-06: An employee can retrieve their own activity history with optional habit and date filters.
+- HAS-01: An authenticated employee can submit a self-reported activity against an active habit they own.
+- HAS-02: Employee identity is derived from validated JWT `sub`; request data cannot select an employee.
+- HAS-03: Event Tracking validates the referenced habit through the Habit API using the caller's bearer token and never accesses the Habit database directly.
+- HAS-04: Inaccessible habits return a non-disclosing not-found response.
+- HAS-05: Event Tracking persists append-only submissions in its own database.
+- HAS-06: An employee can retrieve their own history with optional habit and date filters.
 - HAS-07: An employee cannot retrieve another employee's submission.
-- HAS-08: Duplicate request handling is idempotent according to the approved idempotency policy.
+- HAS-08: Idempotency keys are GUIDs unique per employee. An identical retry returns the original submission; reuse with different habit/date/quantity returns conflict.
 - HAS-09: The service enforces the local inactive-employee projection at its authorization boundary.
 - HAS-10: No manager or organization endpoint exposes individual submissions or personal habit details.
 - HAS-11: Database migrations are applied by the Event Tracking API at startup.
-- HAS-12: Persisting an accepted submission and its publishable domain event is atomic.
+- HAS-12: Submission and `HabitActivityRecorded` outbox event are persisted atomically.
+- HAS-13: The outbox dispatcher publishes versioned events at least once through configurable local RabbitMQ transport; consumers deduplicate by event ID.
 
-## Policy requirements pending owner decision
+## Approved submission policy (ADR-0003)
 
-The exact semantics for duplicate activity dates, multiple submissions, correction/deletion, backdating/time zones, quantity aggregation and target progress must be specified from Open Question 20 before HAS-01 through HAS-08 are implemented.
+- Multiple submissions per habit and calendar date are allowed.
+- Accepted submissions are immutable; no edit or delete endpoint exists.
+- Employee-selected activity date must be within the habit's configured start/end date range.
+- Activity date is a calendar date, not a UTC instant. Submission/occurrence timestamps are server-generated UTC values.
+- Quantity is an integer from 1 through 1,000.
+- Reuse of an employee-scoped idempotency key with different submission values returns HTTP 409.
+- Streak and target-progress calculations are explicitly out of scope.
 
 ## Non-functional requirements
 
-- Keep activity persistence and query paths within Event Tracking.
-- Use UTC timestamps for server-generated audit timestamps.
-- Use calendar dates for the activity date only after the time-zone interpretation is approved.
-- Preserve tenant/employee isolation and avoid leaking resource existence.
+- Keep activity persistence and queries within Event Tracking.
+- Preserve employee isolation and avoid leaking resource existence.
 - Do not require AWS/EventBridge for local development or CI.
-- Do not claim production retention compliance until the ADR-0002 legal/privacy review and deletion jobs are complete.
+- Use a transactional outbox, publisher confirms, persistent RabbitMQ messages, bounded retries and lease-safe acknowledgement.
+- Do not claim production retention compliance until ADR-0002 legal/privacy review and deletion jobs are complete.

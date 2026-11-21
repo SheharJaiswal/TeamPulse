@@ -25,7 +25,7 @@ public sealed class HabitActivitySubmissionStore(IDbContextFactory<EventTracking
         var correlationId = Guid.NewGuid();
         var occurredAtUtc = timeProvider.GetUtcNow().UtcDateTime;
         var payload = JsonSerializer.Serialize(new HabitActivityRecordedEvent(eventId, "HabitActivityRecorded", 1,
-            occurredAtUtc, correlationId, submission.EmployeeId, submission.Id, submission.HabitId, submission.ActivityDate, submission.Quantity));
+            occurredAtUtc, correlationId, new HabitActivityRecordedPayload(submission.EmployeeId, submission.Id, submission.HabitId, submission.ActivityDate, submission.Quantity)));
         database.HabitActivitySubmissions.Add(submission);
         database.EventTrackingOutboxMessages.Add(new EventTrackingOutboxMessage(eventId, "HabitActivityRecorded", 1, occurredAtUtc, correlationId, payload));
         try

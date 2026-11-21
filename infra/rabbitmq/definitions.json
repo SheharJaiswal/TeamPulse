@@ -124,6 +124,30 @@
       "arguments": {
         "x-queue-type": "quorum"
       }
+    },
+    {
+      "name": "teampulse.activity.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-delivery-limit": 5,
+        "x-dead-letter-exchange": "teampulse.domain.events.dlx",
+        "x-dead-letter-routing-key": "habit.activity.recorded.dead",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish",
+        "x-max-length": 100000
+      }
+    },
+    {
+      "name": "teampulse.activity.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
     }
   ],
   "bindings": [
@@ -197,6 +221,22 @@
       "destination": "teampulse.notification.events.dlq",
       "destination_type": "queue",
       "routing_key": "notification.employee.lifecycle.dead",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.activity.events",
+      "destination_type": "queue",
+      "routing_key": "habit.activity.recorded",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events.dlx",
+      "vhost": "/",
+      "destination": "teampulse.activity.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "habit.activity.recorded.dead",
       "arguments": []
     }
   ]
