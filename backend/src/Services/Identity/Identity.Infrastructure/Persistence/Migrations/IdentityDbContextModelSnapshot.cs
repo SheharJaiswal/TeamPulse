@@ -65,9 +65,16 @@ partial class IdentityDbContextModelSnapshot : ModelSnapshot
             b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime(6)");
             b.Property<int>("Generation").HasColumnType("int");
             b.Property<Guid>("InvitationId").HasColumnType("char(36)");
+            b.Property<int>("AttemptCount").HasColumnType("int");
+            b.Property<string>("LastErrorCode").HasMaxLength(100).HasColumnType("varchar(100)");
+            b.Property<Guid?>("LeaseToken").IsConcurrencyToken().HasColumnType("char(36)");
+            b.Property<DateTime?>("LeaseExpiresAtUtc").HasColumnType("datetime(6)");
+            b.Property<DateTime?>("NextAttemptAtUtc").HasColumnType("datetime(6)");
             b.Property<string>("ProtectedToken").IsRequired().HasColumnType("longtext");
             b.HasKey("Id");
             b.HasIndex("InvitationId").IsUnique();
+            b.HasIndex("NextAttemptAtUtc", "LeaseExpiresAtUtc", "CreatedAtUtc")
+                .HasDatabaseName("IX_invitation_delivery_queue");
             b.ToTable("invitation_delivery_secrets");
         });
 
