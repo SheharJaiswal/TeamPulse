@@ -14,6 +14,7 @@ using Identity.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
+using Identity.Infrastructure.Messaging;
 
 namespace Identity.UnitTests;
 
@@ -40,6 +41,28 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
 
         var smtpPort = mailpit.GetMappedPublicPort(1025);
         var apiPort = mailpit.GetMappedPublicPort(8025);
+
+        // Prove the mapped SMTP endpoint accepts a real message before involving
+        // the hosted worker; this separates container/network failures from worker failures.
+        var smtpProbe = new SmtpInvitationEmailSender(
+            "127.0.0.1", smtpPort, false, null, null,
+            "no-reply@teampulse.local", "TeamPulse");
+        try
+        {
+            await smtpProbe.SendAsync(
+                $"smtp-probe-{Guid.NewGuid():N}@example.com",
+                "SMTP connectivity probe",
+                "http://localhost:5173/activate?token=probe",
+                CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            throw new Xunit.Sdk.XunitException(
+                $"Mailpit SMTP endpoint rejected a direct probe. ErrorType={exception.GetType().Name}, " +
+                $"InnerErrorType={exception.InnerException?.GetType().Name ?? "none"}, " +
+                $"SmtpStatus={(exception is System.Net.Mail.SmtpException smtp ? smtp.StatusCode : "not-smtp")}.");
+        }
+
         var settings = new Dictionary<string, string?>
         {
             ["InvitationEmail:Enabled"] = "true",
