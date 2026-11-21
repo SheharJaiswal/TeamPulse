@@ -1,10 +1,12 @@
-## Identity lifecycle request-validation boundary tests — CI #231 pending
+## Identity lifecycle request-validation boundary tests — CI #231 passed
 
 - Added MySQL API-host integration coverage for blank and overlength reason codes, overlength notes, and the guarantee that rejected requests do not mutate employee status, lifecycle audit or outbox rows.
 - Added a maximum-boundary success case: a 100-character reason code and 1,000-character note are accepted; reason-code surrounding whitespace is normalized before persistence.
 - Tests are isolated using a dedicated correlation ID for outbox non-mutation assertions, avoiding assumptions about other test rows in the shared MySQL fixture.
-- GitHub Actions CI #231 is running against code commit `55c192484534a54dd2aad62ccd2f1c0d26ab3774`; restore passed and Release build was in progress at this checkpoint. Do not claim the tests are verified until the full workflow passes.
-- No production code, schema, queue topology, persistent broker or AWS resource was changed.
+- GitHub Actions CI #231 passed for code commit `55c192484534a54dd2aad62ccd2f1c0d26ab3774`: restore, Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests, pinned DynamoDB Local image pull and the full .NET suite passed.
+- Exact .NET results: Identity 102/102, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28, Insight 15/15 and Insight.QueueMigration.IntegrationTests 8/8 — **261 passed, 0 failed, 0 skipped**.
+- [CI #231](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900300510). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900300510/artifacts/14706002282).
+- No production code, schema, queue topology, persistent broker or AWS resource was changed by this test-coverage increment.
 
 Updated: 2026-11-21
 
