@@ -1,3 +1,10 @@
+## Identity idempotency-key character boundary tests — implementation pending
+
+- Next focused regression: accept one-character and 128-character visible-ASCII idempotency keys; reject control, DEL and non-ASCII characters before any lifecycle mutation.
+- Acceptance criterion ILC-15 is recorded in the Identity lifecycle specification. Implementation and CI verification are pending.
+
+Updated: 2026-11-21
+
 ## Identity lifecycle header-validation tests — CI #233 passed
 
 - Added API-host integration coverage for whitespace-only and overlength idempotency keys, repeated idempotency headers and repeated correlation headers. Rejected requests leave employee state/version unchanged, create no lifecycle audit rows and create no outbox rows for the supplied correlation IDs.
