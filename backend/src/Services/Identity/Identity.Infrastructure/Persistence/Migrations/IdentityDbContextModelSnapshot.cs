@@ -51,7 +51,7 @@ partial class IdentityDbContextModelSnapshot : ModelSnapshot
             b.Property<string>("PendingNormalizedEmail").HasMaxLength(320).HasColumnType("varchar(320)");
             b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("varchar(20)");
             b.Property<string>("TeamId").IsRequired().HasMaxLength(100).HasColumnType("varchar(100)");
-            b.Property<string>("TokenDigest").IsRequired().HasColumnType("char(64)");
+            b.Property<string>("TokenDigest").HasColumnType("char(64)");
             b.HasKey("Id");
             b.HasIndex("PendingNormalizedEmail").IsUnique();
             b.HasIndex("TokenDigest").IsUnique();
