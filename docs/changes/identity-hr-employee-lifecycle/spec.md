@@ -1,6 +1,6 @@
 # Specification: HR-Authorized Employee Lifecycle Commands
 
-**Status:** Implemented and verified by GitHub Actions run #72.  
+**Status:** Implemented; acceptance criteria ILC-01–ILC-20 verified by GitHub Actions CI #241 (268/268 full-suite tests passed).  
 **Authority:** ADR-0002, AGENTS.md, Identity service ownership and the domain event envelope.
 
 ## Authorization and field ownership
