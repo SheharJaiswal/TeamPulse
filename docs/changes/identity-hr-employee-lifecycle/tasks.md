@@ -2,7 +2,7 @@
 
 - [x] Add a controller-level test with an explicitly present X-Correlation-ID key and zero parsed StringValues.
 - [x] Assert HTTP 400 and verify IEmployeeLifecycleService.ExecuteAsync is never called.
-- [ ] Verify the regression in GitHub Actions; no CI result is claimed yet.
+- [x] Verify the regression in GitHub Actions; CI #241 passed after the controller/header test correction (Identity 109/109; full suite 268/268).
 
 ## ILC-20 — explicit malformed correlation-header validation verified
 
