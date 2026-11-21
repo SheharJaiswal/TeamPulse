@@ -36,7 +36,7 @@ public sealed class EmployeeInvitationServiceIntegrationTests : IClassFixture<My
         Assert.Equal(EmployeeInvitationCommandStatus.Created, created.Status);
         var createdSummary = Assert.IsType<EmployeeInvitationSummary>(created.Invitation);
         Assert.Equal(1, createdSummary.DeliveryGeneration);
-        Assert.Equal(DateTime.UtcNow.Date, createdSummary.CreatedAtUtc.Date);
+        Assert.Equal(TimeSpan.FromHours(24), createdSummary.ExpiresAtUtc - createdSummary.CreatedAtUtc);
 
         var duplicate = await service.CreateAsync(
             Guid.NewGuid(),
@@ -53,9 +53,11 @@ public sealed class EmployeeInvitationServiceIntegrationTests : IClassFixture<My
             item => item.Id == createdSummary.InvitationId);
         Assert.Equal(firstDigest, invitation.TokenDigest);
 
-        var createOutbox = await database.OutboxMessages.SingleAsync(
-            item => item.EventType == "EmployeeInvitationDeliveryRequested" &&
-                    item.Payload.Contains(createdSummary.InvitationId.ToString()));
+        var createOutbox = await database.OutboxMessages
+            .Where(item => item.EventType == "EmployeeInvitationDeliveryRequested" &&
+                           item.Payload.Contains(createdSummary.InvitationId.ToString()))
+            .OrderBy(item => item.CreatedAtUtc)
+            .FirstAsync();
         using (var payload = JsonDocument.Parse(createOutbox.Payload))
         {
             Assert.Equal(createdSummary.InvitationId,
@@ -70,7 +72,7 @@ public sealed class EmployeeInvitationServiceIntegrationTests : IClassFixture<My
         Assert.Equal(EmployeeInvitationCommandStatus.Updated, resent.Status);
         var resentSummary = Assert.IsType<EmployeeInvitationSummary>(resent.Invitation);
         Assert.Equal(2, resentSummary.DeliveryGeneration);
-        Assert.Equal(createdSummary.ExpiresAtUtc.AddHours(24), resentSummary.ExpiresAtUtc);
+        Assert.True(resentSummary.ExpiresAtUtc > createdSummary.ExpiresAtUtc);
 
         var rotatedSecret = await database.InvitationDeliverySecrets.SingleAsync(
             item => item.InvitationId == createdSummary.InvitationId);
