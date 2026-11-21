@@ -27,7 +27,7 @@
 - [x] Verify RabbitMQ consumer integration suite with GitHub Actions CI #140 attempt 2: EventTracking 24, Habit 24, Identity 100 and Challenge 54 tests passed; 14 Python topology tests passed.
 - [x] Verify production processor replay integration test against MySQL 8.4 inbox, including conflicting duplicate payload (CI #142: passed).
 - [ ] Verify actual API-host consumer health isolation against RabbitMQ and MySQL (CI #147's shutdown callback did not resolve the HTTP 503 timeout. CI #148 then exposed a false-positive HTTP 200: the test-host health check was healthy while the shared consumer status remained disconnected, indicating the optional consumer was disabled in the test host. The test factory now explicitly registers enabled consumer options after API registrations, and the test waits for a real connected session before asserting health. Production heartbeat remains five seconds).
-- [ ] Add commit-before-ack broker interruption/replay integration test using the actual persistent inbox.
+- [x] Add commit-before-ack broker interruption/replay integration test using the production processor and MySQL inbox, with same-container RabbitMQ restart and redelivery; CI verification pending.
 - [ ] Review full CI test output and acceptance matrix before marking this SDD complete.
 
 ## Acceptance mapping
