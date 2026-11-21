@@ -1,3 +1,12 @@
+## Latest verification checkpoint — CI #227 pending
+
+- CI #227 is running against code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`; latest branch HEAD is documentation-only commit `22539aa448e94a62ab38cd98e40919525c596662`.
+- Restore and Release build passed. Docker Compose validation, RabbitMQ startup/topology checks, all 19 Python RabbitMQ topology contract tests and the pinned DynamoDB Local image pull passed.
+- The full .NET test step (including the eight queue-migration Testcontainers tests) is still in progress. Do not mark the CI task complete or infer any test totals until the workflow reports success.
+- CI #227 includes the mandatory-return exception normalization and corrected Testcontainers `user_id` fixture. The bounded-resume test uses a temporary ledger file.
+- Added the AMQP `user_id` migration precondition to the utility README and runbook: inventory non-null values using an approved privacy-safe method and verify they match the migration connection identity. If incompatible or variable values exist, stop and seek explicit owner approval for a property-handling alternative; never silently strip/rewrite the property.
+- Next: obtain completed CI evidence, then jointly review utility behavior, the message-preserving runbook and exact current-topology contract tests. Keep the current durable classic Insight queue unchanged; no persistent broker or AWS resource may be changed as part of this verification.
+
 # Tasks: Insight Employee Status Projection Consumer
 
 **Status:** Approved by project owner on 2026-11-21.
