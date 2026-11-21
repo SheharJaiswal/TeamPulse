@@ -13,7 +13,7 @@ All invitation state, canonical employee creation and password hashing remain in
 - Tests: unit tests, MySQL 8.4 Testcontainers, API-host integration and delivery adapter tests.
 
 ## Token lifecycle
-Generate 32 random bytes with `RandomNumberGenerator`; encode for a URL-safe link. Persist only SHA-256(token bytes). The raw token exists only long enough to construct the outbound message and must never enter logs, exception text, API response bodies or persistent queues. Store UTC creation and expiry timestamps. Use an approved constant-time comparison or indexed digest lookup with fixed-length digest values.
+Generate 32 random bytes with `RandomNumberGenerator`; encode for a URL-safe link. Persist only SHA-256(token bytes) as the activation lookup value. The raw token must never enter logs, exception text, API response bodies, telemetry or ordinary business/lifecycle outbox records. Store UTC creation and expiry timestamps. Use fixed-length digest values and an approved constant-time comparison or indexed digest lookup.
 
 ## Persistence and concurrency
 Use an Identity-owned invitation table with a unique normalized-email constraint for pending invitations (or an equivalent transactionally enforced uniqueness strategy supported by MySQL). Add a unique normalized-email index for Employees if not already guaranteed by the existing model.
@@ -29,14 +29,16 @@ Redemption runs in one transaction:
 Resend rotates the digest and expiry in a transaction and invalidates the previous token before dispatch. Cancellation conditionally changes Pending to Cancelled. Redemption, resend and cancellation must serialize on the same invitation row so races have one deterministic winner. A unique Employee normalized-email constraint is the final guard.
 
 ## Delivery boundary
-Use an `IInvitationDelivery` abstraction. Development uses a local mail catcher in the Compose profile; the message contains the activation URL, but the API and application logs do not. Production adapter/provider is deliberately not selected in this change. Persist a delivery-outbox record in the same transaction as invitation creation/resend, then dispatch with retry and bounded backoff. Do not place the raw token in an ordinary business outbox or logs; if delivery requires recoverable secret material, design a separate encrypted, short-lived secret hand-off and threat-model it before implementation. A hash-only token record cannot reconstruct the link after process restart.
+Use an `IInvitationDelivery` abstraction. Development uses a local mail catcher in the Compose profile; the message contains the activation URL, but the API and application logs do not. Production adapter/provider is deliberately not selected in this change.
 
-## Important design issue — recoverable delivery secret
-Because the raw token must be delivered after a durable invitation write and delivery may retry after process restart, storing only a hash is not sufficient to reconstruct the activation URL. Before implementation, choose and approve one of:
-- encrypt the token using an application-managed key and store ciphertext in a short-lived delivery-secret record, deleting it after confirmed delivery/expiry; or
-- send synchronously after commit and accept that a delivery outage requires a new resend/token rotation.
+The ordinary outbox must contain only an opaque invitation reference and delivery generation/metadata; it must never contain the raw token, activation URL or protected token ciphertext. If delivery is asynchronous/retryable, recoverable token material requires a separate protected-secret store and a narrowly scoped unprotect boundary. See [security-review.md](security-review.md) for the threat model, required invariants and owner decisions.
 
-The preferred option is a dedicated encrypted, short-lived delivery-secret record with strict access and deletion, but it requires key management, rotation and threat-model review. Do not put plaintext token into the existing lifecycle outbox or generic logs. This design issue is an explicit implementation blocker until approved.
+## Delivery-secret operating model — candidate, not approved
+The preferred candidate is a dedicated short-lived delivery-secret row containing an ASP.NET Core Data Protection-protected token. The invitation table continues to store only the SHA-256 lookup digest. The Data Protection purpose must be specific to TeamPulse Identity invitation delivery and versioned; the key ring must be persistent, protected at rest, shared by all eligible workers/instances, backed up and retained long enough to decrypt outstanding records. Keys must not be committed or stored in the same database as ciphertext without an independent protection boundary.
+
+Only the delivery worker may read/unprotect the secret. Before each send it must verify the invitation is still Pending, unexpired and on the same generation as the outbox item. Resend atomically rotates the digest and protected secret. Delete the live secret after the provider accepts the message or after cancellation/expiry cleanup; provider acceptance does not prove recipient receipt. Email is at-least-once and duplicates may occur. Missing/invalid ciphertext or unavailable keys fail closed and require HR-initiated resend after recovery.
+
+This is a proposed operating model only. The owner must choose between this model and synchronous post-commit delivery with explicit resend on failure. Production key protection/storage, backup/restore and worker identity remain deployment decisions; no AWS/KMS integration is selected or provisioned.
 
 ## Rate limiting and responses
 Apply ASP.NET Core rate limiting to anonymous activation by IP and a privacy-safe token-derived key where feasible. Use a generic invalid-invitation response for invalid, expired, cancelled and used tokens. Do not reveal whether a matching email or employee exists. HR endpoints can return actionable conflict details because the caller is authenticated and authorized.
@@ -46,8 +48,11 @@ No committed credentials or provider secrets. Local mail catcher is development-
 
 ## Test strategy
 - Inject `TimeProvider` for deterministic expiry and race tests.
-- Verify token entropy/encoding and that persisted state contains only digest/ciphertext, never raw token.
+- Verify token entropy/encoding and that persisted state contains only digest/protected ciphertext, never raw token.
+- Test Data Protection round-trip, purpose isolation, tampered ciphertext, missing/rotated keys, and failure-closed behavior.
+- Test current-generation checks, retry after process restart, resend races, duplicate delivery behavior and secret deletion/expiry.
 - Test atomic first redemption, concurrent duplicate redemption, resend-vs-redemption and cancel-vs-redemption.
 - Test duplicate normalized email, existing employee conflict and transaction rollback.
 - Test delivery retry without leaking token and token invalidation after resend.
+- Add log/trace/exception redaction tests proving tokens, URLs, ciphertext and key material are absent.
 - Start the real Identity API host against fresh MySQL 8.4 Testcontainers and exercise production DI/migrations.
