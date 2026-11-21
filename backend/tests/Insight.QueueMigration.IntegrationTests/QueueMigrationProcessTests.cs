@@ -144,6 +144,76 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         Assert.Contains("active consumers", result.Output, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Execute_WhenLedgerAppendFailsAfterConfirmedPublish_LeavesSourceUnackedAndRetryCanDuplicate()
+    {
+        var source = QueueName();
+        var destination = QueueName();
+        var ledgerDirectory = Path.Combine(Path.GetTempPath(), $"insight-migration-ledger-dir-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(ledgerDirectory);
+        await using var connection = await CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueueDeclareAsync(source, durable: true, exclusive: false, autoDelete: false);
+        await channel.QueueDeclareAsync(destination, durable: true, exclusive: false, autoDelete: false);
+        await PublishAsync(channel, source, "retry-window-message");
+
+        // A directory is intentionally supplied as the ledger file. The destination publish is
+        // confirmed first; the subsequent ledger append fails, so the utility must close its
+        // channel without acknowledging the source delivery.
+        var failed = await RunUtilityAsync(
+            source,
+            destination,
+            "--execute",
+            "--confirm-quiesced",
+            "--ledger",
+            ledgerDirectory);
+
+        Assert.Equal(1, failed.ExitCode);
+        Assert.Equal(1u, (await channel.QueueDeclarePassiveAsync(source)).MessageCount);
+        Assert.Equal(1u, (await channel.QueueDeclarePassiveAsync(destination)).MessageCount);
+
+        var retryLedger = Path.Combine(Path.GetTempPath(), $"insight-migration-retry-{Guid.NewGuid():N}.jsonl");
+        var retried = await RunUtilityAsync(
+            source,
+            destination,
+            "--execute",
+            "--confirm-quiesced",
+            "--ledger",
+            retryLedger);
+
+        Assert.Equal(0, retried.ExitCode);
+        Assert.Equal(0u, (await channel.QueueDeclarePassiveAsync(source)).MessageCount);
+        Assert.Equal(2u, (await channel.QueueDeclarePassiveAsync(destination)).MessageCount);
+
+        var firstCopy = await channel.BasicGetAsync(destination, autoAck: true);
+        var secondCopy = await channel.BasicGetAsync(destination, autoAck: true);
+        Assert.NotNull(firstCopy);
+        Assert.NotNull(secondCopy);
+        Assert.Equal(firstCopy!.Body.ToArray(), secondCopy!.Body.ToArray());
+        Assert.True(File.Exists(retryLedger));
+        File.Delete(retryLedger);
+        Directory.Delete(ledgerDirectory);
+    }
+
+    [Fact]
+    public async Task Execute_RefusesQueuesWithActiveDestinationConsumers()
+    {
+        var source = QueueName();
+        var destination = QueueName();
+        await using var connection = await CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueueDeclareAsync(source, durable: true, exclusive: false, autoDelete: false);
+        await channel.QueueDeclareAsync(destination, durable: true, exclusive: false, autoDelete: false);
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        await channel.BasicConsumeAsync(destination, autoAck: false, consumer);
+
+        var result = await RunUtilityAsync(source, destination, "--execute", "--confirm-quiesced");
+
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains("active consumers", result.Output, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0u, (await channel.QueueDeclarePassiveAsync(source)).MessageCount);
+    }
+
     private async Task<IConnection> CreateConnectionAsync()
     {
         var factory = new ConnectionFactory { Uri = new Uri(BrokerUri) };
