@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Net.Mail;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.Application.Abstractions;
@@ -72,11 +73,15 @@ public sealed class InvitationDeliveryWorker(
                             timeProvider.GetUtcNow().UtcDateTime.AddSeconds(retrySeconds),
                             ErrorCode(exception), stoppingToken);
                         var smtpException = exception as SmtpException;
+                        var socketException = exception as SocketException ??
+                            exception.InnerException as SocketException;
                         logger.LogWarning(
-                            "Invitation email delivery failed and was scheduled for retry. InvitationId={InvitationId} Generation={Generation} ErrorType={ErrorType} InnerErrorType={InnerErrorType} SmtpStatus={SmtpStatus} SmtpHost={SmtpHost} SmtpPort={SmtpPort} RetrySeconds={RetrySeconds}",
+                            "Invitation email delivery failed and was scheduled for retry. InvitationId={InvitationId} Generation={Generation} ErrorType={ErrorType} InnerErrorType={InnerErrorType} SmtpStatus={SmtpStatus} SocketError={SocketError} SocketNativeErrorCode={SocketNativeErrorCode} SmtpHost={SmtpHost} SmtpPort={SmtpPort} RetrySeconds={RetrySeconds}",
                             item.InvitationId, item.Generation, exception.GetType().Name,
                             exception.InnerException?.GetType().Name ?? "none",
                             smtpException?.StatusCode.ToString() ?? "not-smtp",
+                            socketException?.SocketErrorCode.ToString() ?? "not-socket",
+                            socketException?.NativeErrorCode,
                             _options.Host, _options.Port, retrySeconds);
                     }
                 }
