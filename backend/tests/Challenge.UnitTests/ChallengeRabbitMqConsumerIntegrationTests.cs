@@ -175,7 +175,10 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         const string committedBody = "{\"eventId\":\"commit-before-ack\"}";
         const string sentinelBody = "{\"eventId\":\"after-replay\"}";
         var processor = new CommitBeforeAckReplayProcessor(committedBody, sentinelBody);
-        var status = await StartConsumerAsync(processor, reconnectDelayMilliseconds: 250);
+        var status = await StartConsumerAsync(
+            processor,
+            reconnectDelayMilliseconds: 250,
+            connectionTimeoutMilliseconds: 1000);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
         var completedSessionsBeforeBrokerStop = status.CompletedSessionCount;
 
@@ -195,7 +198,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         // have been disposed. Restarting now cannot race the previous session's teardown.
         await _container.StartAsync();
         await OpenTestChannelAsync();
-        await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+        await WaitUntilAsync(() => Task.FromResult(status.IsConnected), timeoutSeconds: 30);
         await processor.DuplicateReplayObserved.Task.WaitAsync(TimeSpan.FromSeconds(15));
 
         // With prefetch=1, this sentinel can be processed only after the duplicate replay
@@ -320,11 +323,14 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         var status = await StartConsumerAsync(
             processor, maxAttempts: 1, reconnectDelayMilliseconds: 60000);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+        var completedSessionsBeforeFailure = status.CompletedSessionCount;
 
         await _channel!.QueueUnbindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
         await PublishAsync(body);
 
         await WaitUntilAsync(() => Task.FromResult(!status.IsConnected));
+        await WaitUntilAsync(() => Task.FromResult(
+            status.CompletedSessionCount > completedSessionsBeforeFailure));
         var redelivered = await _channel.BasicGetAsync(QueueName, autoAck: false);
         Assert.NotNull(redelivered);
         Assert.Equal(body, Encoding.UTF8.GetString(redelivered!.Body.ToArray()));
@@ -336,7 +342,8 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     private async Task<ChallengeRabbitMqConsumerStatus> StartConsumerAsync(
         IEmployeeStatusProjectionProcessor processor,
         int maxAttempts = 3,
-        int reconnectDelayMilliseconds = 5000)
+        int reconnectDelayMilliseconds = 5000,
+        int connectionTimeoutMilliseconds = 5000)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IEmployeeStatusProjectionProcessor>(processor);
@@ -348,6 +355,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         options.RetryBaseDelayMilliseconds = 1;
         options.RetryMaxDelayMilliseconds = 5;
         options.ReconnectDelayMilliseconds = reconnectDelayMilliseconds;
+        options.ConnectionTimeoutMilliseconds = connectionTimeoutMilliseconds;
         options.Validate();
 
         var status = new ChallengeRabbitMqConsumerStatus();
@@ -422,9 +430,9 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         throw new TimeoutException("Challenge dead-letter message was not received.");
     }
 
-    private static async Task WaitUntilAsync(Func<Task<bool>> condition)
+    private static async Task WaitUntilAsync(Func<Task<bool>> condition, int timeoutSeconds = 10)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
         while (DateTime.UtcNow < deadline)
         {
             if (await condition())

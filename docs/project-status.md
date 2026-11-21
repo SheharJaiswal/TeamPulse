@@ -1,4 +1,18 @@
 # Project Status
+
+## Latest continuation checkpoint — synchronize broker teardown assertions and bound reconnect test window (CI pending)
+
+- Live branch HEAD before this increment: `9382d389835fb505f3b9e3c5782ded76db4a299a` (tree `7045ef638fe153f710796ad6cda41d573240e90d`). CI #116 for that exact commit failed: Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 167/169 (43/45 Challenge, 24 Habit, 100 Identity). [CI run #116](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44851451284).
+- Failure 1: `Consumer_LeavesOriginalUnacknowledgedWhenRetryExhaustionDeadLetterCannotBeConfirmed` observed `status.IsConnected == false` and immediately called `BasicGetAsync`; the consumer marks disconnected before its session-owned channel disposal has completed and RabbitMQ has requeued the delivery. The test now waits for `CompletedSessionCount` to advance before inspecting the source queue, matching the production teardown contract.
+- Failure 2: `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck` timed out at the post-restart connected-state wait. The test used the default 5-second connection-attempt timeout and a 10-second overall wait; a failed attempt begun while the broker is stopped can consume most of that window before the next reconnect. The test now uses a 1-second connection-attempt timeout and a bounded 30-second post-restart wait. Production defaults and reconnect policy are unchanged.
+- The commit-before-ack scenario still asserts session cancellation after the simulated commit, completed old-session disposal before broker restart, replay as Duplicate, and sentinel processing after acknowledgement. No CEPS-11 or CEPS-14 checkbox is closed until CI verifies all assertions.
+- Updated the approved SDD design/task checklist with the test synchronization and exact CI #116 evidence. This increment changes integration-test determinism only; no consumer behavior, projection schema or business workflow is changed.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+- Scope remains the owner-approved employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially; privacy/legal sign-off remains a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
 Updated: 2026-11-21
 
 ## Latest continuation checkpoint — wait for completed RabbitMQ session teardown before reconnect (CI pending)
