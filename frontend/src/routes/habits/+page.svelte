@@ -52,7 +52,7 @@
     </a>
 
     <p class="nav-label">WORKSPACE</p>
-    <a class="nav-link active" href="/habits">
+    <a class="nav-link active" href="/habits" aria-current="page">
       <span class="nav-icon">◷</span>
       My habits
     </a>
@@ -60,6 +60,10 @@
       <span class="nav-icon">✓</span>
       Activity history
     </a>
+    <nav class="mobile-workspace-nav" aria-label="Workspace">
+      <a class="mobile-workspace-link active" href="/habits" aria-current="page">My habits</a>
+      <a class="mobile-workspace-link" href="/activities">Activity history</a>
+    </nav>
     <div class="sidebar-note">
       <span class="note-icon">✳</span>
       <strong>Progress, not perfection.</strong>
