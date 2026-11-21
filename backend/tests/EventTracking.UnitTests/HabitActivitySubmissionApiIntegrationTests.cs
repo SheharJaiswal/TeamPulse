@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EventTracking.Application.Abstractions;
 using EventTracking.Domain.Entities;
+using EventTracking.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Testcontainers.MySql;
@@ -42,6 +43,40 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         using var response = await client.PostAsJsonAsync("/api/habit-activities", NewSubmission());
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(0, habitApi.RequestCount);
+    }
+
+    [Fact]
+    public async Task InactiveEmployee_CannotCreateOrReadActivitySubmissions()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        var employeeId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(employeeId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+            await using var databaseContext = await contextFactory.CreateDbContextAsync();
+            databaseContext.EmployeeStatusProjections.Add(new EmployeeStatusProjection(
+                employeeId, false, 2, DateTime.UtcNow));
+            await databaseContext.SaveChangesAsync();
+
+            var store = scope.ServiceProvider.GetRequiredService<IHabitActivitySubmissionStore>();
+            await store.AddAsync(new HabitActivitySubmission(submissionId, employeeId, Guid.NewGuid(),
+                new DateOnly(2026, 11, 21), 1, Guid.NewGuid(), DateTime.UtcNow), CancellationToken.None);
+        }
+
+        using var createResponse = await client.PostAsJsonAsync("/api/habit-activities", NewSubmission());
+        using var historyResponse = await client.GetAsync("/api/habit-activities");
+        using var detailResponse = await client.GetAsync($"/api/habit-activities/{submissionId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, createResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, historyResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, detailResponse.StatusCode);
         Assert.Equal(0, habitApi.RequestCount);
     }
 
