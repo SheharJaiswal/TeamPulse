@@ -54,7 +54,7 @@ No raw JSON, note, reasonCode, profile, activity or evidence fields. No cross-da
 
 ## Atomic processing
 
-The Application layer validates the complete recognized envelope before persistence. The Infrastructure store uses one MySQL transaction:
+The Application layer validates the complete recognized envelope before persistence, including the Identity-owned `source=hr-admin-api` value and the trimmed 1–100-character `reasonCode` bound. These constraints mirror `docs/changes/identity-hr-employee-lifecycle/spec.md`; do not accept arbitrary source identifiers or weaken the producer's reason-code validation. The Infrastructure store uses one MySQL transaction:
 
 1. Insert the inbox marker for eventId.
 2. On the specific inbox eventId uniqueness conflict, roll back and return Duplicate; unrelated database errors remain failures.

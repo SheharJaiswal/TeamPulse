@@ -29,7 +29,7 @@ Do not copy employee profile, organization/team, role, credential, JWT, password
 
 Accept only schema-version-1 `EmployeeDeactivated` and `EmployeeReactivated` envelopes using the shared event envelope.
 
-Validate eventId and correlationId UUIDs, non-default UTC occurredAtUtc, schemaVersion, eventType, employeeId and actorEmployeeId UUIDs, non-empty source/reasonCode, positive lifecycleVersion, and transition consistency before persistence:
+Validate eventId and correlationId UUIDs, non-default UTC occurredAtUtc, schemaVersion, eventType, employeeId and actorEmployeeId UUIDs, `source` exactly equal to `hr-admin-api`, a trimmed `reasonCode` containing 1–100 characters (matching the Identity command contract), positive lifecycleVersion, and transition consistency before persistence:
 
 | eventType | previousStatus | newStatus | isActive |
 |---|---|---|---|
