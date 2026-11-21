@@ -16,13 +16,13 @@
 - [x] Add DynamoDB SDK client configuration, Insight-owned store abstraction and single-table key/item model.
 - [x] Implement schema-v1 envelope validation and transport-independent lifecycle processor, including Identity's optional-note type/1000-character constraint without persisting or logging the note.
 - [x] Implement DynamoDB TransactWriteItems inbox/projection persistence with conditional version fences, duplicate detection and bounded optimistic-concurrency retries.
-- [ ] Add DynamoDB Local for local execution and isolated integration tests; no AWS account or credentials.
+- [x] Add DynamoDB Local for local execution and isolated integration tests; no AWS account or credentials. CI #188 passed all 11 Insight tests.
 - [x] Add opt-in RabbitMQ consumer with manual ack after committed transaction, bounded transient retries, reconnect and separate consumer health.
 - [x] Add confirmed DLQ publishing and failure classifications; preserve source delivery if DLQ routing/confirmation fails.
 - [ ] Update only Insight source/DLQ topology after pending-message-preserving migration runbook and exact contract tests are in place.
 - [x] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
 - [ ] Add privacy assertions proving raw payload, note and credentials are not stored/logged.
-- [ ] Add runbooks/configuration docs and update project status.
+- [x] Add runbooks/configuration docs and update project status.
 - [ ] Verify full Release build, DynamoDB Local integration, RabbitMQ Testcontainers, Compose and topology tests in CI.
 
 ## Acceptance mapping

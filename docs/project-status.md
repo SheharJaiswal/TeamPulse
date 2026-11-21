@@ -1,3 +1,14 @@
+## Insight DynamoDB CI acceptance verified; RabbitMQ consumer tests added
+
+- CI #188 passed for commit `faf0cac9ccc2c13f62fe4a9db25567959222d84f` on `feature/backend-foundation`.
+- Release build, Docker Compose validation, local RabbitMQ startup/topology checks and the full .NET test suite passed. Test totals: Identity 100, Habit 24, Challenge 56, Event Tracking 27, Notification 28 and Insight 11 — **246/246 passed**, zero failed or skipped.
+- The Insight DynamoDB Local integration tests verified minimal projection/inbox attributes, duplicate delivery, stale/equal/newer version behavior and concurrent version ordering.
+- Added dedicated Insight RabbitMQ Testcontainers coverage for ack-after-processing, classified terminal DLQ delivery and source-message recovery when the DLQ route is unavailable. The acknowledgement test uses a prefetch-1 sentinel delivery to verify the first message was acknowledged before the next is processed.
+- These new broker tests are committed in `9ca613c41f9116296935270c19b8f8b136c78c5a`; CI #190 is pending/running and must pass before claiming the consumer integration acceptance criteria complete.
+- No persistent RabbitMQ queue/volume, MySQL volume or AWS resource was modified.
+
+Updated: 2026-11-21
+
 ## Insight lifecycle projection — implementation in progress
 
 - Owner approval of the Insight lifecycle-projection SDD was received on 2026-11-21. Implementation is confined to `feature/backend-foundation`.
