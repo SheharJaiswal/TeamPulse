@@ -5,6 +5,19 @@
   export let data: PageData;
   export let form: ActionData;
 
+  let isSubmitting = false;
+
+  function handleEnhance() {
+    isSubmitting = true;
+    return async ({ update }: { update: () => Promise<void> }) => {
+      try {
+        await update();
+      } finally {
+        isSubmitting = false;
+      }
+    };
+  }
+
   $: invitation = form && 'invitation' in form ? form.invitation : undefined;
   $: message = form && 'message' in form ? form.message : undefined;
   $: actionLabel = form && 'action' in form
@@ -104,13 +117,13 @@
           </div>
           {#if invitation.status.toLowerCase() === 'pending'}
             <div class="invitation-actions">
-              <form method="POST" action="?/resend" use:enhance>
+              <form method="POST" action="?/resend" use:enhance={handleEnhance} aria-busy={isSubmitting}>
                 <input type="hidden" name="invitationId" value={invitation.invitationId} />
-                <button class="primary-button" type="submit">Resend invitation</button>
+                <button class="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Resending…' : 'Resend invitation'}</button>
               </form>
-              <form method="POST" action="?/cancel" use:enhance>
+              <form method="POST" action="?/cancel" use:enhance={handleEnhance} aria-busy={isSubmitting}>
                 <input type="hidden" name="invitationId" value={invitation.invitationId} />
-                <button class="danger-button" type="submit">Cancel invitation</button>
+                <button class="danger-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Cancelling…' : 'Cancel invitation'}</button>
               </form>
             </div>
           {/if}
@@ -123,7 +136,7 @@
             <div class="panel-icon">＋</div>
             <div><h2>Invite an employee</h2><p class="muted">An activation link will be sent to their work email.</p></div>
           </div>
-          <form method="POST" action="?/create" use:enhance class="hr-form">
+          <form method="POST" action="?/create" use:enhance={handleEnhance} class="hr-form" aria-busy={isSubmitting}>
             <div class="form-field full">
               <label for="invite-name">Employee name</label>
               <input id="invite-name" name="displayName" maxlength="150" placeholder="e.g. Aditi Sharma" required />
@@ -140,7 +153,7 @@
               <label for="invite-team">Team ID</label>
               <input id="invite-team" name="teamId" maxlength="100" placeholder="Team identifier" required />
             </div>
-            <button class="primary-button full-width" type="submit">Create invitation <span aria-hidden="true">→</span></button>
+            <button class="primary-button full-width" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating invitation…' : 'Create invitation'} <span aria-hidden="true">→</span></button>
           </form>
           <p class="form-footnote">The employee will create their password using the secure, time-limited activation link. New accounts receive the Employee role.</p>
         </section>
@@ -150,12 +163,12 @@
             <div class="panel-icon violet">⌕</div>
             <div><h2>Find an invitation</h2><p class="muted">Look up a specific invitation by its ID.</p></div>
           </div>
-          <form method="POST" action="?/inspect" use:enhance class="hr-form">
+          <form method="POST" action="?/inspect" use:enhance={handleEnhance} class="hr-form" aria-busy={isSubmitting}>
             <div class="form-field full">
               <label for="lookup-id">Invitation ID</label>
               <input id="lookup-id" name="invitationId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required />
             </div>
-            <button class="secondary-button full-width" type="submit">Load invitation</button>
+            <button class="secondary-button full-width" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Loading…' : 'Load invitation'}</button>
           </form>
           <div class="lookup-note">
             <span>ⓘ</span>
