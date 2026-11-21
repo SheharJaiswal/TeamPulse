@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading.RateLimiting;
 using Amazon.EventBridge;
 using Identity.API.BackgroundServices;
 using Identity.API.HealthChecks;
@@ -11,6 +12,7 @@ using Identity.Infrastructure.Messaging;
 using Identity.Infrastructure.Persistence;
 using Identity.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -45,6 +47,7 @@ builder.Services.AddDataProtection()
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IInvitationTokenService, InvitationTokenService>();
 builder.Services.AddScoped<IEmployeeInvitationService, EmployeeInvitationService>();
+builder.Services.AddScoped<IEmployeeInvitationActivationService, EmployeeInvitationActivationService>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
@@ -112,6 +115,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("invitation-activation", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -141,6 +158,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
