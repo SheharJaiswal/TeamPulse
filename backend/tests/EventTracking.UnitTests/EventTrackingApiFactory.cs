@@ -27,7 +27,8 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
                 ["Jwt:Issuer"] = "TeamPulse.Identity",
                 ["Jwt:Audience"] = "TeamPulse.Services",
                 ["Jwt:SigningKey"] = JwtSigningKey,
-                ["HabitApi:BaseUrl"] = "http://localhost:5102/"
+                ["HabitApi:BaseUrl"] = "http://localhost:5102/",
+                ["EventTrackingOutbox:Enabled"] = "false"
             });
         });
         builder.ConfigureServices(services =>

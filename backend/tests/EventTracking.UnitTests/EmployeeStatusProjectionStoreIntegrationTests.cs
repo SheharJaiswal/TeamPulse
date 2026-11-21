@@ -48,7 +48,8 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(EventTrackingM
         var factory = provider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
         await using var database = await factory.CreateDbContextAsync();
         await database.Database.MigrateAsync();
-        Assert.Equal(2, (await database.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(3, (await database.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.True(await database.EventTrackingOutboxMessages.AnyAsync() == false);
     }
     private async Task<ServiceProvider> CreateProviderAsync()
     {
