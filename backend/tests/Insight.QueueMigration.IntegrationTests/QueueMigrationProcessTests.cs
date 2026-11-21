@@ -77,7 +77,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         {
             ContentType = "application/json",
             ContentEncoding = "utf-8",
-            DeliveryMode = 1,
+            DeliveryMode = DeliveryModes.NonPersistent,
             Priority = 3,
             CorrelationId = "correlation-123",
             ReplyTo = "reply-queue",
@@ -105,7 +105,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         Assert.Equal(payload, copied!.Body.ToArray());
         Assert.Equal("application/json", copied.BasicProperties.ContentType);
         Assert.Equal("utf-8", copied.BasicProperties.ContentEncoding);
-        Assert.Equal((byte)2, copied.BasicProperties.DeliveryMode);
+        Assert.Equal(DeliveryModes.Persistent, copied.BasicProperties.DeliveryMode);
         Assert.Equal((byte)3, copied.BasicProperties.Priority);
         Assert.Equal("correlation-123", copied.BasicProperties.CorrelationId);
         Assert.Equal("reply-queue", copied.BasicProperties.ReplyTo);
@@ -169,7 +169,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             publisher.PublishAsync(
                 missingDestination,
-                new BasicProperties { DeliveryMode = 2 },
+                new BasicProperties { DeliveryMode = DeliveryModes.Persistent },
                 Encoding.UTF8.GetBytes("must-not-be-treated-as-copied")));
 
         Assert.Contains("mandatory destination publication", exception.Message, StringComparison.OrdinalIgnoreCase);
