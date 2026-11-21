@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using DotNet.Testcontainers.Configurations;
+using DotNet.Testcontainers.Images;
 using Xunit;
 
 namespace Insight.UnitTests;
