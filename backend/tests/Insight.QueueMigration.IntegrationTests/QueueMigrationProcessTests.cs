@@ -13,6 +13,8 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
 {
     private readonly RabbitMqContainer _rabbitMq = new RabbitMqBuilder()
         .WithImage("rabbitmq:4.0-alpine")
+        .WithUsername("teampulse-test")
+        .WithPassword("teampulse-test-password")
         .Build();
 
     private string BrokerUri => _rabbitMq.GetConnectionString();
