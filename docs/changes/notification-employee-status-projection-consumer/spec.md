@@ -1,6 +1,6 @@
 # Specification: Notification Employee Status Projection Consumer
 
-**Status:** Draft — awaiting owner approval.  
+**Status:** Owner-approved on 2026-11-21.  
 **Authority:** `AGENTS.md`, service ownership, communication conventions, ADR-0001, event-envelope and employee-status-projection contracts.
 
 ## Service and persistence boundary

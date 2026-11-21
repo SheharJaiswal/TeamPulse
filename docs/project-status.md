@@ -1,3 +1,13 @@
+## Notification projection implementation — application core added
+
+- Owner approval for the Notification employee-status projection SDD was received on 2026-11-21. The proposal/spec/design/tasks are now marked owner-approved; the scope remains projection-only.
+- Added Notification.Domain, Notification.Application and Notification.UnitTests projects to the six-service solution. The first increment implements minimal projection/inbox domain entities, strict schema-v1 recognized-field validation and a transport-independent processor.
+- Added deterministic tests for valid lifecycle transitions, exact `hr-admin-api` source, reason-code bounds, malformed/missing fields, unsupported schema, transition mismatch, unknown additive fields and optional-note exclusion.
+- Implementation commit: `d8e207f7a7650bc1747baf8509e17c5f4e2b305f`. CI verification for this commit is pending; no local .NET or Docker build/test is claimed.
+- Next focused increment: Notification-owned EF Core/MySQL persistence and checked-in migration. RabbitMQ source-queue migration remains a later increment and must preserve pending messages; no live broker or existing database volume has been altered.
+
+Updated: 2026-11-21
+
 ## Next increment prepared — Notification lifecycle projection SDD draft
 
 - Prepared `docs/changes/notification-employee-status-projection-consumer/` with proposal, spec, design and acceptance-mapped tasks on 2026-11-21.

@@ -1,6 +1,6 @@
 # Design: Notification Employee Status Projection Consumer
 
-**Status:** Draft; implementation requires owner approval.
+**Status:** Owner-approved on 2026-11-21.
 
 ## Architecture
 

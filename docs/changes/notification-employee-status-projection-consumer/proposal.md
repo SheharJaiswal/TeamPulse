@@ -1,6 +1,6 @@
 # Proposal: Notification Employee Status Projection Consumer
 
-**Status:** Draft — awaiting owner approval. No implementation is authorized by this proposal alone.
+**Status:** Owner-approved on 2026-11-21. Implementation is authorized only within this approved scope.
 
 ## Context
 
