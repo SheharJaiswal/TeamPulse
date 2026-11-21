@@ -10,17 +10,17 @@
 - [x] Keep the increment limited to employee lifecycle projection/inbox; no analytics, dashboards, aggregates or employee-facing APIs.
 - [x] Owner approval of proposal.md, spec.md, design.md and tasks.md — approved 2026-11-21.
 
-## Implementation — blocked pending approval
+## Implementation
 - [x] Add Insight.Application, Insight.Domain and Insight.UnitTests foundation with inward-only references.
-- [ ] Add Insight.API and Insight.Infrastructure hosts/adapters with inward-only references.
-- [ ] Add DynamoDB SDK abstractions and the Insight-owned single-table key/item model.
+- [x] Add Insight.API and Insight.Infrastructure hosts/adapters with inward-only references.
+- [x] Add DynamoDB SDK client configuration, Insight-owned store abstraction and single-table key/item model.
 - [x] Implement schema-v1 envelope validation and transport-independent lifecycle processor, including Identity's optional-note type/1000-character constraint without persisting or logging the note.
-- [ ] Implement DynamoDB TransactWriteItems inbox/projection persistence with conditional version fences, duplicate detection and bounded optimistic-concurrency retries.
+- [x] Implement DynamoDB TransactWriteItems inbox/projection persistence with conditional version fences, duplicate detection and bounded optimistic-concurrency retries.
 - [ ] Add DynamoDB Local for local execution and isolated integration tests; no AWS account or credentials.
-- [ ] Add opt-in RabbitMQ consumer with manual ack after committed transaction, bounded transient retries, reconnect and separate consumer health.
-- [ ] Add confirmed DLQ publishing and failure classifications; preserve source delivery if DLQ routing/confirmation fails.
+- [x] Add opt-in RabbitMQ consumer with manual ack after committed transaction, bounded transient retries, reconnect and separate consumer health.
+- [x] Add confirmed DLQ publishing and failure classifications; preserve source delivery if DLQ routing/confirmation fails.
 - [ ] Update only Insight source/DLQ topology after pending-message-preserving migration runbook and exact contract tests are in place.
-- [ ] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
+- [x] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
 - [ ] Add privacy assertions proving raw payload, note and credentials are not stored/logged.
 - [ ] Add runbooks/configuration docs and update project status.
 - [ ] Verify full Release build, DynamoDB Local integration, RabbitMQ Testcontainers, Compose and topology tests in CI.

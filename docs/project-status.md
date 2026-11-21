@@ -1,3 +1,15 @@
+## Insight lifecycle projection — implementation in progress
+
+- Owner approval of the Insight lifecycle-projection SDD was received on 2026-11-21. Implementation is confined to `feature/backend-foundation`.
+- Added Insight.Domain, Insight.Application, Insight.Infrastructure, Insight.API and Insight.UnitTests projects to the solution. The transport-independent schema-v1 processor validates Identity lifecycle envelopes, transitions, recognized fields and the optional note's string/1,000-character bound; the note is excluded from the persistence contract.
+- Added a DynamoDB-native store using strongly consistent reads and `TransactWriteItems` for the inbox/projection decision, conditional version fences and bounded optimistic-concurrency retries. The store records only approved projection/inbox attributes.
+- Added Development-only opt-in DynamoDB Local table initialization, DynamoDB readiness health, independent consumer health and a disabled-by-default RabbitMQ consumer with manual acknowledgement, bounded transient retry/reconnect and confirmed DLQ publication.
+- Added DynamoDB Local to Compose without changing or resetting existing MySQL/RabbitMQ volumes. Insight source/DLQ topology remains unchanged pending topology contract tests and the pending-message-preserving migration procedure.
+- The processor foundation and consumer/store code are committed; CI restore/build/test validation is in progress or pending. Do not treat the Insight increment as complete until DynamoDB Local, RabbitMQ integration, topology and full CI evidence pass.
+- No AWS resources, EventBridge/SQS adapters, analytics, dashboards or read APIs were added. The migration procedure is documented at `docs/changes/insight-employee-status-projection-consumer/rabbitmq-migration-runbook.md`; it is not authorized for execution against a live persistent broker.
+
+Updated: 2026-11-21
+
 ## Next increment prepared — Insight lifecycle projection SDD draft
 
 - Prepared docs/changes/insight-employee-status-projection-consumer/ with proposal, spec, design and acceptance-mapped tasks on 2026-11-21.

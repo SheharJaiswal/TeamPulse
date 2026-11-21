@@ -1,6 +1,6 @@
 # Design: Insight Employee Status Projection Consumer
 
-**Status:** Draft — awaiting owner approval.
+**Status:** Approved by project owner on 2026-11-21.
 
 ## Architecture
 Identity transactional outbox -> local RabbitMQ publisher -> teampulse.domain.events -> teampulse.insight.events -> Insight.API BackgroundService -> Insight.Application lifecycle processor -> Insight.Infrastructure DynamoDB store -> Insight-owned DynamoDB table.
