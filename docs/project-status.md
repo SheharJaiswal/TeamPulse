@@ -16,7 +16,7 @@ Updated: 2026-11-21
 - Habit management backend and SvelteKit employee experience are implemented: employees can view, create, update and archive their own habits through server-side authenticated actions; ownership remains enforced by Habit API.
 - Habit management tasks HM-T01–HM-T09 are complete. Backend CI #284 passed the Release build and all 298 tests across seven assemblies. Frontend CI #44915274529 passed all 9 unit tests, Svelte/TypeScript checks (0 errors, 0 warnings) and the production build.
 - The employee Activity History and submission vertical slice is also complete and CI-verified. No activity progress/streak projection or downstream activity consumer has been introduced without a separately approved business definition.
-- Next product increment identified: HR-controlled employee invitations. Its SDD and security threat model are drafted, but implementation is blocked pending owner decisions on delivery-secret handling, key protection/backup, expiry/resend/cancel semantics, activation behavior and rate limiting. No invitation implementation has been started.
+- HR-controlled employee invitations are now owner-approved and implemented across Identity API, protected delivery queue and SvelteKit HR/activation pages. SMTP delivery verification is explicitly deferred by owner direction; do not let it block unrelated work.
 
 ## Employee Activity History workspace refinement — verified
 
