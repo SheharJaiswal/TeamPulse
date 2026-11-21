@@ -31,27 +31,32 @@ public sealed class EventTrackingOutboxMessage
     public string? LastErrorCode { get; private set; }
     public bool TryAcquireLease(Guid token, DateTime nowUtc, DateTime expiresUtc)
     {
-        if (token == Guid.Empty || PublishedAtUtc.HasValue || DeadLetteredAtUtc.HasValue ||
+        if (token == Guid.Empty || !IsUtc(nowUtc) || !IsUtc(expiresUtc) || expiresUtc <= nowUtc ||
+            PublishedAtUtc.HasValue || DeadLetteredAtUtc.HasValue ||
             (NextAttemptAtUtc.HasValue && NextAttemptAtUtc.Value > nowUtc) ||
             (LeaseExpiresAtUtc.HasValue && LeaseExpiresAtUtc.Value > nowUtc)) return false;
         LeaseToken = token; LeaseExpiresAtUtc = expiresUtc; AttemptCount = checked(AttemptCount + 1); return true;
     }
     public bool TryMarkPublished(Guid token, DateTime publishedAtUtc)
     {
-        if (!OwnsLease(token)) return false;
+        if (!OwnsUnexpiredLease(token, publishedAtUtc)) return false;
         PublishedAtUtc = publishedAtUtc; ClearLease(); NextAttemptAtUtc = null; LastErrorCode = null; return true;
     }
     public bool TryScheduleRetry(Guid token, DateTime retryAtUtc, string errorCode)
     {
-        if (!OwnsLease(token)) return false;
+        if (!IsUtc(retryAtUtc) || !OwnsUnexpiredLease(token, retryAtUtc)) return false;
         NextAttemptAtUtc = retryAtUtc; LastErrorCode = Sanitize(errorCode); ClearLease(); return true;
     }
     public bool TryQuarantine(Guid token, DateTime deadLetteredAtUtc, string errorCode)
     {
-        if (!OwnsLease(token)) return false;
+        if (!IsUtc(deadLetteredAtUtc) || !OwnsUnexpiredLease(token, deadLetteredAtUtc)) return false;
         DeadLetteredAtUtc = deadLetteredAtUtc; LastErrorCode = Sanitize(errorCode); ClearLease(); return true;
     }
-    private bool OwnsLease(Guid token) => token != Guid.Empty && LeaseToken == token && !PublishedAtUtc.HasValue && !DeadLetteredAtUtc.HasValue;
+    private bool OwnsUnexpiredLease(Guid token, DateTime transitionAtUtc) =>
+        IsUtc(transitionAtUtc) && token != Guid.Empty && LeaseToken == token &&
+        LeaseExpiresAtUtc.HasValue && LeaseExpiresAtUtc.Value > transitionAtUtc &&
+        !PublishedAtUtc.HasValue && !DeadLetteredAtUtc.HasValue;
+    private static bool IsUtc(DateTime value) => value.Kind == DateTimeKind.Utc;
     private void ClearLease() { LeaseToken = null; LeaseExpiresAtUtc = null; }
     private static string Sanitize(string value)
     {
