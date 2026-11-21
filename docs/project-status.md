@@ -1,3 +1,13 @@
+## Insight queue migration — at-least-once retry failure-path coverage
+
+- Added an isolated Testcontainers scenario that intentionally makes the ledger append fail after the destination publish has completed. It verifies the destination copy exists while the source delivery remains unacknowledged and is requeued when the utility channel closes.
+- The test then retries with a valid ledger and verifies the source is acknowledged while the destination contains the duplicate copy, proving the documented at-least-once crash window rather than claiming exactly-once behavior.
+- Added a separate destination-consumer guard test: the utility refuses execution if the destination queue has active consumers.
+- This coverage runs only against a disposable RabbitMQ Testcontainers broker. No persistent/shared broker was accessed. CI build/runtime verification remains pending because the local environment does not provide the .NET SDK.
+- Remaining before operational review: deterministic mandatory-unroutable publication race coverage, complete Release build/test run, then joint review of utility, runbook and exact topology contract tests.
+
+Updated: 2026-11-21
+
 ## Insight queue migration — isolated integration test harness
 
 - Added `Insight.QueueMigration.IntegrationTests`, a dedicated .NET 8 test project using RabbitMQ Testcontainers and invoking the actual migration console executable against a disposable RabbitMQ broker.
