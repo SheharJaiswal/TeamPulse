@@ -1,3 +1,15 @@
+## Latest continuation checkpoint — CI #128 passed; consumer log-privacy test added
+
+- CI #128 passed for `0833da57289080ed8cdabe8c97fe98d1f12a7da5`: Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology, 11 Python topology tests and all 176 .NET tests (Challenge 52, Habit 24, Identity 100), zero failed/skipped. [CI #128](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44875036205).
+- The CI artifact TRX files independently confirm 52/52 Challenge, 24/24 Habit and 100/100 Identity tests passed. The three new MySQL integration tests verify concurrent identical-event deduplication, conflicting-fingerprint winner preservation and idempotent migration history.
+- Added a capturing-logger RabbitMQ integration test. It publishes an event containing unique body/note sentinels and asserts the rendered application logs do not contain the body, note, configured broker password or broker URI. The consumer test helper now accepts an optional logger for this assertion.
+- Current code commit: `a73992143617fb8cd36093a45b32752b14f78863`. CI for this commit is pending; do not mark the privacy/logging acceptance complete until it passes.
+- Scope remains projection-only. Open question 19 remains unresolved. AWS EventBridge/SQS and provisioning remain deferred until owner cloud setup. No local build/test claim is made.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — CI #127 passed; MySQL duplicate-race tests added
 
 - CI #127 passed for `50e844e0f01290e393187801d1391d9ec189b878`: Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology, 11 Python topology tests and all 173 .NET tests (Challenge 49, Habit 24, Identity 100), with zero failures/skips. [CI #127](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44874735877).
