@@ -53,8 +53,15 @@
 - [CI #233](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522/artifacts/14706141699).
 
 
-## Idempotency-key character boundary regression — implementation pending
+## Idempotency-key character boundary regression — CI #235 passed
 
-- Add API-host integration coverage for the minimum and maximum accepted visible-ASCII key lengths (1 and 128 characters).
-- Add rejected cases for ASCII control characters, DEL and non-ASCII characters; verify HTTP 400 and no employee, audit or correlation-scoped outbox mutation.
-- Acceptance criterion ILC-15 is recorded in the specification. GitHub Actions verification is pending.
+- Added API-host integration coverage for accepted one-character and 128-character visible-ASCII keys and rejected ASCII control, DEL and non-ASCII values.
+- Rejected requests return HTTP 400 without changing employee status/version or creating lifecycle audit/outbox records; accepted keys complete the expected transition.
+- CI #235 passed against code commit `0525db1487d96e35b92552cb586cb8fc508ebb70`: Identity 104, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **263 passed, 0 failed, 0 skipped**.
+- [CI #235](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44901319799). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44901319799/artifacts/14705773167).
+
+## JWT subject-claim validation regression — implementation added
+
+- Added an API-host integration test using correctly signed HrAdmin tokens with either no `sub` claim or a non-GUID `sub`.
+- Both requests must return 401 before lifecycle mutation; the test verifies employee status/version, audit and correlation-scoped outbox remain unchanged.
+- Implementation commit: `d0b20c32c1c1ec7b7af8b138c571730d8f7be10a`. CI verification pending.
