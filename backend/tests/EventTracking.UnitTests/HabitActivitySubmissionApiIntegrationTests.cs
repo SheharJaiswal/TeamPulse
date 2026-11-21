@@ -195,6 +195,40 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetMine_WhenDateRangeIsReversed_ReturnsBadRequest()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(Guid.NewGuid()));
+
+        using var response = await client.GetAsync(
+            "/api/habit-activities?fromDate=2026-11-22&toDate=2026-11-20");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("from date cannot be after the to date",
+            await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, habitApi.RequestCount);
+    }
+
+    [Fact]
+    public async Task GetMine_WhenDateFilterIsMalformed_ReturnsBadRequest()
+    {
+        var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
+        using var factory = CreateFactory(habitApi);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer", CreateToken(Guid.NewGuid()));
+
+        using var response = await client.GetAsync(
+            "/api/habit-activities?fromDate=not-a-date&toDate=2026-11-22");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, habitApi.RequestCount);
+    }
+
+    [Fact]
     public async Task Get_WhenSubmissionBelongsToAnotherEmployee_ReturnsNotFound()
     {
         var habitApi = new StubHabitApiHandler(HttpStatusCode.OK);
