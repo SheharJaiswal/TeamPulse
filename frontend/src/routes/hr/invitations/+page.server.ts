@@ -58,15 +58,19 @@ async function requireHrAdmin(
   return employee;
 }
 
+function upstreamFailureStatus(status: number): number {
+  return [400, 403, 404, 409, 410, 422, 429].includes(status) ? status : 502;
+}
+
 async function invitationAction(
   invitationId: string,
   action: 'resend' | 'cancel' | 'inspect',
   token: string,
   cookies: Cookies,
   fetcher: typeof fetch
-): Promise<{ invitation?: Invitation; message?: string }> {
+): Promise<{ invitation?: Invitation; message?: string; status?: number }> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(invitationId)) {
-    return { message: 'Enter a valid invitation ID.' };
+    return { status: 400, message: 'Enter a valid invitation ID.' };
   }
 
   const suffix = action === 'inspect' ? '' : `/${action}`;
@@ -80,7 +84,7 @@ async function invitationAction(
       }
     );
   } catch {
-    return { message: 'Identity service is unavailable. Please try again.' };
+    return { status: 503, message: 'Identity service is unavailable. Please try again.' };
   }
 
   if (response.status === 401) {
@@ -88,7 +92,10 @@ async function invitationAction(
     redirect(303, '/login');
   }
   if (!response.ok) {
-    return { message: await responseMessage(response, 'The invitation could not be updated.') };
+    return {
+      status: upstreamFailureStatus(response.status),
+      message: await responseMessage(response, 'The invitation could not be updated.')
+    };
   }
   return { invitation: (await response.json()) as Invitation };
 }
@@ -148,7 +155,7 @@ export const actions: Actions = {
     const result = await invitationAction(
       String(formData.get('invitationId') ?? '').trim(), 'inspect', token, cookies, fetch
     );
-    if (result.message) return fail(400, { action: 'inspect', message: result.message });
+    if (result.message) return fail(result.status ?? 502, { action: 'inspect', message: result.message });
     return { action: 'inspect', invitation: result.invitation };
   },
 
@@ -159,7 +166,7 @@ export const actions: Actions = {
     const result = await invitationAction(
       String(formData.get('invitationId') ?? '').trim(), 'resend', token, cookies, fetch
     );
-    if (result.message) return fail(400, { action: 'resend', message: result.message });
+    if (result.message) return fail(result.status ?? 502, { action: 'resend', message: result.message });
     return { action: 'resend', invitation: result.invitation };
   },
 
@@ -170,7 +177,7 @@ export const actions: Actions = {
     const result = await invitationAction(
       String(formData.get('invitationId') ?? '').trim(), 'cancel', token, cookies, fetch
     );
-    if (result.message) return fail(400, { action: 'cancel', message: result.message });
+    if (result.message) return fail(result.status ?? 502, { action: 'cancel', message: result.message });
     return { action: 'cancel', invitation: result.invitation };
   }
 };
