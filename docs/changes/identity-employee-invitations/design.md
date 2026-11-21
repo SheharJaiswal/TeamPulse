@@ -6,7 +6,7 @@
 All invitation state, canonical employee creation and password hashing remain in Identity. No new service or cross-service database dependency is introduced. Use the existing .NET 8, EF Core 8, Pomelo and MySQL 8.4 conventions.
 
 ## Components
-- API: thin HrAdmin-protected invitation controller and anonymous activation action.
+- API: thin HrAdmin-protected invitation controller is implemented for create, inspect, resend and cancel. Anonymous activation action remains pending.
 - Application: create/get/resend/cancel/redeem command handlers and delivery abstraction.
 - Domain: invitation state transitions and invariants.
 - Infrastructure: EF mappings/migration, transactional repository, token generator/hash service and mail adapter.
