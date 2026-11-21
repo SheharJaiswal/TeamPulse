@@ -113,6 +113,8 @@ The projection is a status signal, not a replacement for each service's resource
 | ILC-14 | Whitespace/overlength/repeated idempotency headers and repeated correlation headers return 400 before mutation. | MySQL API-host integration test verifies employee, audit and correlation-scoped outbox state remain unchanged. |
 | ILC-15 | One-character and 128-character visible-ASCII idempotency keys are accepted; control, DEL and non-ASCII characters return 400 before mutation. | MySQL API-host integration test verifies accepted boundary transitions and no mutation for rejected character classes. |
 
+| ILC-16 | Missing or non-GUID JWT `sub` claims on otherwise correctly signed HrAdmin tokens return 401 before any lifecycle mutation. | MySQL API-host integration test verifies employee status/version, lifecycle audit and correlation-scoped outbox remain unchanged. |
+
 ## Deferred work (not acceptance criteria for this increment)
 
 Employee invitations/provisioning, profile/role mutation, Organization Admin request intake, HRIS integration, EventBridge dispatch/retries/DLQ, and downstream consumer implementations each require their own SDD change and tests.
