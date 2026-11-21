@@ -2,7 +2,7 @@
 
 - Added an isolated Testcontainers scenario that intentionally makes the ledger append fail after the destination publish has completed. It verifies the destination copy exists while the source delivery remains unacknowledged and is requeued when the utility channel closes.
 - The test then retries with a valid ledger and verifies the source is acknowledged while the destination contains the duplicate copy, proving the documented at-least-once crash window rather than claiming exactly-once behavior.
-- Added a separate destination-consumer guard test: the utility refuses execution if the destination queue has active consumers.
+- Added a separate destination-consumer guard test: the utility refuses execution if the destination queue has active consumers. A missing-destination preflight test also confirms the source message remains untouched.
 - This coverage runs only against a disposable RabbitMQ Testcontainers broker. No persistent/shared broker was accessed. CI build/runtime verification remains pending because the local environment does not provide the .NET SDK.
 - Remaining before operational review: deterministic mandatory-unroutable publication race coverage, complete Release build/test run, then joint review of utility, runbook and exact topology contract tests.
 
@@ -11,7 +11,7 @@ Updated: 2026-11-21
 ## Insight queue migration — isolated integration test harness
 
 - Added `Insight.QueueMigration.IntegrationTests`, a dedicated .NET 8 test project using RabbitMQ Testcontainers and invoking the actual migration console executable against a disposable RabbitMQ broker.
-- Initial coverage verifies passive preflight leaves source messages untouched, successful copy preserves the payload and supported AMQP basic properties/headers while upgrading delivery mode to persistent, bounded copy can resume, queue counts reconcile, and active consumers block execution.
+- Coverage verifies passive preflight leaves source messages untouched (including when the destination queue is missing), successful copy preserves the payload and supported AMQP basic properties/headers while upgrading delivery mode to persistent, bounded copy can resume, queue counts reconcile, and active consumers on either queue block execution.
 - Registered the test project in `backend/TeamPulse.sln`. The tests have not yet been compiled or run; CI must provide the first authoritative build/runtime result. The local execution environment has no .NET SDK.
 - Remaining tests: mandatory unroutable publish failure, publish-confirm/source-ack ordering and the documented crash/retry duplicate window. The utility remains unapproved for operational use until the full suite and runbook/topology review pass.
 - All broker interactions in these tests use disposable Testcontainers instances. No persistent RabbitMQ queues, volumes, MySQL, DynamoDB Local or AWS resources were modified.
