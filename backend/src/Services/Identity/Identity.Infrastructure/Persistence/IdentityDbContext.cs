@@ -45,7 +45,11 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         deliverySecret.ToTable("invitation_delivery_secrets");
         deliverySecret.HasKey(x => x.Id);
         deliverySecret.Property(x => x.ProtectedToken).HasColumnType("longtext").IsRequired();
+        deliverySecret.Property(x => x.LastErrorCode).HasMaxLength(100);
+        deliverySecret.Property(x => x.LeaseToken).IsConcurrencyToken();
         deliverySecret.HasIndex(x => x.InvitationId).IsUnique();
+        deliverySecret.HasIndex(x => new { x.NextAttemptAtUtc, x.LeaseExpiresAtUtc, x.CreatedAtUtc })
+            .HasDatabaseName("IX_invitation_delivery_queue");
         deliverySecret.HasOne<EmployeeInvitation>().WithOne()
             .HasForeignKey<InvitationDeliverySecret>(x => x.InvitationId)
             .OnDelete(DeleteBehavior.Cascade);
