@@ -4,7 +4,7 @@
 - Release build, Docker Compose validation, local RabbitMQ startup/topology checks and the full .NET test suite passed. Test totals: Identity 100, Habit 24, Challenge 56, Event Tracking 27, Notification 28 and Insight 11 — **246/246 passed**, zero failed or skipped.
 - The Insight DynamoDB Local integration tests verified minimal projection/inbox attributes, duplicate delivery, stale/equal/newer version behavior and concurrent version ordering.
 - Added dedicated Insight RabbitMQ Testcontainers coverage for ack-after-processing, classified terminal DLQ delivery and source-message recovery when the DLQ route is unavailable. The acknowledgement test uses a prefetch-1 sentinel delivery to verify the first message was acknowledged before the next is processed.
-- These new broker tests are committed in `9ca613c41f9116296935270c19b8f8b136c78c5a`; CI #190 is pending/running and must pass before claiming the consumer integration acceptance criteria complete.
+- CI #190 passed for code commit `9ca613c41f9116296935270c19b8f8b136c78c5a`: **249/249 .NET tests passed**, zero failed or skipped (Identity 100, Habit 24, Challenge 56, Event Tracking 27, Notification 28, Insight 14). This includes the three new RabbitMQ Testcontainers tests for ack-after-processing, classified terminal DLQ delivery, and source-message recovery when the DLQ route is unavailable. Release build, Compose validation, RabbitMQ startup/topology checks, topology contract tests and test-result artifact upload also passed. [CI #190](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44893324977).
 - No persistent RabbitMQ queue/volume, MySQL volume or AWS resource was modified.
 
 Updated: 2026-11-21

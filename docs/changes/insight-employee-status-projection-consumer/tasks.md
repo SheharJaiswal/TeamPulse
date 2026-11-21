@@ -23,7 +23,7 @@
 - [x] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
 - [ ] Add privacy assertions proving raw payload, note and credentials are not stored/logged.
 - [x] Add runbooks/configuration docs and update project status.
-- [ ] Verify full Release build, DynamoDB Local integration, RabbitMQ Testcontainers, Compose and topology tests in CI.
+- [x] Verify full Release build, DynamoDB Local integration, RabbitMQ Testcontainers, Compose and topology tests in CI — CI #190 passed for code commit `9ca613c41f9116296935270c19b8f8b136c78c5a`; 249/249 .NET tests passed, including all 14 Insight tests; zero failed or skipped.
 
 ## Acceptance mapping
 | Acceptance IDs | Required evidence |
