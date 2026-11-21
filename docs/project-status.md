@@ -1,3 +1,14 @@
+## Insight queue migration — CI #227 header assertion failure and correction
+
+- CI #227 completed for code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`. Restore and Release build passed; Compose validation, RabbitMQ startup/topology, all 19 Python topology tests and the pinned DynamoDB Local image pull passed.
+- Existing service suites all passed: Identity 100/100, Habit 24/24, Challenge 57/57, Event Tracking 27/27, Notification 28/28 and Insight 15/15 (**251/251**). The new Insight.QueueMigration.IntegrationTests suite passed 7/8; one successful-copy property test failed at its header assertion.
+- Failure detail: RabbitMQ.Client exposes the AMQP short-string header `x-contract-version` as the UTF-8 byte array `[49]` when the copied message is read. The test incorrectly expected a .NET string. The migration code copies the received header value as-is; no production behavior change was indicated by the failure.
+- Corrected the integration assertion to compare the UTF-8 bytes for `"1"` (commit `5bf2b0e97b5234af4c9dd438b0742e119623582b`). A fresh CI run is required to verify this correction; do not mark the migration utility operationally accepted yet.
+- [CI #227](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44898745526). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44898745526/artifacts/14705235902).
+- No persistent/shared RabbitMQ queue or volume, MySQL volume or AWS resource was modified. Insight queue definitions remain unchanged pending review and an approved maintenance window.
+
+Updated: 2026-11-21
+
 ## Insight queue migration — CI #227 verification pending
 
 - CI #227 is running against code commit `801d01c9f2de1c5278fd5f4b12ea38450fa631cd`. The Release build, Docker Compose validation, RabbitMQ startup/topology verification, all 19 Python topology contract tests and pinned DynamoDB Local image pull have passed; the full .NET test step remains in progress. No .NET test totals are claimed yet.
