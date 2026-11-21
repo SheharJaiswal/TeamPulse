@@ -1,6 +1,6 @@
 # Tasks: Notification Employee Status Projection Consumer
 
-**Status:** Owner-approved on 2026-11-21; implementation in progress.
+**Status:** Owner-approved on 2026-11-21; implementation and CI acceptance verified on 2026-11-21 (CI #168).
 
 ## SDD and contract review
 
@@ -17,25 +17,25 @@
 - [x] Add Notification.UnitTests and register Domain, Application and test projects in backend/TeamPulse.sln.
 - [x] Add Notification-owned MySQL database initialization, Compose mount and safe existing-volume migration runbook.
 - [x] Implement minimal projection/inbox domain entities, schema-v1 envelope validator and transport-independent application processor.
-- [x] Add checked-in EF migration and transactional projection/inbox store with reader abstraction; API startup migration remains pending.
+- [x] Add checked-in EF migration, transactional projection/inbox store, reader abstraction and API startup migration.
 - [x] Add opt-in RabbitMQ consumer with manual ack, bounded retries, reconnect and independent consumer health.
 - [x] Upgrade only Notification source queue to quorum/DLX/DLQ definitions and add pending-message-preserving migration instructions.
-- [x] Add MySQL 8.4 Testcontainers coverage for migration idempotency/schema, duplicate event IDs, stale/equal ordering and concurrent maximum-version preservation; RabbitMQ/API-host tests remain pending.
+- [x] Add MySQL 8.4 Testcontainers coverage for migration idempotency/schema, duplicate event IDs, stale/equal ordering and concurrent maximum-version preservation, plus RabbitMQ/API-host integration tests.
 - [x] Add processor tests for strict recognized-field validation, additive unknown-field tolerance, transition consistency, note exclusion and zero persistence calls on invalid input.
 - [x] Document existing MySQL/RabbitMQ volume migrations; API host configuration is documented in appsettings and consumer is disabled by default.
 - [x] Run full restore, Release build, solution tests, Compose validation and topology tests in CI (#165 passed for `13095cc3effb30a11862ccc68a64fc3ebf60425e`).
-- [ ] Complete remaining DLQ failure-path verification and update acceptance evidence.
+- [x] Verify malformed-event DLQ delivery and unavailable-DLQ-route source redelivery in RabbitMQ Testcontainers.
 
 ## Acceptance mapping
 
 | Acceptance IDs | Required evidence |
 |---|---|
-| NESP-01–03 | Release build, ownership review, clean/repeated MySQL host migration |
-| NESP-04–05 | Envelope validation and exact persistence schema |
-| NESP-06–08 | Atomicity, duplicate, ordering and concurrent MySQL tests |
-| NESP-09–11 | RabbitMQ ack/replay, DLQ, reconnect and API health tests |
-| NESP-12–13 | Persistence/log privacy and no-notification-side-effect assertions |
-| NESP-14 | Full GitHub Actions workflow |
+| NESP-01–03 | Verified by CI #168 Release build and MySQL 8.4 Testcontainers migration/API-host tests. |
+| NESP-04–05 | Verified by Notification processor validation and exact-schema persistence tests in CI #168. |
+| NESP-06–08 | Verified by MySQL transaction, duplicate, stale/equal ordering and concurrent-version tests in CI #168. |
+| NESP-09–11 | Verified by RabbitMQ replay, confirmed DLQ, unavailable-route redelivery, consumer/API health and reconnect coverage in CI #168. |
+| NESP-12–13 | Verified by minimal-field persistence/privacy and transport-independent processor tests in CI #168. |
+| NESP-14 | Verified by successful full GitHub Actions workflow #168. |
 
 ## Deferred
 
@@ -77,4 +77,4 @@
 - [x] Added Notification RabbitMQ persistent-message replay integration test based on the already-proven Event Tracking harness, plus options/retry and API consumer-health tests.
 - [x] Added `docs/runbooks/notification-rabbitmq-queue-migration.md`; it requires pausing publisher/consumer and buffering pending messages before queue recreation. No live broker topology was changed.
 - [x] CI #165 passed for commit `13095cc3effb30a11862ccc68a64fc3ebf60425e`; restore, Release build, Compose, RabbitMQ topology and full .NET/Testcontainers suite passed.
-- [ ] Verify both new DLQ integration tests in CI; close NESP-10 only after confirmed-route and unavailable-route behavior pass.
+- [x] CI #168 passed for commit `bd27c4a118e851d02625d5e2002a9be357acec0a`; both DLQ integration tests passed. NESP-10 is verified.

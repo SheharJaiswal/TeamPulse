@@ -1,3 +1,16 @@
+## Notification employee-status projection — acceptance verified by CI #168
+
+- CI #168 passed for commit `bd27c4a118e851d02625d5e2002a9be357acec0a` on `feature/backend-foundation`.
+- Test results: Notification **28/28**, EventTracking **27/27**, Challenge **56/56**, Habit **24/24**, Identity **100/100** — **235/235 .NET tests passed**, zero failed or skipped; RabbitMQ topology contract **17/17** passed.
+- Release build succeeded with 0 errors. Docker Compose validation, RabbitMQ startup/topology checks and test-result artifact upload passed.
+- Notification's malformed UTF-8 test verified original message bytes and `InvalidEvent` classification reached its DLQ. The unavailable-DLQ-route test verified that the source delivery remained unacknowledged and was recoverable after the consumer session ended. Both are isolated RabbitMQ Testcontainers tests.
+- The Notification employee-status projection SDD acceptance criteria NESP-01–NESP-14 are now verified by the combined implementation tests and CI #168. Scope remains projection-only; this does not authorize notification sending/preferences changes, employee-facing APIs, or an inactive-employee access policy.
+- [CI #168](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44889070669). Test results artifact: [teampulse-test-results](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44889070669/artifacts/14700589953).
+- Build reported two nullable warnings in integration-test helper code (one Notification, one EventTracking); there were no build errors. These are recorded for a later cleanup and do not invalidate the passing run.
+- No persistent RabbitMQ broker, existing database volume, or AWS resource was changed.
+
+Updated: 2026-11-21
+
 ## Notification DLQ failure-path test added
 
 - Added a second broker-backed failure-path test: temporarily remove the Notification DLQ binding, publish malformed UTF-8 to the source queue, and verify the mandatory DLQ publish failure ends the consumer session without acknowledging the source delivery. After channel disposal, the test reads and acknowledges the redelivered source message to leave its disposable broker clean.
