@@ -111,10 +111,7 @@ public sealed class EmployeeInvitationService(
 
         var material = tokenService.Create();
         invitation.RotateToken(material.TokenDigest, nowUtc, nowUtc.Add(InvitationLifetime));
-        await RemoveDeliverySecretAsync(invitationId, cancellationToken);
-        database.InvitationDeliverySecrets.Add(new InvitationDeliverySecret(
-            Guid.NewGuid(), invitation.Id, invitation.DeliveryGeneration,
-            material.ProtectedToken, nowUtc));
+        await ReplaceDeliverySecretAsync(invitation, material.ProtectedToken, nowUtc, cancellationToken);
         AddDeliveryOutboxMessage(invitation, nowUtc);
 
         await database.SaveChangesAsync(cancellationToken);
@@ -178,6 +175,25 @@ public sealed class EmployeeInvitationService(
         parameter.Value = invitationId;
         command.Parameters.Add(parameter);
         return await command.ExecuteScalarAsync(cancellationToken) is not null;
+    }
+
+    private async Task ReplaceDeliverySecretAsync(
+        EmployeeInvitation invitation,
+        string protectedToken,
+        DateTime createdAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var existing = await database.InvitationDeliverySecrets.SingleOrDefaultAsync(
+            secret => secret.InvitationId == invitation.Id, cancellationToken);
+        if (existing is null)
+        {
+            database.InvitationDeliverySecrets.Add(new InvitationDeliverySecret(
+                Guid.NewGuid(), invitation.Id, invitation.DeliveryGeneration,
+                protectedToken, createdAtUtc));
+            return;
+        }
+
+        existing.Replace(invitation.DeliveryGeneration, protectedToken, createdAtUtc);
     }
 
     private async Task RemoveDeliverySecretAsync(
