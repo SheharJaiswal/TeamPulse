@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { eventTrackingApiUrl, habitApiUrl, responseMessage } from '$lib/server/api';
+import { eventTrackingApiUrl, habitApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
 import { isCalendarDate, isGuid } from '$lib/validation.js';
 import { submitActivity } from '$lib/server/activity-submission.js';
 
@@ -11,6 +11,15 @@ interface Habit {
   startDate: string;
   endDate: string | null;
   status: number;
+}
+
+interface Employee {
+  employeeId: string;
+  email: string;
+  displayName: string;
+  organizationId: string;
+  teamId: string;
+  role: string;
 }
 
 interface Activity {
@@ -61,22 +70,26 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
 
   let habitsResponse: Response;
   let activitiesResponse: Response;
+  let employeeResponse: Response;
   try {
     [habitsResponse, activitiesResponse] = await Promise.all([
       fetch(`${habitApiUrl()}/api/habits`, { headers }),
-      fetch(historyUrl, { headers })
+      fetch(historyUrl, { headers }),
+      fetch(`${identityApiUrl()}/api/identity/me`, { headers })
     ]);
   } catch {
     error(503, 'TeamPulse services are unavailable. Check that Identity, Habit and Event Tracking APIs are running.');
   }
   await handleUnauthorized(habitsResponse, cookies);
   await handleUnauthorized(activitiesResponse, cookies);
-  if (!habitsResponse.ok || !activitiesResponse.ok) {
+  await handleUnauthorized(employeeResponse, cookies);
+  if (!habitsResponse.ok || !activitiesResponse.ok || !employeeResponse.ok) {
     error(502, 'TeamPulse could not load your activity history. Please try again.');
   }
 
   return {
     habits: (await habitsResponse.json()) as Habit[],
+    employee: (await employeeResponse.json()) as Employee,
     activities: (await activitiesResponse.json()) as Activity[],
     filters: { habitId, fromDate, toDate },
     idempotencyKey: crypto.randomUUID()
