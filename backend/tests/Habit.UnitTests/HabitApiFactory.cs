@@ -14,6 +14,10 @@ public sealed class HabitApiFactory(string connectionString) : WebApplicationFac
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("ConnectionStrings:HabitDatabase", connectionString);
+        builder.UseSetting("Jwt:Issuer", JwtIssuer);
+        builder.UseSetting("Jwt:Audience", JwtAudience);
+        builder.UseSetting("Jwt:SigningKey", JwtSigningKey);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
