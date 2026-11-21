@@ -1,25 +1,30 @@
 # Tasks: Event Tracking Employee Status Projection Consumer
 
-**Status:** Draft — implementation blocked on owner approval of this SDD.
+**Status:** Owner-approved SDD; implementation in progress.
 
 ## SDD and contract review
 
 - [x] Owner reviewed and approved proposal/spec/design/tasks on 2026-11-21.
-- [x] Reuse the existing Employee Status Projection Contract v1 and shared event envelope without changing them.
+- [x] Reuse Employee Status Projection Contract v1 and the shared event envelope without changing them.
 - [x] Preserve Event Tracking ownership of activity submissions and audit history; keep this increment projection-only.
 - [x] Map acceptance criteria to unit, MySQL 8.4 and RabbitMQ Testcontainers verification.
 
-## Implementation — only after approval
+## Implementation
 
 - [x] Add EventTracking API, Application, Domain and Infrastructure projects targeting .NET 8.
 - [x] Add EventTracking.UnitTests and register all projects in backend/TeamPulse.sln.
-- [x] Add Event Tracking-owned MySQL database configuration, `03-event-tracking-database.sql`, Compose mount and documented migration for existing persistent MySQL volumes.
-- [x] Implement minimal projection, inbox, application processor and projection reader.
+- [x] Add Event Tracking-owned MySQL database configuration, initialization script and Compose mount.
+- [x] Document the explicit database/grant migration required for existing persistent MySQL volumes.
+- [x] Implement minimal employee-status projection, inbox, application processor and projection reader.
 - [x] Add checked-in EF migration/model snapshot and startup migration.
+- [x] Add initial processor unit tests and MySQL 8.4 Testcontainers store tests (CI verification pending).
+- [ ] Verify clean Release build and all existing/new tests in GitHub Actions.
+- [ ] Add production API-host startup integration test against fresh MySQL, proving migrations and production reader.
 - [ ] Add manual-ack RabbitMQ consumer, bounded retry/reconnect and independent consumer health.
-- [ ] Upgrade the existing durable classic Event Tracking queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; add its dedicated quorum DLQ and exact routing-key contract test. Do not modify other service queues. Document safe migration of existing persistent RabbitMQ queues and pending messages.
-- [ ] Add unit, MySQL 8.4 and RabbitMQ Testcontainers coverage, including API-host startup and privacy assertions.
-- [ ] Add local run documentation and update README/project status.
+- [ ] Upgrade only the Event Tracking source queue to quorum with delivery limit 5, at-least-once dead-lettering and reject-publish overflow; add dedicated quorum DLQ and exact routing-key contract test.
+- [ ] Document safe migration of the existing persistent RabbitMQ queue, preserving pending messages; never silently discard messages or reset shared volume.
+- [ ] Add unit, MySQL 8.4 and RabbitMQ Testcontainers coverage for consumer acknowledgement, retry, DLQ, reconnect, replay and privacy.
+- [ ] Add local run documentation and update README/project status after consumer topology is complete.
 
 ## Acceptance mapping
 
@@ -39,21 +44,11 @@
 - Insight and Notification consumers.
 - Global immediate token revocation, automated DLQ redrive and retention cleanup.
 
+## Infrastructure constraints
 
-## Infrastructure audit correction — existing local resources
-
-- The current Event Tracking RabbitMQ source queue is durable but has empty arguments; it is not yet quorum and has no DLX. Its existing binding is `teampulse.domain.events` -> `teampulse.event-tracking.events` with routing key `identity.employee.lifecycle`.
-- The design now explicitly upgrades only that queue to quorum with delivery limit 5, at-least-once dead-lettering, reject-publish overflow and an Event Tracking-owned DLQ. RabbitMQ queue type/arguments are immutable on redeclaration; existing persistent local queues require a deliberate drain/preserve/delete/recreate migration. Never discard pending lifecycle messages or reset a shared volume implicitly.
-- The MySQL bootstrap currently has only Habit and Challenge init scripts. Add a third Event Tracking database/grant script and Compose mount; existing persistent MySQL volumes need an explicit database/grant migration.
-- No application code, topology, Compose file or database bootstrap was changed in this SDD-only execution. Owner approval remains required before implementation.
-
-
-## First implementation increment — service and persistence foundation
-
-- Owner approved this SDD package on 2026-11-21.
-- Added EventTracking API, Application, Domain and Infrastructure projects plus EventTracking.UnitTests to the solution.
-- Added the minimal employee status projection, processed-event inbox, schema-v1 lifecycle envelope processor, projection reader and transactional MySQL store with a conditional lifecycle-version upsert.
-- Added the checked-in initial EF migration and model snapshot; API startup applies migrations before serving health endpoints.
-- Added the Event Tracking logical MySQL database initialization script and Compose mount. Existing persistent MySQL volumes still require an explicit database/grant migration because init scripts do not rerun for populated volumes.
-- Added initial processor tests and MySQL 8.4 Testcontainers store tests. RabbitMQ consumer and queue topology changes are the next increment and are not included here.
-- Verification pending GitHub Actions. No local .NET SDK or Docker CLI execution is claimed.
+- Existing Event Tracking source queue: durable classic queue with no queue arguments; binding is `teampulse.domain.events` -> `teampulse.event-tracking.events` with routing key `identity.employee.lifecycle`.
+- The intended upgrade is Event Tracking-owned quorum queue with delivery limit 5, at-least-once dead-lettering, reject-publish overflow and a dedicated Event Tracking DLQ. Queue type/arguments are immutable on redeclaration; migration must deliberately preserve/drain pending lifecycle messages before recreation.
+- Existing MySQL volumes do not rerun init scripts. Follow `docs/runbooks/event-tracking-local-migrations.md`.
+- AWS EventBridge/SQS and cloud provisioning remain deferred until owner cloud setup.
+- Inbox retention is initially permanent and requires privacy/legal review before production.
+- Never log raw event bodies, optional notes, credentials or broker URIs.
