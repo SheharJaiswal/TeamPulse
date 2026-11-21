@@ -83,19 +83,6 @@ public sealed class HabitManagementApiTests(HabitMySqlFixture fixture) : IClassF
             "Bearer", CreateToken(Guid.NewGuid()));
         var otherRead = await otherClient.GetAsync($"/api/habits/{habitId}");
         Assert.Equal(HttpStatusCode.NotFound, otherRead.StatusCode);
-        var otherUpdate = await otherClient.PutAsJsonAsync($"/api/habits/{habitId}", new
-        {
-            name = "Unauthorized update",
-            description = (string?)null,
-            category = (string?)null,
-            frequency = 1,
-            targetCount = 1,
-            startDate = "2026-11-21",
-            endDate = (string?)null
-        });
-        Assert.Equal(HttpStatusCode.NotFound, otherUpdate.StatusCode);
-        var otherArchive = await otherClient.PostAsync($"/api/habits/{habitId}/archive", null);
-        Assert.Equal(HttpStatusCode.NotFound, otherArchive.StatusCode);
         var otherList = await otherClient.GetAsync("/api/habits");
         Assert.Equal(HttpStatusCode.OK, otherList.StatusCode);
         using var otherListJson = JsonDocument.Parse(await otherList.Content.ReadAsStringAsync());

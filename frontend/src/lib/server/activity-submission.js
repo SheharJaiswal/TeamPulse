@@ -47,7 +47,7 @@ export async function submitActivity(submission, dependencies) {
   if (!response.ok) {
     return {
       kind: 'rejected',
-      status: [400, 404, 409].includes(response.status) ? response.status : 502,
+      status: [400, 404, 409, 503].includes(response.status) ? response.status : 502,
       message: await dependencies.getResponseMessage(response, 'Your activity could not be recorded.'),
       idempotencyKey
     };

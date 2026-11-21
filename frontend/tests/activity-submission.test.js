@@ -55,6 +55,27 @@ test('retains the same key when the Event Tracking request fails', async () => {
   assert.equal(result.idempotencyKey, validSubmission.idempotencyKey);
 });
 
+test('preserves service-unavailable responses and the idempotency key', async () => {
+  const result = await submitActivity(
+    validSubmission,
+    dependencies({
+      send: async () => new Response(JSON.stringify({ message: 'Habit service is temporarily unavailable.' }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' }
+      }),
+      getResponseMessage: async (response, fallback) => {
+        const body = await response.json();
+        return body.message || fallback;
+      }
+    })
+  );
+
+  assert.equal(result.kind, 'rejected');
+  assert.equal(result.status, 503);
+  assert.equal(result.message, 'Habit service is temporarily unavailable.');
+  assert.equal(result.idempotencyKey, validSubmission.idempotencyKey);
+});
+
 test('retains the same key when Event Tracking rejects the submission', async () => {
   let observedStatus = 0;
   const result = await submitActivity(
