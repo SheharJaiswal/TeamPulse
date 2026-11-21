@@ -208,3 +208,29 @@ button { cursor: pointer; }
   opacity: .62;
   transform: none;
 }
+
+/* Shared keyboard-navigation affordance across every workspace and auth route. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #2f8067;
+  outline-offset: 3px;
+}
+
+/* Respect operating-system motion preferences without changing default behavior. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
