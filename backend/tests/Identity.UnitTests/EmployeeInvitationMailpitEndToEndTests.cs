@@ -84,7 +84,11 @@ public sealed class EmployeeInvitationMailpitEndToEndTests : IClassFixture<MySql
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
         using (var scope = factory.Services.CreateScope())
         {
-            Assert.True(scope.ServiceProvider.GetRequiredService<IOptions<InvitationEmailOptions>>().Value.Enabled);
+            var emailOptions = scope.ServiceProvider.GetRequiredService<IOptions<InvitationEmailOptions>>().Value;
+            Assert.True(emailOptions.Enabled);
+            Assert.Equal("127.0.0.1", emailOptions.Host);
+            Assert.Equal(smtpPort, emailOptions.Port);
+            Assert.False(emailOptions.EnableSsl);
             Assert.Contains(scope.ServiceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>(),
                 service => service is InvitationDeliveryWorker);
         }
