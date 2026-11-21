@@ -80,14 +80,14 @@
 
 - Added an API-host integration test using correctly signed HrAdmin tokens with either no `sub` claim or a non-GUID `sub`.
 - Both requests must return 401 before lifecycle mutation; the test verifies employee status/version, audit and correlation-scoped outbox remain unchanged.
-- Implementation commit: `d0b20c32c1c1ec7b7af8b138c571730d8f7be10a`. CI verification pending.
+- Implementation commit: `d0b20c32c1c1ec7b7af8b138c571730d8f7be10a`. Identity 105/105 passed in CI #237; full workflow verification is recorded below.
 
 ## JWT subject-claim validation regression — CI #236 test passed; workflow image setup corrected
 
 - Added an API-host integration test using correctly signed HrAdmin tokens with either no `sub` claim or a non-GUID `sub`. Both requests returned HTTP 401; the employee remained active at lifecycle version 0, with no audit rows and no outbox rows for either supplied correlation ID.
 - Identity passed **105/105** tests in CI #236, confirming the new ILC-16 regression test passed.
 - CI #236 overall failed for an unrelated environment setup issue: the Insight queue-migration Testcontainers test requested `rabbitmq:4.0-alpine`, but the GitHub runner had not pulled that image. Seven of eight Insight queue-migration tests passed; the failing test could not create its container.
-- Corrected CI workflow to pre-pull the exact RabbitMQ image used by the Testcontainers fixture before running the suite. Workflow fix commit: `819242fe43a446fe1574e3025458d12a14331188`. Full workflow verification is pending.
+- Corrected CI workflow to pre-pull the exact RabbitMQ image used by the Testcontainers fixture before running the suite. Workflow fix commit: `819242fe43a446fe1574e3025458d12a14331188`. Full workflow verification passed in CI #237 (264/264 .NET tests).
 - [CI #236](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44901781762).
 
 
@@ -121,7 +121,7 @@
 - Added a sequential MySQL API-host integration test that submits the same lifecycle command twice using the same actor/idempotency key and different correlation IDs.
 - The test asserts the first response is `transitioned`, the second is `replayed`, both expose the original event and correlation IDs, and exactly one employee lifecycle audit/outbox row exists with the original correlation ID also present in the serialized envelope.
 - Added acceptance criterion ILC-19 to the lifecycle specification.
-- Test commit: `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. Specification commit: `9d4a7130dbd4dc745611cda4356d73f199e47318`. CI verification pending.
+- Test commit: `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. Specification commit: `9d4a7130dbd4dc745611cda4356d73f199e47318`. Verified in CI #239 (Identity 108/108; full .NET suite 267/267).
 
 
 ## CI #239 — correlation-ID idempotency replay verified
@@ -136,7 +136,7 @@
 
 - Corrected lifecycle header handling so UUID generation occurs only when X-Correlation-ID is absent. An explicitly supplied empty value now follows UUID parsing and is rejected with HTTP 400, consistent with the documented contract.
 - Added a MySQL API-host regression test proving an explicitly empty correlation header returns 400 before changing employee status/version, creating a lifecycle audit or inserting an outbox row.
-- Added acceptance criterion ILC-20. CI verification is pending.
+- Added acceptance criterion ILC-20. Verified in CI #241; Identity 109/109 and the full .NET suite 268/268 passed.
 - Controller commit: `62b84ee4a68c9fbca1b48c8329a029b6183dc4ee`; test commit: `df805822b958cae6cd9580af019ca3cbf07d2558`.
 
 
@@ -145,5 +145,5 @@
 - CI #240 completed with failure against `df805822b958cae6cd9580af019ca3cbf07d2558`. Identity passed 108/109; the new explicit-empty-header regression expected HTTP 400 but received HTTP 200. The other suites passed: Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8. The 19 Python topology tests, build, Compose validation, RabbitMQ startup/topology and pinned image pulls passed.
 - Root cause: the controller inferred header omission from `StringValues.Count == 0`. An explicitly present empty header can have zero parsed values, so this conflated header presence with value count. The test client's empty header serialization also did not preserve a distinguishable empty field.
 - Corrected controller to use `Request.Headers.ContainsKey("X-Correlation-ID")` to distinguish absence from presence, then require exactly one parseable UUID when present. Changed the API-host regression to send a whitespace-only value, which exercises a present malformed header.
-- Correction is committed for CI verification; do not mark ILC-20 accepted until the new workflow passes.
+- The correction was verified in CI #241: ILC-20 passed with the whitespace-only header case returning HTTP 400 before mutation; the full .NET suite passed 268/268.
 - [CI #240](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903663508). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903663508/artifacts/14706973358).
