@@ -13,8 +13,8 @@
 - [x] Add frontend and backend CI validation.
 
 ## Remaining
-- [ ] Add MySQL integration tests proving activity and outbox commit/rollback atomically, employee-scoped idempotency and filtered history.
+- [x] Add MySQL integration tests proving activity and outbox commit/rollback atomically, employee-scoped idempotency and filtered history.
 - [ ] Add API integration tests for authorization, ownership isolation and Habit API outage handling.
-- [ ] Verify local RabbitMQ publisher against a dedicated Testcontainers broker without changing shared persistent topology/data.
+- [x] Verify local RabbitMQ publisher against a dedicated Testcontainers broker without changing shared persistent topology/data.
 - [x] Add activity history habit/date filters and a preselected habit action from habit cards.\n- [x] Preserve the same idempotency key when a submission response is ambiguous or retryable; rotate it only after acceptance.
 - [ ] Decide downstream event consumer and progress projection scope separately; do not infer streak/target semantics.
