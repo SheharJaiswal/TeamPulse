@@ -8,7 +8,7 @@ namespace Insight.Infrastructure.Persistence;
 
 public sealed class DynamoDbEmployeeStatusProjectionStore : IEmployeeStatusProjectionStore
 {
-    private const int MaxConcurrencyAttempts = 5;
+    private const int MaxConcurrencyAttempts = 10;
     private readonly IAmazonDynamoDB _client;
     private readonly InsightDynamoDbOptions _options;
 

@@ -25,7 +25,7 @@ services:
   dynamodb-local:
     image: amazon/dynamodb-local:2.5.2
     container_name: teampulse-dynamodb-local
-    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "./data"]
+    command: ["-sharedDb", "-dbPath", "./data"]
     working_dir: /home/dynamodblocal
     ports:
       - "8000:8000"
