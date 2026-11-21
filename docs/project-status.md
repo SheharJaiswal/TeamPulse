@@ -13,7 +13,7 @@ Updated: 2026-11-21
 - Added a Testcontainers integration test that invokes this exact production component against a disposable RabbitMQ broker and publishes with `mandatory=true` to a non-existent destination routing key. The test asserts that the broker's Basic.Return is surfaced as a failure, without a timing-sensitive queue deletion race.
 - The same test then publishes successfully to a valid queue using the same publisher instance, confirming that a previous returned publication does not poison subsequent copy attempts.
 - Expanded successful-copy property assertions to include expiration, timestamp, user ID and cluster ID in addition to the previously covered AMQP properties, headers and body.
-- These are committed tests but remain uncompiled/unexecuted until CI runs; the local environment has no .NET SDK. No persistent/shared broker was accessed.
+- These are committed tests. The latest CI run has successfully compiled the complete Release solution and passed Compose, local RabbitMQ startup/topology and Python topology-contract validation; the .NET test step is still running. The local environment has no .NET SDK. No persistent/shared broker was accessed.
 
 Updated: 2026-11-21
 
@@ -23,7 +23,7 @@ Updated: 2026-11-21
 - Added a separate destination-consumer guard test: the utility refuses execution if the destination queue has active consumers. A missing-destination preflight test also confirms the source message remains untouched.
 - Expanded the successful-copy contract assertions to cover AMQP expiration, timestamp, user ID and cluster ID in addition to content type/encoding, persistent delivery mode, priority, correlation ID, reply-to, message ID, type, app ID, headers and body. This is source-level test coverage only until CI compiles and runs the project.
 - This coverage runs only against a disposable RabbitMQ Testcontainers broker. No persistent/shared broker was accessed. CI build/runtime verification remains pending because the local environment does not provide the .NET SDK.
-- Remaining before operational review: deterministic mandatory-unroutable publication race coverage, complete Release build/test run, then joint review of utility, runbook and exact topology contract tests.
+- Remaining before operational review: complete the current CI .NET test run, then jointly review the utility, runbook and exact topology contract tests. The deterministic mandatory-return test has since been added.
 
 Updated: 2026-11-21
 
@@ -31,8 +31,8 @@ Updated: 2026-11-21
 
 - Added `Insight.QueueMigration.IntegrationTests`, a dedicated .NET 8 test project using RabbitMQ Testcontainers and invoking the actual migration console executable against a disposable RabbitMQ broker.
 - Coverage verifies passive preflight leaves source messages untouched (including when the destination queue is missing), successful copy preserves the payload and supported AMQP basic properties/headers while upgrading delivery mode to persistent, bounded copy can resume, queue counts reconcile, and active consumers on either queue block execution.
-- Registered the test project in `backend/TeamPulse.sln`. The tests have not yet been compiled or run; CI must provide the first authoritative build/runtime result. The local execution environment has no .NET SDK.
-- Remaining tests: mandatory unroutable publish failure, publish-confirm/source-ack ordering and the documented crash/retry duplicate window. The utility remains unapproved for operational use until the full suite and runbook/topology review pass.
+- Registered the test project in `backend/TeamPulse.sln`. The tests are now compiled successfully in Release by CI; their runtime result is pending in the current workflow. The local execution environment has no .NET SDK.
+- Remaining verification: complete the full CI test suite and review the utility, runbook and exact topology contract together. Mandatory unroutable publish handling and the documented crash/retry duplicate window now have isolated Testcontainers coverage. The utility remains unapproved for operational use until the full suite and review pass.
 - All broker interactions in these tests use disposable Testcontainers instances. No persistent RabbitMQ queues, volumes, MySQL, DynamoDB Local or AWS resources were modified.
 
 Updated: 2026-11-21
