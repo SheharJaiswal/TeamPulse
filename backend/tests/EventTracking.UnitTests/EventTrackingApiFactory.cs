@@ -1,7 +1,10 @@
 using System.Collections.Generic;
+using EventTracking.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventTracking.UnitTests;
 
@@ -15,14 +18,22 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:EventTrackingDatabase"] = connectionString,
-                ["EventTrackingConsumer:Enabled"] = (rabbitMqUri is not null).ToString(),
-                ["EventTrackingConsumer:Uri"] = rabbitMqUri ?? string.Empty,
-                ["EventTrackingConsumer:ReconnectDelayMilliseconds"] = "250",
-                ["EventTrackingConsumer:ConnectionTimeoutMilliseconds"] = "1000",
-                // Keep broker-loss detection deterministic in integration tests. Production
-                // retains the five-second default unless explicitly configured.
-                ["EventTrackingConsumer:HeartbeatSeconds"] = "1"
+                ["ConnectionStrings:EventTrackingDatabase"] = connectionString
+            });
+        });
+        // Configure the test consumer explicitly after the API's registrations. This avoids
+        // a false-healthy health endpoint when test-host configuration binding leaves the
+        // optional consumer disabled.
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<EventTrackingRabbitMqConsumerOptions>();
+            services.AddSingleton(new EventTrackingRabbitMqConsumerOptions
+            {
+                Enabled = rabbitMqUri is not null,
+                Uri = rabbitMqUri ?? string.Empty,
+                ReconnectDelayMilliseconds = 250,
+                ConnectionTimeoutMilliseconds = 1000,
+                HeartbeatSeconds = 1
             });
         });
     }

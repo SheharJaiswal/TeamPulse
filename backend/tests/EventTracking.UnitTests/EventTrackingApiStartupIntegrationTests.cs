@@ -152,10 +152,12 @@ public sealed class EventTrackingApiStartupIntegrationTests(EventTrackingMySqlFi
 
         using var factory = new EventTrackingApiFactory(fixture.ConnectionString, brokerUri);
         using var client = factory.CreateClient();
+        var consumerOptions = factory.Services.GetRequiredService<EventTracking.Infrastructure.Messaging.EventTrackingRabbitMqConsumerOptions>();
         var consumerStatus = factory.Services.GetRequiredService<EventTracking.Infrastructure.Messaging.EventTrackingRabbitMqConsumerStatus>();
 
+        Assert.True(consumerOptions.Enabled, "The API-host integration test must enable the RabbitMQ consumer.");
+        await WaitForConnectedAsync(consumerStatus);
         await WaitForStatusAsync(client, "/health/consumer", HttpStatusCode.OK);
-        Assert.True(consumerStatus.IsConnected);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
 
         await broker.StopAsync();
@@ -163,6 +165,25 @@ public sealed class EventTrackingApiStartupIntegrationTests(EventTrackingMySqlFi
         await WaitForDisconnectedAsync(consumerStatus);
         await WaitForStatusAsync(client, "/health/consumer", HttpStatusCode.ServiceUnavailable);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/ready")).StatusCode);
+    }
+
+    private static async Task WaitForConnectedAsync(
+        EventTracking.Infrastructure.Messaging.EventTrackingRabbitMqConsumerStatus status,
+        int timeoutSeconds = 20)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (status.IsConnected)
+                return;
+            await Task.Delay(100);
+        }
+
+        Assert.Fail(
+            $"RabbitMQ consumer did not establish a session. " +
+            $"Attempts={status.ConnectionAttemptCount}, Established={status.EstablishedSessionCount}, " +
+            $"Completed={status.CompletedSessionCount}, Stage={status.CurrentSessionStage}, " +
+            $"FailureStage={status.LastSessionFailureStage}, FailureTypes={status.LastSessionFailureTypes}.");
     }
 
     private static async Task WaitForDisconnectedAsync(
