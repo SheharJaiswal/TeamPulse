@@ -166,6 +166,16 @@ try
         }
     }
 
+    var summaryRecord = JsonSerializer.Serialize(new
+    {
+        type = "copy-summary",
+        source = options.Source,
+        destination = options.Destination,
+        acknowledgedThisRun = copied,
+        completedAtUtc = DateTimeOffset.UtcNow
+    });
+    await File.AppendAllTextAsync(ledgerPath, summaryRecord + Environment.NewLine);
+
     Console.WriteLine($"Copy completed for this invocation. Messages confirmed and acknowledged: {copied}.");
     Console.WriteLine($"Digest ledger: {ledgerPath}");
     Console.WriteLine("Duplicates are possible after a crash between destination confirmation and source acknowledgement.");
@@ -268,11 +278,18 @@ static (MigrationOptions? Options, string? Error) ParseArguments(string[] argume
 
 static string ReadValue(string[] arguments, ref int index)
 {
-    if (++index >= arguments.Length || arguments[index].StartsWith("--", StringComparison.Ordinal))
+    if (index + 1 >= arguments.Length)
+    {
+        index = arguments.Length;
+        return string.Empty;
+    }
+
+    if (arguments[index + 1].StartsWith("--", StringComparison.Ordinal))
     {
         return string.Empty;
     }
 
+    index++;
     return arguments[index];
 }
 
