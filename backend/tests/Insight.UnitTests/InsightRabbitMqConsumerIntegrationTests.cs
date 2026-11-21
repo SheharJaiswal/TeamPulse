@@ -282,7 +282,8 @@ public sealed class InsightRabbitMqConsumerIntegrationTests : IAsyncLifetime
 
         public async Task<ProjectionProcessingOutcome> ProcessAsync(string message, CancellationToken cancellationToken)
         {
-            if (message.Contains("after-ack-sentinel", StringComparison.Ordinal))
+            if (message.Contains("after-ack-sentinel", StringComparison.Ordinal)
+                || message.Contains("after-privacy-sentinel", StringComparison.Ordinal))
             {
                 SentinelProcessed.TrySetResult(true);
                 return ProjectionProcessingOutcome.Applied;
