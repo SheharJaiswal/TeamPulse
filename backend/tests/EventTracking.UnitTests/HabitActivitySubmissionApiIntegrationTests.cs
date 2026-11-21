@@ -82,14 +82,26 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
             "Bearer", CreateToken(employeeId));
 
+        var originalSubmissionId = Guid.NewGuid();
         using (var scope = factory.Services.CreateScope())
         {
             var store = scope.ServiceProvider.GetRequiredService<IHabitActivitySubmissionStore>();
-            await store.AddAsync(new HabitActivitySubmission(Guid.NewGuid(), employeeId, habitId,
+            await store.AddAsync(new HabitActivitySubmission(originalSubmissionId, employeeId, habitId,
                 new DateOnly(2026, 11, 21), 1, idempotencyKey, DateTime.UtcNow), CancellationToken.None);
         }
 
-        using var response = await client.PostAsJsonAsync("/api/habit-activities", new
+        using var identicalRetry = await client.PostAsJsonAsync("/api/habit-activities", new
+        {
+            habitId,
+            activityDate = "2026-11-21",
+            quantity = 1,
+            idempotencyKey
+        });
+        Assert.Equal(HttpStatusCode.OK, identicalRetry.StatusCode);
+        using (var retryDocument = JsonDocument.Parse(await identicalRetry.Content.ReadAsStringAsync()))
+            Assert.Equal(originalSubmissionId, retryDocument.RootElement.GetProperty("id").GetGuid());
+
+        using var conflictingRetry = await client.PostAsJsonAsync("/api/habit-activities", new
         {
             habitId,
             activityDate = "2026-11-21",
@@ -97,9 +109,9 @@ public sealed class HabitActivitySubmissionApiIntegrationTests : IAsyncLifetime
             idempotencyKey
         });
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, conflictingRetry.StatusCode);
         Assert.Contains("already used for a different activity.",
-            await response.Content.ReadAsStringAsync());
+            await conflictingRetry.Content.ReadAsStringAsync());
         Assert.Equal(0, habitApi.RequestCount);
 
         using var history = await client.GetAsync("/api/habit-activities");
