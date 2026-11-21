@@ -86,14 +86,10 @@ public sealed class DynamoDbEmployeeStatusProjectionStore : IEmployeeStatusProje
                     {
                         TableName = _options.TableName,
                         Key = employeeKey,
-                        UpdateExpression = "SET #pk = :pk, #sk = :sk, #employeeId = :employeeId, #isActive = :isActive, #version = :version, #updatedAtUtc = :updatedAtUtc",
+                        UpdateExpression = "SET #employeeId = :employeeId, #isActive = :isActive, #version = :version, #updatedAtUtc = :updatedAtUtc",
                         ConditionExpression = condition,
                         ExpressionAttributeNames = ProjectionNames(),
-                        ExpressionAttributeValues = values.Concat(new Dictionary<string, AttributeValue>
-                        {
-                            [":pk"] = new() { S = employeeKey["PK"].S },
-                            [":sk"] = new() { S = employeeKey["SK"].S }
-                        }).ToDictionary(pair => pair.Key, pair => pair.Value)
+                        ExpressionAttributeValues = values
                     }
                 });
             }
