@@ -1,11 +1,11 @@
 
 
 
-## Event Tracking consumer CI verification and API-host startup test
+## Event Tracking RabbitMQ Testcontainers coverage
 
-- CI #136 passed for consumer commit `057d5cb9c38f045e728d50ad3a34b10a1b49f1f8`: Release build, Compose validation, RabbitMQ startup/topology checks, 194 .NET tests and 14 Python topology tests passed. [CI #136](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44879757388).
-- Added a real EventTracking API-host integration test using a fresh MySQL 8.4 Testcontainer. It exercises `/health/ready`, verifies the startup migration is applied, resolves the production projection store/reader from DI, persists a lifecycle projection and reads it back.
-- Upgraded MySqlConnector to 2.6.2. The CI warning identified GHSA-473q-m89c-ghf8; versions before 2.6.1 are affected, and 2.6.1+ contains the fix. [GitHub advisory](https://github.com/advisories/GHSA-473q-m89c-ghf8).
-- These API-host test and dependency changes are authored but await CI verification. RabbitMQ Testcontainers behavior tests and actual-host consumer health isolation remain outstanding. Existing user RabbitMQ/MySQL volumes remain untouched.
+- Added broker-backed tests using RabbitMQ 4.1 Testcontainers for manual acknowledgement after processing completes, terminal outcome DLQ confirmation/classification, transient retry success and exhaustion, source redelivery when the mandatory DLQ route is unavailable, and log privacy.
+- These tests use a dedicated disposable broker and the exact Event Tracking source/DLQ quorum topology. They do not modify the user's existing persistent broker volume.
+- CI #137 is still running the API-host startup/MySQL integration test stage; latest test results must be polled before claiming the startup increment passed.
+- Commit for the new broker tests is pending CI verification. Commit-before-ack replay against the real persistent inbox and API-host consumer health isolation remain outstanding.
 
 Updated: 2026-11-21
