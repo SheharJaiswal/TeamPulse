@@ -1,3 +1,13 @@
+## SvelteKit shared accessibility baseline — implementation committed; CI pending
+
+- Added a shared keyboard-visible focus indicator for links, buttons and form controls in `frontend/src/routes/app.css`. Existing input focus border and shadow styling remains in place.
+- Added a `prefers-reduced-motion: reduce` media query to disable smooth scrolling and minimize CSS animation/transition duration when requested by the operating system.
+- Scope is CSS-only: no routes, business workflows, API contracts, authentication or backend behavior changed.
+- SDD: `docs/changes/frontend-accessibility-baseline/`. Implementation commit: `f4386acccd2dd5fe24bd1b14c74a8a8c31c45b3b`.
+- Frontend CI verification is pending; do not treat this increment as accepted until the existing frontend workflow passes.
+
+Updated: 2026-11-21
+
 ## Identity lifecycle command validation — ILC-01–ILC-20 verified
 
 - The HR-authorized lifecycle API now has explicit acceptance coverage for validated HrAdmin authorization and GUID JWT subject attribution; atomic employee/audit/outbox mutation; idempotent retries and conflict handling; lifecycle version/concurrency behavior; and request/header boundary validation.
