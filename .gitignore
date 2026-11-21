@@ -1,0 +1,8 @@
+**/.keys/
+**/identity-dpkeys/
+**/bin/
+**/obj/
+**/node_modules/
+.env
+.env.*
+!.env.example
