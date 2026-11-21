@@ -8,6 +8,7 @@
   $: activeHabits = data.habits.filter((habit) => habit.status === 1);
   $: habitNames = new Map(data.habits.map((habit) => [habit.id, habit.name]));
   $: formMessage = form && 'message' in form ? form.message : undefined;
+  $: idempotencyKey = form && 'idempotencyKey' in form ? form.idempotencyKey : data.idempotencyKey;
 
   function dateLabel(value: string): string {
     const [year, month, day] = value.split('-').map(Number);
@@ -59,10 +60,13 @@
           <div class="empty-state"><h3>No active habits yet</h3><p>Create a habit before recording activity.</p><a class="primary-button" href="/habits#create-habit">Create a habit →</a></div>
         {:else}
           <form class="create-form" method="POST" action="?/submit" use:enhance>
+            <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
             <div class="form-field full">
               <label for="activity-habit">Habit</label>
               <select id="activity-habit" name="habitId" required>
-                {#each activeHabits as habit (habit.id)}<option value={habit.id}>{habit.name}</option>{/each}
+                {#each activeHabits as habit (habit.id)}
+                  <option value={habit.id} selected={habit.id === data.filters.habitId}>{habit.name}</option>
+                {/each}
               </select>
             </div>
             <div class="form-field">
@@ -78,12 +82,43 @@
         {/if}
       </section>
 
+      <section class="create-section activity-filter-section">
+        <div class="create-copy">
+          <p class="eyebrow">FIND AN ENTRY</p>
+          <h2>Filter your timeline</h2>
+          <p class="muted">Narrow your personal history by habit or activity date.</p>
+        </div>
+        <form class="activity-filters" method="GET" action="/activities">
+          <div class="form-field">
+            <label for="filter-habit">Habit</label>
+            <select id="filter-habit" name="habitId">
+              <option value="">All habits</option>
+              {#each data.habits as habit (habit.id)}
+                <option value={habit.id} selected={habit.id === data.filters.habitId}>{habit.name}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="filter-from">From date</label>
+            <input id="filter-from" name="fromDate" type="date" value={data.filters.fromDate} />
+          </div>
+          <div class="form-field">
+            <label for="filter-to">To date</label>
+            <input id="filter-to" name="toDate" type="date" value={data.filters.toDate} />
+          </div>
+          <div class="activity-filter-actions">
+            <button class="primary-button" type="submit">Apply filters</button>
+            <a class="subtle-button" href="/activities">Clear</a>
+          </div>
+        </form>
+      </section>
+
       <div class="section-heading">
         <div><h2>Your activity timeline</h2><p class="muted">Only your own submissions are shown here.</p></div>
         <span class="count-pill">{data.activities.length} entries</span>
       </div>
       {#if data.activities.length === 0}
-        <section class="empty-state"><div class="empty-illustration">✓</div><h3>Your story starts here</h3><p>Once you record an activity, it will appear in this timeline.</p></section>
+        <section class="empty-state"><div class="empty-illustration">✓</div><h3>No matching activity</h3><p>Try changing the habit or date filters, or record a new activity above.</p></section>
       {:else}
         <div class="archived-list">
           {#each data.activities as activity (activity.id)}

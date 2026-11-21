@@ -181,7 +181,7 @@
                 <div class="habit-footer">
                   <span>Started {dateLabel(habit.startDate)}</span>
                   <div class="card-actions">
-                    <a class="subtle-button" href="/activities">Log activity</a>
+                    <a class="subtle-button" href={`/activities?habitId=${habit.id}`}>Log activity</a>
                     <button class="subtle-button" type="button" onclick={() => editingHabitId = habit.id}>Edit</button>
                     <form method="POST" action="?/archive" use:enhance>
                       <input type="hidden" name="habitId" value={habit.id} />

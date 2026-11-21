@@ -183,3 +183,12 @@ button { cursor: pointer; }
   .edit-form { grid-template-columns: 1fr; }
   .edit-form .form-field.full, .edit-form .edit-actions.full { grid-column: auto; }
 }
+
+.activity-filter-section { margin-top: 22px; }
+.activity-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 12px; }
+.activity-filter-actions { display: flex; align-items: center; gap: 14px; grid-column: 1 / -1; }
+.activity-filter-actions .primary-button { min-height: 40px; font-size: 11px; }
+@media (max-width: 700px) {
+  .activity-filters { grid-template-columns: 1fr; }
+  .activity-filter-actions { grid-column: auto; }
+}
