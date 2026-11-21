@@ -309,6 +309,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
             new FixedOutcomeProcessor(ProjectionProcessingOutcome.Invalid),
             reconnectDelayMilliseconds: 60000);
         await WaitUntilAsync(() => Task.FromResult(status.IsConnected));
+        var completedSessionsBeforeFailure = status.CompletedSessionCount;
 
         await _channel!.QueueUnbindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
         await PublishAsync(body);
@@ -319,7 +320,6 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         // IsConnected becomes false before the session's async-disposable channels finish
         // closing. Wait for the completed-session signal so RabbitMQ has requeued the
         // unacknowledged source delivery before inspecting the queue from this test channel.
-        var completedSessionsBeforeFailure = status.CompletedSessionCount;
         await WaitUntilAsync(() => Task.FromResult(
             status.CompletedSessionCount > completedSessionsBeforeFailure));
         var redelivered = await _channel.BasicGetAsync(QueueName, autoAck: false);
