@@ -1,8 +1,10 @@
 # Insight RabbitMQ queue migration runbook
 
-**Status:** Prepared for review. Do not execute against a persistent broker until the migration utility and maintenance window are separately reviewed.
+**Status:** Prepared for review. The repository definitions intentionally retain the existing durable classic source queue with no arguments and no Insight DLQ. Do not change definitions or execute against a persistent broker until the migration utility and maintenance window are separately reviewed.
 
 ## Scope and invariants
+
+The currently committed RabbitMQ definitions must continue to declare the existing Insight queue as durable classic with no arguments, with its existing domain-exchange binding. The target topology below is a migration destination only; it must not be imported or activated before the migration is completed and verified. The topology contract tests intentionally assert the current classic queue until that point.
 
 This procedure changes only `teampulse.insight.events` and adds `teampulse.insight.events.dlq`. It must not alter the Habit, Challenge, Event Tracking or Notification queues, bindings, exchanges or persistent volumes. The target Insight source queue is durable quorum with delivery limit 5, at-least-once dead-lettering to `teampulse.domain.events.dlx`, routing key `insight.employee.lifecycle.dead`, and `reject-publish` overflow. The DLQ is a durable quorum queue bound to that routing key.
 
@@ -30,7 +32,7 @@ If any precondition is not met, stop. Do not attempt an in-place redeclaration.
 8. Declare `teampulse.insight.events.dlq` as durable quorum and bind it to `teampulse.domain.events.dlx` using `insight.employee.lifecycle.dead`.
 9. Copy all messages from the migration queue back to the new Insight source queue using the same confirmed-copy/manual-ack procedure. Verify the migration queue is empty, the source count matches the ledger, and the source/DLQ declarations and bindings exactly match the target topology.
 10. Keep the temporary queue until post-migration verification is complete. Then delete only `teampulse.insight.events.migration`.
-11. Resume Identity publication, then enable/start the Insight consumer. Monitor queue depth, unacknowledged count, consumer health, DLQ depth and duplicate outcomes.
+11. Only after all migration checks pass, update the committed RabbitMQ definitions and topology contract tests to the target source/DLQ topology. Review and deploy that definitions change in the same controlled maintenance window. Resume Identity publication, then enable/start the Insight consumer. Monitor queue depth, unacknowledged count, consumer health, DLQ depth and duplicate outcomes.
 
 ## Rollback
 
