@@ -1,5 +1,17 @@
 # Project Status
 
+## Latest continuation checkpoint — assert replay behavior instead of transient reconnect health snapshot (CI pending)
+
+- Live branch HEAD before this increment: `cc5be875c398c5bf67de82a094a7b2af24494edc` (tree `a4e1a568e5cec059da7264dfb1c8fdf23c611e33`). CI #117 for that exact commit failed: Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (44/45 Challenge, 24 Habit, 100 Identity). [CI run #117](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44857671950).
+- The sole failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`, timing out while polling `status.IsConnected` after the broker restarted (test line 201). The test had already waited for the old session's completed-disposal counter before restart. The failing assertion was a transient health snapshot, not the acceptance behavior itself.
+- Changed the test to wait directly for `DuplicateReplayObserved` after restart, then for `SentinelProcessed`. The duplicate outcome proves a usable consumer channel was re-established; the sentinel proves the replay acknowledgement released the prefetch-1 slot. Both waits are bounded to 30 seconds. No consumer implementation, retry, DLQ or health semantics changed.
+- Updated the approved SDD test guidance and task checklist. CEPS-11/CEPS-14 remain unchecked until this end-to-end scenario and the full CI run pass.
+- Local recheck: `dotnet` and `docker` commands are unavailable in this environment; no local build/test is claimed.
+- Scope remains the owner-approved Challenge employee-status projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. Inbox retention is permanent initially; privacy/legal sign-off remains a production prerequisite. EventBridge/SQS/AWS and CloudWatch remain deferred until owner cloud setup.
+- Changes are intended only for `feature/backend-foundation`; `main` is untouched.
+
+Updated: 2026-11-21
+
 ## Latest continuation checkpoint — synchronize broker teardown assertions and bound reconnect test window (CI pending)
 
 - Live branch HEAD before this increment: `9382d389835fb505f3b9e3c5782ded76db4a299a` (tree `7045ef638fe153f710796ad6cda41d573240e90d`). CI #116 for that exact commit failed: Release build passed with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 167/169 (43/45 Challenge, 24 Habit, 100 Identity). [CI run #116](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44851451284).
