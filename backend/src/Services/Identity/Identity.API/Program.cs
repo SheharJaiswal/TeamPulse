@@ -42,7 +42,9 @@ builder.Services.AddDataProtection()
     .SetApplicationName("TeamPulse.Identity")
     .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
 
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IInvitationTokenService, InvitationTokenService>();
+builder.Services.AddScoped<IEmployeeInvitationService, EmployeeInvitationService>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeLifecycleService, EmployeeLifecycleService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
@@ -56,7 +58,6 @@ if (dispatcherOptions.Enabled)
     dispatcherOptions.ValidateGeneral();
     builder.Services.Configure<OutboxDispatcherOptions>(
         builder.Configuration.GetSection(OutboxDispatcherOptions.SectionName));
-    builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddScoped<IOutboxMessageStore, OutboxMessageStore>();
 
     switch (dispatcherOptions.Transport.Trim().ToLowerInvariant())
