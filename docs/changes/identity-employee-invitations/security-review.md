@@ -1,12 +1,12 @@
 # Security review: invitation delivery-secret handling
 
-**Status:** Advisory threat-model draft; owner approval required. This document does not authorize implementation.
+**Status:** Option A approved by owner on 2026-11-21, including provider-acceptance secret deletion and at-least-once delivery with possible duplicate messages. Production key protection/storage and backup/restore implementation remain deferred to cloud infrastructure setup. This document does not authorize implementation.
 
 ## Decision under review
 
 The invitation flow needs a recoverable activation token for asynchronous delivery retries. The preferred candidate is a dedicated, short-lived delivery-secret record containing an ASP.NET Core Data Protection-protected token, separate from the ordinary lifecycle/business outbox. The invitation table continues to store only the SHA-256 token digest used for redemption lookup.
 
-The alternative is synchronous delivery after the invitation transaction commits. That avoids recoverable token storage but makes delivery outages require an explicit resend/token rotation and leaves a commit-to-send failure window. The owner must choose the operating model before implementation.
+The alternative is synchronous delivery after the invitation transaction commits. That avoids recoverable token storage but makes delivery outages require an explicit resend/token rotation and leaves a commit-to-send failure window. The owner selected Option A on 2026-11-21. Production key protection/storage and backup/restore implementation remain deployment decisions deferred until cloud setup.
 
 ## Candidate Option A — protected short-lived secret
 
