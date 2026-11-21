@@ -60,6 +60,12 @@
       <span class="nav-icon">✓</span>
       Activity history
     </a>
+    {#if data.employee.role === 'HrAdmin'}
+      <a class="nav-link" href="/hr/invitations">
+        <span class="nav-icon">✉</span>
+        Employee invitations
+      </a>
+    {/if}
     <nav class="mobile-workspace-nav" aria-label="Workspace">
       <a class="mobile-workspace-link active" href="/habits" aria-current="page">My habits</a>
       <a class="mobile-workspace-link" href="/activities">Activity history</a>
