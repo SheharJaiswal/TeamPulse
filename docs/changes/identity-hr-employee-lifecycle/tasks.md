@@ -51,3 +51,10 @@
 - Added acceptance criterion ILC-14 to the lifecycle specification; the test passed in GitHub Actions CI #233.
 - CI #233 passed against code commit `d7dc8b8663e28e25c9beec395acd0ae48c628185`: Identity 103, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **262 passed, 0 failed, 0 skipped**.
 - [CI #233](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44900792522/artifacts/14706141699).
+
+
+## Idempotency-key character boundary regression — implementation pending
+
+- Add API-host integration coverage for the minimum and maximum accepted visible-ASCII key lengths (1 and 128 characters).
+- Add rejected cases for ASCII control characters, DEL and non-ASCII characters; verify HTTP 400 and no employee, audit or correlation-scoped outbox mutation.
+- Acceptance criterion ILC-15 is recorded in the specification. GitHub Actions verification is pending.
