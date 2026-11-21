@@ -189,3 +189,10 @@
 
 
 - [x] CI #195 passed for `64879f7585fff2f6ad8dd2fb964582e7ab2ae9ca`: Challenge 57/57, Habit 24/24, Identity 100/100, Event Tracking 27/27, Notification 28/28 and Insight 15/15 — **251/251 .NET tests**, zero failed or skipped; all 19 Python RabbitMQ topology tests, Release build, Compose validation, RabbitMQ startup/topology and pinned DynamoDB Local image pull passed. The new API-host health-route test is included. [CI #195](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44896073551).
+
+## Post-acceptance Challenge regression checkpoint — 2026-11-21
+
+- [x] Reconcile the latest backend regression evidence: [CI run 44930680828](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44930680828) targeted `bf79ae0fabbdb599675487c8267132a01a0f6bc9` and passed Challenge UnitTests 57/57 with zero failures or skips. Release build, Compose validation, RabbitMQ topology, Habit (30/30), Event Tracking (50/50), Notification (28/28), Insight (15/15) and Insight queue migration (8/8) passed. The overall workflow failed only in the separate Identity Mailpit end-to-end test (Identity 131/132); invitation SMTP verification remains deferred by owner direction and was not investigated.
+- [x] Confirm the tested backend commit is an ancestor of the live branch checkpoint `0cbeec6892e82636899ac858fc9e8d1937d2d8be`; the intervening diff contains only documentation and SvelteKit frontend files, with no Challenge source or test changes. This is regression confirmation, not a new CEPS acceptance item.
+- The approved CEPS-01–CEPS-18 acceptance remains complete based on the successful Challenge evidence recorded above (CI #122, #127, #129, #133, #145, #151 and #195). Open question 19, cloud provisioning and privacy/legal retention sign-off remain deferred; do not add Challenge business workflows under this SDD.
+

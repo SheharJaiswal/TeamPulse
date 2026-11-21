@@ -1,3 +1,15 @@
+## Challenge employee-status projection consumer — acceptance complete
+
+- Challenge's approved lifecycle slice is projection-only. It stores exactly `employeeId`, `isActive`, `lifecycleVersion` and `updatedAtUtc`; Identity remains authoritative. No programme, task, eligibility, participation, scoring or evidence workflow/API was added.
+- The Challenge inbox retains only the eight approved event metadata/fingerprint columns. Recognized schema-v1 fields are strictly validated while unknown additive JSON is ignored; source is exact case-sensitive `hr-admin-api`; actor UUID is validated. Fingerprints use normalized recognized fields, RFC 8785 JCS and SHA-256 (`rfc8785-sha256-v1`), excluding optional note and unknown properties. Conflicting reuse of an event ID is quarantined without mutating the original inbox/projection.
+- Inbox insertion and the conditional projection upsert are one Challenge-MySQL transaction. Only a strictly newer lifecycle version applies; same-ID/same-fingerprint is Duplicate and equal/lower new events are Stale. Inbox retention is permanent initially, with no TTL or cleanup; privacy/legal retention sign-off remains a production prerequisite.
+- The local RabbitMQ adapter uses manual acknowledgement and prefetch 1, bounded exponential full-jitter retries, classified shared-DLQ routing and mandatory publisher confirmation before acknowledging terminal deliveries. Established-session broker loss cancels/drains the callback, disposes the old session, reconnects, replays a commit-before-ack message as Duplicate, and processes a sentinel to prove prefetch release.
+- Challenge exposes independent `/health/live`, MySQL-only `/health/ready` and RabbitMQ-only `/health/consumer`. API-host Testcontainers coverage verifies startup migrations, production projection write/read and health-route independence.
+- Verification: CI #151 passed 207/207 .NET tests and 14/14 topology tests; CI #195 passed 251/251 .NET tests (Challenge 57/57), 19/19 topology tests, Release build, Compose and broker checks. The later backend regression run [44930680828](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44930680828), on ancestor commit `bf79ae0`, also passed Challenge 57/57 with zero skips. That overall workflow was red only because a separate Identity Mailpit end-to-end test failed (Identity 131/132); invitation SMTP verification remains deferred by owner direction and is not a Challenge acceptance failure.
+- Deferred: open question 19 (inactive-employee historical reads versus new mutations), AWS EventBridge/SQS/CloudWatch until cloud setup, privacy/legal retention sign-off, and any global immediate JWT revocation claim. No additional Challenge behavior is authorized without a separate approved SDD.
+
+Updated: 2026-11-21
+
 ## Habit activity submissions — implementation complete
 
 - Owner approved submission cardinality, correction policy, activity-date/time-zone semantics, quantity and idempotency rules on 2026-11-21; recorded in ADR-0003.
