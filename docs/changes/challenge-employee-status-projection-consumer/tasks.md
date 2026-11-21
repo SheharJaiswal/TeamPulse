@@ -56,7 +56,7 @@
 - [x] Add monotonic in-memory connection-attempt and established-session counters and include them, plus source queue message/consumer counts, in bounded replay-test timeout diagnostics. These counters do not change the public health contract; established-session replay passed in CI #122.
 - [x] Add in-memory session-setup stage and last-failure exception-type-chain diagnostics so reconnect failures can be localized to connection, channel creation, QoS or consumer registration. Store no exception messages, broker URI or credentials; verify this with a unit test.
 - [x] Bound RabbitMQ connection-attempt, AMQP handshake and protocol continuation timeouts through a validated consumer option; deterministic tests reject out-of-range values. Established-session reconnect verified in CI #122.
-- [x] Add a completed-session counter that advances after RabbitMQ channels/connection finish disposal; the established-session replay test waits for this signal before restarting the broker. End-to-end verification remains pending CI.
+- [x] Add a completed-session counter that advances after RabbitMQ channels/connection finish disposal; the established-session replay test waits for this signal before restarting the broker. Established-session disposal and replay were verified end-to-end in CI #122.
 - [ ] RabbitMQ Testcontainers: restore the Challenge DLQ binding after a mandatory publish failure and verify the original unacknowledged delivery is processed and dead-lettered after reconnect.
 - [ ] Host health integration tests prove DB readiness is independent of RabbitMQ and consumer health is separately observable.
 - [ ] Privacy/logging tests prove no event body, note, credentials or connection string is logged/persisted.

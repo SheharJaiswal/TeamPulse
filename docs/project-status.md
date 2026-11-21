@@ -1,10 +1,11 @@
 # Project Status
 
-## Latest continuation checkpoint — health-check isolation test added (CI pending)
+## Latest continuation checkpoint — CI #125 executing new Challenge integration tests
 
-- Start-of-run branch HEAD: `58a6727f4d46ba0cd413dbd9d3e471fce7ec5f6b`. CI #122 for its parent passed 171/171 .NET tests (Challenge 47, Habit 24, Identity 100), 11/11 Python topology tests, Release build, Compose validation and RabbitMQ topology. The established-session broker-loss/duplicate replay/sentinel acceptance test passed; CEPS-11/CEPS-14 are verified.
+- Current branch HEAD at checkpoint: `7f226457ba604848a143062e2d9cb78ebb36d09a`. CI #125 is running for this exact code commit: restore, Release build, Docker Compose validation and RabbitMQ topology validation have passed; the full .NET Testcontainers suite is still in progress. [CI #125](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44874441259).
+- Baseline CI #122 passed 171/171 .NET tests (Challenge 47, Habit 24, Identity 100), 11/11 Python topology tests, Release build, Compose validation and RabbitMQ topology. The established-session broker-loss/duplicate replay/sentinel acceptance test passed; CEPS-11/CEPS-14 are verified.
 - Added `backend/tests/Challenge.UnitTests/ChallengeHealthCheckIntegrationTests.cs`: an integration test using the existing MySQL 8.4 Testcontainers fixture and the production Challenge health-check classes. It verifies liveness, MySQL readiness and RabbitMQ consumer health are independently tag-selectable; with MySQL healthy and the enabled RabbitMQ consumer disconnected, readiness remains Healthy while consumer health is Unhealthy.
-- The inbox schema/privacy integration test was added in commit `58a6727f4d46ba0cd413dbd9d3e471fce7ec5f6b`; it asserts exactly the eight approved inbox metadata/fingerprint columns and no MySQL scheduled events. Both new tests await CI verification; do not mark their acceptance items complete until the workflow passes.
+- The inbox schema/privacy integration test (exactly eight approved metadata/fingerprint columns; no MySQL scheduled events) and health isolation integration test (liveness, MySQL readiness and consumer health separately selectable) are included in CI #125. Do not mark their acceptance items complete until the test stage passes.
 - Scope remains the owner-approved projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. EventBridge/SQS, CloudWatch and AWS provisioning remain deferred until owner cloud setup. Inbox retention remains permanent initially and requires privacy/legal review before production.
 - Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
 
