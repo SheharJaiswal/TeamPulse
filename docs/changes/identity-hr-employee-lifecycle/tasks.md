@@ -65,3 +65,12 @@
 - Added an API-host integration test using correctly signed HrAdmin tokens with either no `sub` claim or a non-GUID `sub`.
 - Both requests must return 401 before lifecycle mutation; the test verifies employee status/version, audit and correlation-scoped outbox remain unchanged.
 - Implementation commit: `d0b20c32c1c1ec7b7af8b138c571730d8f7be10a`. CI verification pending.
+
+## JWT subject-claim validation regression — CI #236 test passed; workflow image setup corrected
+
+- Added an API-host integration test using correctly signed HrAdmin tokens with either no `sub` claim or a non-GUID `sub`. Both requests returned HTTP 401; the employee remained active at lifecycle version 0, with no audit rows and no outbox rows for either supplied correlation ID.
+- Identity passed **105/105** tests in CI #236, confirming the new ILC-16 regression test passed.
+- CI #236 overall failed for an unrelated environment setup issue: the Insight queue-migration Testcontainers test requested `rabbitmq:4.0-alpine`, but the GitHub runner had not pulled that image. Seven of eight Insight queue-migration tests passed; the failing test could not create its container.
+- Corrected CI workflow to pre-pull the exact RabbitMQ image used by the Testcontainers fixture before running the suite. Workflow fix commit: `819242fe43a446fe1574e3025458d12a14331188`. Full workflow verification is pending.
+- [CI #236](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44901781762).
+
