@@ -77,4 +77,4 @@
 - [x] Added Notification RabbitMQ persistent-message replay integration test based on the already-proven Event Tracking harness, plus options/retry and API consumer-health tests.
 - [x] Added `docs/runbooks/notification-rabbitmq-queue-migration.md`; it requires pausing publisher/consumer and buffering pending messages before queue recreation. No live broker topology was changed.
 - [x] CI #165 passed for commit `13095cc3effb30a11862ccc68a64fc3ebf60425e`; restore, Release build, Compose, RabbitMQ topology and full .NET/Testcontainers suite passed.
-- [ ] Verify the new malformed-message DLQ integration test in the next CI run; add the missing-DLQ-route redelivery test before closing NESP-10.
+- [ ] Verify both new DLQ integration tests in CI; close NESP-10 only after confirmed-route and unavailable-route behavior pass.

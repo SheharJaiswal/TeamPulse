@@ -187,7 +187,47 @@ public sealed class NotificationRabbitMqMySqlReplayIntegrationTests(
         Assert.Equal(0u, (await _adminChannel.QueueDeclarePassiveAsync(DeadLetterQueueName)).MessageCount);
     }
 
-    private async Task CreateProductionProcessorServicesAsync()
+
+    [Fact]
+    public async Task Consumer_LeavesSourceUnacknowledgedWhenDeadLetterRouteIsUnavailable()
+    {
+        await CreateProductionProcessorServicesAsync();
+        await StartConsumerAsync(reconnectDelayMilliseconds: 60000);
+        await WaitUntilAsync(() => Task.FromResult(_consumerStatus!.IsConnected));
+        var completedSessions = _consumerStatus!.CompletedSessionCount;
+
+        await _adminChannel!.QueueUnbindAsync(DeadLetterQueueName, DeadLetterExchange, DeadLetterRoutingKey);
+        var messageId = Guid.NewGuid().ToString("D");
+        var invalidUtf8Body = new byte[] { 0xC3, 0x28 };
+        var properties = new BasicProperties
+        {
+            MessageId = messageId,
+            ContentType = "application/json",
+            DeliveryMode = DeliveryModes.Persistent
+        };
+        await _adminChannel.BasicPublishAsync(
+            ExchangeName,
+            RoutingKey,
+            mandatory: true,
+            basicProperties: properties,
+            body: invalidUtf8Body);
+
+        await WaitUntilAsync(() => Task.FromResult(!_consumerStatus.IsConnected), 20);
+        await WaitUntilAsync(
+            () => Task.FromResult(_consumerStatus.CompletedSessionCount > completedSessions), 20);
+
+        // A mandatory DLQ publish without a matching binding must end the broker session.
+        // Once its channel is disposed, RabbitMQ redelivers the still-unacked source message.
+        var redelivered = await _adminChannel.BasicGetAsync(QueueName, autoAck: false);
+        Assert.NotNull(redelivered);
+        Assert.Equal(messageId, redelivered!.BasicProperties.MessageId);
+        Assert.True(invalidUtf8Body.SequenceEqual(redelivered.Body.ToArray()));
+        await _adminChannel.BasicAckAsync(redelivered.DeliveryTag, multiple: false);
+        Assert.Equal(0u, (await _adminChannel.QueueDeclarePassiveAsync(QueueName)).MessageCount);
+        Assert.Equal(0u, (await _adminChannel.QueueDeclarePassiveAsync(DeadLetterQueueName)).MessageCount);
+    }
+
+
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -209,7 +249,7 @@ public sealed class NotificationRabbitMqMySqlReplayIntegrationTests(
         await database.Database.MigrateAsync();
     }
 
-    private async Task StartConsumerAsync()
+    private async Task StartConsumerAsync(int reconnectDelayMilliseconds = 250)
     {
         var options = new NotificationRabbitMqConsumerOptions
         {
@@ -220,7 +260,7 @@ public sealed class NotificationRabbitMqMySqlReplayIntegrationTests(
             MaxProcessingAttempts = 3,
             RetryBaseDelayMilliseconds = 1,
             RetryMaxDelayMilliseconds = 5,
-            ReconnectDelayMilliseconds = 250,
+            ReconnectDelayMilliseconds = reconnectDelayMilliseconds,
             ConnectionTimeoutMilliseconds = 1000,
             HeartbeatSeconds = 1
         };

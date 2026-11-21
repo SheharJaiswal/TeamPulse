@@ -1,3 +1,11 @@
+## Notification DLQ failure-path test added
+
+- Added a second broker-backed failure-path test: temporarily remove the Notification DLQ binding, publish malformed UTF-8 to the source queue, and verify the mandatory DLQ publish failure ends the consumer session without acknowledging the source delivery. After channel disposal, the test reads and acknowledges the redelivered source message to leave its disposable broker clean.
+- Together with the malformed-message DLQ success-path test, this covers both confirmed DLQ publication and unavailable DLQ routing. CI verification is pending.
+- These tests use isolated RabbitMQ Testcontainers instances; they do not alter the persistent local broker or production topology.
+
+Updated: 2026-11-21
+
 ## Notification consumer CI verification and DLQ test extension
 
 - CI #165 passed for commit `13095cc3effb30a11862ccc68a64fc3ebf60425e` on `feature/backend-foundation`: restore, Release build, Docker Compose validation, RabbitMQ startup/topology contract tests and the full .NET suite (including MySQL 8.4 and RabbitMQ Testcontainers) all succeeded.
