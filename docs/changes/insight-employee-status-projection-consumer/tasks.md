@@ -25,8 +25,7 @@
 - [x] Extract the utility's mandatory publisher-confirm/Basic.Return handling into `MandatoryPublisher` and add a deterministic Testcontainers broker test that publishes mandatorily to a missing routing key and asserts the production helper throws on the broker return. This tests the same production component used by the copy loop without relying on a timing-sensitive queue-deletion race.
 - [ ] Run the complete Release build and test suite in CI; local .NET SDK is unavailable. Do not execute against the persistent broker.
 - [x] Register the standalone utility project in `backend/TeamPulse.sln`; CI compilation and runtime verification remain pending.
-- [ ] Review the migration utility, pending-message-preserving runbook and exact topology contract tests together after the remaining failure-path tests pass.
-- [ ] Review the migration utility, pending-message-preserving runbook and exact topology contract tests together. Keep the committed Insight topology on its existing durable classic declaration until a separately scheduled maintenance window is approved.
+- [ ] Review the migration utility, pending-message-preserving runbook and exact topology contract tests together after the full Release build and integration suite pass. Keep the committed Insight topology on its existing durable classic declaration until a separately scheduled maintenance window is approved.
 - [ ] Update only Insight source/DLQ topology after the migration utility, runbook and exact contract tests are reviewed and the controlled maintenance window is approved.
 - [x] Add API host health checks and Development-only local table initialization; production must not auto-create cloud tables.
 - [x] Add privacy assertions proving raw payload, note and credentials are not stored/logged — Consumer_DoesNotLogRawPayloadNotesCredentialsOrConnectionStrings passed in Insight.UnitTests (15/15) in CI #193 attempt 1.
