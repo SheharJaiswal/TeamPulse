@@ -23,7 +23,7 @@
 - [x] Verify consumer/topology increment with GitHub Actions CI #136: Release build, Compose validation, RabbitMQ startup/topology and 194 .NET tests plus 14 Python topology tests passed.
 - [x] Add production API-host startup integration test against fresh MySQL 8.4, proving startup migration and production reader registration.
 - [x] Add RabbitMQ Testcontainers coverage for post-processing acknowledgement, terminal-outcome DLQ confirmation, transient retry success/exhaustion, failed DLQ route redelivery and log privacy (CI verification pending).
-- [ ] Verify API-host startup and RabbitMQ consumer integration tests with GitHub Actions.
+- [x] Verify API-host startup with GitHub Actions CI #137: all 17 EventTracking tests passed, including the fresh MySQL 8.4 API-host migration/readback test; total solution tests 195 passed.
 - [ ] Add commit-before-ack broker interruption/replay integration test using the actual persistent inbox.
 - [ ] Add actual-host consumer health isolation test.
 - [ ] Review full CI test output and acceptance matrix before marking this SDD complete.

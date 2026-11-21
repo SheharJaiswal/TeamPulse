@@ -90,7 +90,7 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
 
         processor.Release.TrySetResult(true);
         await processor.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        await WaitUntilAsync(async () => await _channel!.MessageCountAsync(QueueName) == 0);
+        await WaitUntilAsync(async () => await GetMessageCountAsync(QueueName) == 0);
         Assert.Equal(1, processor.CallCount);
     }
 
@@ -107,7 +107,7 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
         var deadLetter = await WaitForDeadLetterAsync();
         Assert.Equal(body, deadLetter.Body);
         Assert.Equal(expectedClassification, deadLetter.Classification);
-        await WaitUntilAsync(async () => await _channel!.MessageCountAsync(QueueName) == 0);
+        await WaitUntilAsync(async () => await GetMessageCountAsync(QueueName) == 0);
     }
 
     [Fact]
@@ -118,9 +118,9 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
         await PublishAsync("{\"eventId\":\"transient-retry\"}");
 
         await WaitUntilAsync(() => Task.FromResult(Volatile.Read(ref processor.CallCount) == 2));
-        await WaitUntilAsync(async () => await _channel!.MessageCountAsync(QueueName) == 0);
+        await WaitUntilAsync(async () => await GetMessageCountAsync(QueueName) == 0);
         Assert.Equal(2, processor.CallCount);
-        Assert.Equal(0, await _channel!.MessageCountAsync(DeadLetterQueueName));
+        Assert.Equal(0, await GetMessageCountAsync(DeadLetterQueueName));
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
         Assert.NotNull(redelivered);
         Assert.Equal(body, Encoding.UTF8.GetString(redelivered!.Body.ToArray()));
         await _channel.BasicAckAsync(redelivered.DeliveryTag, multiple: false);
-        Assert.Equal(0, await _channel.MessageCountAsync(DeadLetterQueueName));
+        Assert.Equal(0, await GetMessageCountAsync(DeadLetterQueueName));
     }
 
     private async Task<EventTrackingRabbitMqConsumerStatus> StartConsumerAsync(
@@ -258,6 +258,12 @@ public sealed class EventTrackingRabbitMqConsumerIntegrationTests : IAsyncLifeti
             await Task.Delay(50);
         }
         throw new TimeoutException("EventTracking dead-letter message was not received.");
+    }
+
+    private async Task<uint> GetMessageCountAsync(string queueName)
+    {
+        var declaration = await _channel!.QueueDeclarePassiveAsync(queueName);
+        return declaration.MessageCount;
     }
 
     private static async Task WaitUntilAsync(Func<Task<bool>> condition, int timeoutSeconds = 10)
