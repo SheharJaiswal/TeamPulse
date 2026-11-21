@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using EventTracking.Application.Abstractions;
 using EventTracking.Domain.Entities;
 using EventTracking.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Testcontainers.MySql;
