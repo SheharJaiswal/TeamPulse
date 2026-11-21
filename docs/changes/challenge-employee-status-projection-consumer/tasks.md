@@ -36,7 +36,7 @@
 - [x] Add deterministic bounded exponential full-jitter delay policy tests and explicit `TransientRetryExhausted` / `NonTransientProcessingFailure` DLQ classifications.
 - [x] Verify transient exhaustion and non-transient processing failures reach the shared lifecycle DLQ, and failed DLQ publication leaves the original delivery unacknowledged, in RabbitMQ Testcontainers CI #108 (40 Challenge tests; full run 164/164 passed).
 - [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note (schema/metadata integration test added; awaiting CI verification).
-- [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract.
+- [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract (integration test added; awaiting CI).
 
 
 - [x] Diagnose CI #120 reconnect failure: the last failure stage was `connection` with `BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`; the source queue retained one message and had zero consumers. The Challenge Testcontainers fixture used a dynamically mapped host port, while the consumer retained its original URI across container restart.
@@ -53,9 +53,9 @@
 - [ ] RabbitMQ Testcontainers: bounded exponential retry, exhaustion/non-transient classifications and failed-DLQ redelivery for retry exhaustion.
 - [x] RabbitMQ Testcontainers: broker unavailable at startup and reconnect; startup-reconnect test passed in CI #105.
 - [x] RabbitMQ Testcontainers: established-session loss/reconnect and duplicate redelivery after commit-before-ack; CI #122 passed the complete test, including cancellation of the active callback, old-session disposal, replay as Duplicate and sentinel processing proving prefetch-1 acknowledgement release. CEPS-11/CEPS-14 acceptance is verified.
-- [x] Add monotonic in-memory connection-attempt and established-session counters and include them, plus source queue message/consumer counts, in bounded replay-test timeout diagnostics. These counters do not change the public health contract; end-to-end replay remains pending CI.
+- [x] Add monotonic in-memory connection-attempt and established-session counters and include them, plus source queue message/consumer counts, in bounded replay-test timeout diagnostics. These counters do not change the public health contract; established-session replay passed in CI #122.
 - [x] Add in-memory session-setup stage and last-failure exception-type-chain diagnostics so reconnect failures can be localized to connection, channel creation, QoS or consumer registration. Store no exception messages, broker URI or credentials; verify this with a unit test.
-- [x] Bound RabbitMQ connection-attempt, AMQP handshake and protocol continuation timeouts through a validated consumer option; deterministic tests reject out-of-range values. End-to-end reconnect verification remains pending CI.
+- [x] Bound RabbitMQ connection-attempt, AMQP handshake and protocol continuation timeouts through a validated consumer option; deterministic tests reject out-of-range values. Established-session reconnect verified in CI #122.
 - [x] Add a completed-session counter that advances after RabbitMQ channels/connection finish disposal; the established-session replay test waits for this signal before restarting the broker. End-to-end verification remains pending CI.
 - [ ] RabbitMQ Testcontainers: restore the Challenge DLQ binding after a mandatory publish failure and verify the original unacknowledged delivery is processed and dead-lettered after reconnect.
 - [ ] Host health integration tests prove DB readiness is independent of RabbitMQ and consumer health is separately observable.
@@ -90,3 +90,5 @@
 
 - [x] CI #122 passed for `725b4a887eeccd83709f9c36dfc33ccf6d776db8`: Release restore/build, Docker Compose validation, RabbitMQ startup/topology and all 11 Python tests passed; .NET tests passed 171/171 (Challenge 47, Habit 24, Identity 100), zero failed/skipped. The established-session broker-loss replay and sentinel/prefetch acceptance test passed. [CI run #122](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44873516708).
 - [ ] Add and verify MySQL inbox schema/privacy assertion: only the eight approved metadata/fingerprint columns exist and no MySQL scheduled events are defined; no raw payload, note, TTL or cleanup process is introduced. Test authored in the next commit; CI pending.
+
+- [ ] Add and verify health-check integration coverage proving liveness, MySQL readiness and RabbitMQ consumer health are independently selectable; a healthy database remains ready while the enabled RabbitMQ consumer is disconnected. Test authored; CI pending.

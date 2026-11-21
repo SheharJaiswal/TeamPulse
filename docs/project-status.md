@@ -1,5 +1,17 @@
 # Project Status
 
+## Latest continuation checkpoint — health-check isolation test added (CI pending)
+
+- Start-of-run branch HEAD: `58a6727f4d46ba0cd413dbd9d3e471fce7ec5f6b`. CI #122 for its parent passed 171/171 .NET tests (Challenge 47, Habit 24, Identity 100), 11/11 Python topology tests, Release build, Compose validation and RabbitMQ topology. The established-session broker-loss/duplicate replay/sentinel acceptance test passed; CEPS-11/CEPS-14 are verified.
+- Added `backend/tests/Challenge.UnitTests/ChallengeHealthCheckIntegrationTests.cs`: an integration test using the existing MySQL 8.4 Testcontainers fixture and the production Challenge health-check classes. It verifies liveness, MySQL readiness and RabbitMQ consumer health are independently tag-selectable; with MySQL healthy and the enabled RabbitMQ consumer disconnected, readiness remains Healthy while consumer health is Unhealthy.
+- The inbox schema/privacy integration test was added in commit `58a6727f4d46ba0cd413dbd9d3e471fce7ec5f6b`; it asserts exactly the eight approved inbox metadata/fingerprint columns and no MySQL scheduled events. Both new tests await CI verification; do not mark their acceptance items complete until the workflow passes.
+- Scope remains the owner-approved projection only. No Challenge programme/task/eligibility/participation behavior; open question 19 remains unresolved. EventBridge/SQS, CloudWatch and AWS provisioning remain deferred until owner cloud setup. Inbox retention remains permanent initially and requires privacy/legal review before production.
+- Local .NET SDK and Docker CLI remain unavailable; no local build/test is claimed.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — established-session replay verified; inbox privacy schema test added (CI pending)
 
 - Start-of-run branch HEAD: `725b4a887eeccd83709f9c36dfc33ccf6d776db8`. Verified CI #122 for this exact commit: workflow succeeded; Release restore/build, Docker Compose validation, RabbitMQ startup/topology and all 11 Python tests passed; .NET tests were 171/171 (Challenge 47, Habit 24, Identity 100), zero failed/skipped. [CI #122](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44873516708).
