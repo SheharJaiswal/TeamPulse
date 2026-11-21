@@ -31,8 +31,6 @@ services:
       - "8000:8000"
     volumes:
       - teampulse-dynamodb-data:/home/dynamodblocal/data
-    healthcheck:
-
   rabbitmq:
     image: rabbitmq:4.1-management
     container_name: teampulse-rabbitmq
