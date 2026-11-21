@@ -24,8 +24,10 @@ public sealed class HabitRepository(HabitDbContext database) : IHabitRepository
         database.Habits.SingleOrDefaultAsync(
             x => x.Id == id && x.OwnerEmployeeId == ownerEmployeeId, cancellationToken);
 
-    public async Task AddAsync(HabitDefinition habit, CancellationToken cancellationToken) =>
+    public async Task AddAsync(HabitDefinition habit, CancellationToken cancellationToken)
+    {
         await database.Habits.AddAsync(habit, cancellationToken);
+    }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         database.SaveChangesAsync(cancellationToken);

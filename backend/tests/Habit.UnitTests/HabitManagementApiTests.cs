@@ -40,7 +40,7 @@ public sealed class HabitManagementApiTests(HabitMySqlFixture fixture) : IClassF
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         using var createdJson = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
         var habitId = createdJson.RootElement.GetProperty("id").GetGuid();
-        Assert.Equal(ownerId, createdJson.RootElement.GetProperty("ownerEmployeeId").GetGuid());
+        Assert.False(createdJson.RootElement.TryGetProperty("ownerEmployeeId", out _));
 
         var ownRead = await ownerClient.GetAsync($"/api/habits/{habitId}");
         Assert.Equal(HttpStatusCode.OK, ownRead.StatusCode);
@@ -48,6 +48,35 @@ public sealed class HabitManagementApiTests(HabitMySqlFixture fixture) : IClassF
         Assert.Equal(HttpStatusCode.OK, ownList.StatusCode);
         using var listJson = JsonDocument.Parse(await ownList.Content.ReadAsStringAsync());
         Assert.Equal(1, listJson.RootElement.GetArrayLength());
+
+        var updateResponse = await ownerClient.PutAsJsonAsync($"/api/habits/{habitId}", new
+        {
+            name = "Drink water consistently",
+            description = "Stay hydrated throughout the day",
+            category = "Wellness",
+            frequency = 1,
+            targetCount = 10,
+            startDate = "2026-11-21",
+            endDate = (string?)null
+        });
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var archiveResponse = await ownerClient.PostAsync($"/api/habits/{habitId}/archive", null);
+        Assert.Equal(HttpStatusCode.NoContent, archiveResponse.StatusCode);
+        var repeatedArchive = await ownerClient.PostAsync($"/api/habits/{habitId}/archive", null);
+        Assert.Equal(HttpStatusCode.NoContent, repeatedArchive.StatusCode);
+
+        var updateArchived = await ownerClient.PutAsJsonAsync($"/api/habits/{habitId}", new
+        {
+            name = "Should not update",
+            description = (string?)null,
+            category = (string?)null,
+            frequency = 1,
+            targetCount = 1,
+            startDate = "2026-11-21",
+            endDate = (string?)null
+        });
+        Assert.Equal(HttpStatusCode.Conflict, updateArchived.StatusCode);
 
         using var otherClient = factory.CreateClient();
         otherClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
