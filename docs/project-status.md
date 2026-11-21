@@ -1,5 +1,18 @@
 # Project Status
 
+## Latest continuation checkpoint — stabilize Challenge broker endpoint across container restart (CI pending)
+
+- Start-of-run live branch HEAD: `0415c697e369ade72d19f6a5432850fd2e12f74e` (tree `2981578e3520e87974af48f0630aba6c59b2075b`). Fetched CI #120, job steps and full test logs before selecting this increment. CI #120 failed: Release build succeeded with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (Challenge 44/45, Habit 24/24, Identity 100/100). [CI run #120](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44872585673).
+- The only failing test was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`. Its safe diagnostic reported 137 connection attempts, one established session, 137 completed sessions, one source queue message and zero consumers. Last failure stage/types: `connection / BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`.
+- Root cause in the test harness: the Challenge RabbitMQ Testcontainers fixture used a dynamically assigned host port. The consumer captured the original connection URI; after stopping and restarting the same container, the host port mapping could change, so the consumer repeatedly attempted the stale endpoint while the restarted broker remained reachable through the new mapping.
+- Updated the Challenge integration fixture to reserve one host port before container creation, bind it to AMQP 5672, and reuse one stable AMQP URI for the consumer and test publisher across the entire fixture. The broker-loss test now asserts the container's connection string remains equal to that stable URI after restart. Production consumer/reconnect behavior, health semantics, acknowledgements, retry and DLQ policy are unchanged.
+- Updated the approved SDD design/tasks with the diagnosis and test-fixture correction. CEPS-11/CEPS-14 remain open until duplicate replay and sentinel/prefetch release pass in CI.
+- Local environment limitation remains: .NET SDK and Docker CLI are unavailable; no local build/test is claimed. Scope remains the approved Challenge employee-status projection; no business workflows, open question 19 or AWS provisioning.
+
+Updated: 2026-11-21
+
+---
+
 ## Latest continuation checkpoint — capture safe RabbitMQ session setup failure stage (CI pending)
 
 - Live branch HEAD before this increment: `1b123541ea52dd845309977506eff170207fdcc2` (tree `3749f844b5ac99b76822485c7ad0790cb099b1ae`). CI #119 for this exact HEAD failed: Release build succeeded with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed; .NET tests were 168/169 (45/46 Challenge, 24 Habit, 100 Identity), zero skipped. [CI run #119](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44867775340).

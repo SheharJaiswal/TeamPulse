@@ -38,6 +38,10 @@
 - [ ] Verify inbox has no TTL/automatic cleanup and stores no raw payload or note.
 - [ ] Align health response states with the separate liveness, MySQL readiness and RabbitMQ consumer-health contract.
 
+
+- [x] Diagnose CI #120 reconnect failure: the last failure stage was `connection` with `BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`; the source queue retained one message and had zero consumers. The Challenge Testcontainers fixture used a dynamically mapped host port, while the consumer retained its original URI across container restart.
+- [ ] Stabilize the Challenge Testcontainers AMQP host port across stop/start and verify the URI remains unchanged; rerun the complete broker-loss replay and sentinel/prefetch acceptance test. Keep CEPS-11/CEPS-14 open until that end-to-end test passes.
+
 ## Verification gaps
 
 - [ ] MySQL 8.4 Testcontainers: clean and repeated host-startup migration, exact schema/model assertions and projection reader.
@@ -81,3 +85,5 @@
 - [ ] Add SQS/EventBridge adapter and deploy AWS resources only after owner cloud setup.
 - [ ] Do not claim global immediate JWT revocation.
 - [ ] Do not implement inbox expiry/cleanup until retention/privacy/legal policy is approved.
+
+- [ ] CI #120 for `0415c697e369ade72d19f6a5432850fd2e12f74e` failed: restore, Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. .NET tests were 168/169 (Challenge 44/45, Habit 24/24, Identity 100/100). The sole failure was `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck`. Safe diagnostics showed 137 connection attempts, only one established session, 137 completed sessions, one source message and zero consumers; the last failure was at connection stage with `BrokerUnreachableException -> AggregateException -> ConnectFailureException -> SocketException`. [CI run #120](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44872585673).

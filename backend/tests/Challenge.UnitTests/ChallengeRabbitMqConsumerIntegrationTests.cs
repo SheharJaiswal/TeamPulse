@@ -124,19 +124,36 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
     private const string DeadLetterQueueName = "teampulse.challenge.events.dlq";
     private const string FailureClassificationHeader = "x-teampulse-failure-classification";
 
-    private readonly RabbitMqContainer _container = new RabbitMqBuilder()
-        .WithImage("rabbitmq:4.1-management")
-        .WithUsername("teampulse")
-        .WithPassword("local_rabbitmq_password")
-        .Build();
-
+    private readonly RabbitMqContainer _container;
+    private readonly string _brokerUri;
     private readonly List<(ChallengeRabbitMqConsumer Consumer, ServiceProvider Provider)> _consumers = new();
     private IConnection? _connection;
     private IChannel? _channel;
 
+    public ChallengeRabbitMqConsumerIntegrationTests()
+    {
+        // Keep the host endpoint stable across Testcontainers StopAsync/StartAsync.
+        // A dynamically allocated port can change after restart while the consumer keeps
+        // reconnecting to the original URI, producing endless connection-refused failures.
+        using var portListener = new System.Net.Sockets.TcpListener(
+            System.Net.IPAddress.Loopback, 0);
+        portListener.Start();
+        var brokerPort = ((System.Net.IPEndPoint)portListener.LocalEndpoint).Port;
+        portListener.Stop();
+
+        _container = new RabbitMqBuilder()
+            .WithImage("rabbitmq:4.1-management")
+            .WithUsername("teampulse")
+            .WithPassword("local_rabbitmq_password")
+            .WithPortBinding(brokerPort, 5672)
+            .Build();
+        _brokerUri = $"amqp://teampulse:local_rabbitmq_password@127.0.0.1:{brokerPort}/";
+    }
+
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
+        Assert.Equal(_brokerUri, _container.GetConnectionString());
         await OpenTestChannelAsync();
 
         await _channel!.ExchangeDeclareAsync(ExchangeName, ExchangeType.Topic, durable: true, autoDelete: false);
@@ -406,7 +423,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         var provider = services.BuildServiceProvider();
 
         var options = ChallengeRabbitMqConsumerOptionsTests.ValidOptions();
-        options.Uri = _container.GetConnectionString();
+        options.Uri = _brokerUri;
         options.MaxProcessingAttempts = maxAttempts;
         options.RetryBaseDelayMilliseconds = 1;
         options.RetryMaxDelayMilliseconds = 5;
@@ -433,7 +450,7 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         if (_connection is not null)
             await _connection.DisposeAsync();
 
-        var factory = new ConnectionFactory { Uri = new Uri(_container.GetConnectionString()) };
+        var factory = new ConnectionFactory { Uri = new Uri(_brokerUri) };
         _connection = await factory.CreateConnectionAsync("TeamPulse.Challenge.ConsumerTests");
         _channel = await _connection.CreateChannelAsync();
     }
