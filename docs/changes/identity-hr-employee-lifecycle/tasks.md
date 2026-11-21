@@ -106,3 +106,19 @@
 - The test asserts the first response is `transitioned`, the second is `replayed`, both expose the original event and correlation IDs, and exactly one employee lifecycle audit/outbox row exists with the original correlation ID also present in the serialized envelope.
 - Added acceptance criterion ILC-19 to the lifecycle specification.
 - Test commit: `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`. Specification commit: `9d4a7130dbd4dc745611cda4356d73f199e47318`. CI verification pending.
+
+
+## CI #239 — correlation-ID idempotency replay verified
+
+- CI #239 passed for test commit `dd1c2a310c4bd70ba86499e5ad4349a6097b2812`.
+- ILC-19 passed: sequential same-actor/same-command replay with a different retry correlation ID returned the original event and correlation IDs and created exactly one audit/outbox row.
+- Full .NET results: Identity 108, Habit 24, Challenge 57, Event Tracking 27, Notification 28, Insight 15 and Insight.QueueMigration.IntegrationTests 8 — **267 passed, 0 failed, 0 skipped**.
+- Restore, Release build, Compose validation, RabbitMQ startup/topology, all 19 Python topology contract tests, both pinned Testcontainers image pulls and test-result artifact upload passed. Build reported 3 warnings and 0 errors.
+- [CI #239](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903148180). [Test-results artifact](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44903148180/artifacts/14706841604).
+
+## Explicit empty correlation-ID validation — implementation added
+
+- Corrected lifecycle header handling so UUID generation occurs only when X-Correlation-ID is absent. An explicitly supplied empty value now follows UUID parsing and is rejected with HTTP 400, consistent with the documented contract.
+- Added a MySQL API-host regression test proving an explicitly empty correlation header returns 400 before changing employee status/version, creating a lifecycle audit or inserting an outbox row.
+- Added acceptance criterion ILC-20. CI verification is pending.
+- Controller commit: `62b84ee4a68c9fbca1b48c8329a029b6183dc4ee`; test commit: `df805822b958cae6cd9580af019ca3cbf07d2558`.
