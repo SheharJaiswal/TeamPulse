@@ -94,3 +94,8 @@ The current local definitions show Insight's source queue is durable classic top
 
 ## Operational constraints
 No analytics or notification side effects are permitted. Do not provision AWS, alter EventBridge/SQS or add inbox cleanup.
+
+
+### Local DynamoDB test image
+
+The Insight integration-test fixture uses the pinned `amazon/dynamodb-local:2.5.2` image without implicit pulls. Before running the .NET test suite locally, run `docker pull amazon/dynamodb-local:2.5.2` once. CI performs this explicit pull step before tests. The Docker Compose service also uses the same pinned image for local development.
