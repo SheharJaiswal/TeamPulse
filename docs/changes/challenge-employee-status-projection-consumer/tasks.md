@@ -44,10 +44,10 @@
 
 ## Verification gaps
 
-- [ ] Add a deterministic RFC 8785/SHA-256 known-answer regression covering property-order/whitespace equivalence, lowercase UUID normalization, UTC timestamp normalization and `long.MaxValue`; CI #149 pending.
+- [x] Add and verify a deterministic RFC 8785/SHA-256 known-answer regression covering property-order/whitespace equivalence, lowercase UUID normalization, UTC timestamp normalization and `long.MaxValue`; CI #151 passed on d9402b56fd91ad59a1de34a8aee6fcfcde905db0 (Challenge 56/56).
 
 - [x] Dedicated API-host startup integration test authored in `ChallengeApiStartupIntegrationTests.cs`: starts the real `Program` against the fixture's fresh MySQL 8.4 database with the RabbitMQ consumer disabled, calls `/health/ready`, asserts both checked-in migrations were applied, writes through the production projection store and reads through its production reader. Verified in CI #133 after aligning the test timestamp to MySQL `datetime(6)` microsecond precision.
-- [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
+- [x] MySQL 8.4 Testcontainers: sequential and concurrent same-ID/same-fingerprint and conflicting-fingerprint cases are verified; CI #128 passed (Challenge 52 tests), including preservation of the winning inbox fingerprint and projection.
 - [x] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert; concurrent same-fingerprint and conflicting-fingerprint tests passed CI #128.
 - [x] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation (existing integration tests passed CI #127).
 - [x] Add a deterministic concurrent equal-version MySQL 8.4 regression test and classify Applied/Stale from the atomic upsert's connection-scoped result flag; verified in CI #145 (55/55 Challenge tests passed).
@@ -82,6 +82,14 @@
 - [ ] CI #111 for `8c975629dfb8dcba5f324c0bf90a7d532c0eb738` failed: 164/165 .NET tests passed (40/41 Challenge, 24 Habit, 100 Identity); the same commit-before-ack test timed out waiting for the consumer to reconnect after broker restart. Restore, Release build, Compose, RabbitMQ topology and all 11 Python topology tests passed. [CI run #111](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44822510001).
 - [ ] CI #119 for `1b123541ea52dd845309977506eff170207fdcc2` failed: Release build succeeded with 0 warnings/errors; Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passed. .NET tests were 168/169 (45/46 Challenge, 24 Habit, 100 Identity), zero skipped. `Consumer_ReplaysCommittedMessageAsDuplicateWhenBrokerStopsBeforeAck` timed out after 30 seconds. Diagnostic evidence: connection attempts increased 1→137, established sessions remained 1→1, completed sessions reached 137, and the source queue held 1 message with 0 consumers. This proves repeated session setup is failing before a new consumer is established; the exact failing setup stage/type was not yet captured. [CI run #119](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44867775340).
 - [x] README and communication documentation include Challenge local run/configuration guidance and transport contract.
+
+
+## Final Challenge projection acceptance checkpoint — CI #151
+
+- [x] Verify the RFC 8785/SHA-256 known-answer vector on the live code head d9402b56fd91ad59a1de34a8aee6fcfcde905db0; CI #151 passed the Challenge suite 56/56, including the fixed digest f17c59bcb345810da58183dc56a79b7eaa6e742ee8e9f5fb4432993eb8909fc5.
+- [x] Confirm full-solution verification on CI #151: 207/207 .NET tests passed (Challenge 56, EventTracking 27, Habit 24, Identity 100), 14/14 Python RabbitMQ topology tests passed, and Compose/topology checks passed. Release build succeeded with 0 errors and one nullable warning in an EventTracking test file; no Challenge build warning was reported.
+- [x] Close the approved Challenge projection implementation acceptance criteria CEPS-01–CEPS-18 using the test evidence recorded above (including broker replay/reconnect CI #122, API-host migration/read CI #133, health/schema/privacy CI #127/#129, concurrent equal-version CI #145 and canonical fingerprint CI #151).
+- Production prerequisites remain deferred: privacy/legal retention sign-off, cloud EventBridge/SQS/CloudWatch provisioning, and open question 19. No Challenge programme/task/eligibility/participation behavior is authorized by this SDD.
 
 ## Deferred
 

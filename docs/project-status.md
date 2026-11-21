@@ -1,14 +1,14 @@
-## Challenge RFC 8785 fingerprint vector — CI pending
+## Challenge lifecycle projection acceptance — CI #151 verified
 
-- Live branch baseline for this increment: `960db3e0505077495707a10b82685e84bd72d204` (`test(event-tracking): expose consumer shutdown health state`).
-- CI #148 completed with Release build (0 warnings/errors), Compose validation, RabbitMQ startup/topology and all 11 Python topology tests passing. Challenge passed 55/55; Habit 24/24 and Identity 100/100 passed. The full workflow failed only in the unrelated EventTracking API-host consumer-health test: `EventTrackingApiStartupIntegrationTests.ApiHost_ConsumerHealthIsIndependentFromDatabaseReadiness` asserted that the consumer had disconnected after broker shutdown, but the assertion remained false. [CI #148](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44883911468).
-- Added a deterministic SHA-256 known-answer test for the approved `rfc8785-sha256-v1` fingerprint. It verifies identical output across reordered/whitespace-varied JSON, uppercase versus lowercase UUIDs, equivalent UTC timestamp representations, and `long.MaxValue` lifecycleVersion.
-- CI verification for this focused Challenge test is pending. No production behavior, schema, queue topology or Challenge business workflow changed.
+- Live code head verified: d9402b56fd91ad59a1de34a8aee6fcfcde905db0 on feature/backend-foundation. The deterministic Challenge fingerprint-vector test is present in this head's history.
+- CI #151 completed successfully for that exact head: Release build succeeded with 0 errors and one nullable warning in EventTrackingRabbitMqMySqlReplayIntegrationTests.cs (outside Challenge scope); Docker Compose validation, RabbitMQ startup/topology and all 14 Python topology tests passed.
+- All .NET tests passed: **207/207** — Challenge 56, EventTracking 27, Habit 24 and Identity 100; zero failed or skipped. The Challenge known-answer test verified digest f17c59bcb345810da58183dc56a79b7eaa6e742ee8e9f5fb4432993eb8909fc5 across property-order/whitespace equivalence, UUID case normalization, equivalent UTC timestamps and long.MaxValue.
+- [CI #151](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44884885148).
+- The approved Challenge projection acceptance criteria CEPS-01–CEPS-18 are now verified by the CI evidence in the Challenge SDD tasks. This closes projection implementation acceptance only; it does not authorize Challenge business workflows. Open question 19, privacy/legal retention sign-off and owner-deferred AWS provisioning remain unchanged.
 
 Updated: 2026-11-21
 
-
-## Latest repository checkpoint — 2026-11-21
+## Previous repository checkpoint before CI #151 — 2026-11-21
 
 - Active branch: `feature/backend-foundation`. Current head at this documentation update: `ee99cdb24994a5a06c9efcdc5eeb8c624ff1b2a2` (an EventTracking-only follow-up; no Challenge files changed).
 - CI #145 ran against Challenge commit `5fb1d41f6a775af88968d3277414fe77627edc10`. Restore, Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology and all 14 Python topology tests passed. Challenge passed 55/55, Habit 24/24 and Identity 100/100. EventTracking passed 25/26; its sole failure was the API-host consumer-health test waiting for `/health/consumer` to return 503 after RabbitMQ shutdown. Thus 204/205 .NET tests passed and all 55 Challenge tests passed. [CI #145](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44882807000).
