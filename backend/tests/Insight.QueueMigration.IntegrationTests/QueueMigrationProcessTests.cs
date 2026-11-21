@@ -85,7 +85,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
             MessageId = "message-123",
             Timestamp = new AmqpTimestamp(1_700_000_000),
             Type = "employee.lifecycle",
-            UserId = "publisher-user",
+            UserId = "teampulse-test",
             AppId = "teampulse-tests",
             ClusterId = "cluster-a",
             Headers = new Dictionary<string, object?> { ["x-contract-version"] = "1" }
@@ -113,7 +113,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
         Assert.Equal("message-123", copied.BasicProperties.MessageId);
         Assert.Equal(new AmqpTimestamp(1_700_000_000), copied.BasicProperties.Timestamp);
         Assert.Equal("employee.lifecycle", copied.BasicProperties.Type);
-        Assert.Equal("publisher-user", copied.BasicProperties.UserId);
+        Assert.Equal("teampulse-test", copied.BasicProperties.UserId);
         Assert.Equal("teampulse-tests", copied.BasicProperties.AppId);
         Assert.Equal("cluster-a", copied.BasicProperties.ClusterId);
         Assert.Equal("1", copied.BasicProperties.Headers!["x-contract-version"]);
@@ -131,6 +131,7 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
     {
         var source = QueueName();
         var destination = QueueName();
+        var ledger = Path.Combine(Path.GetTempPath(), $"insight-migration-{Guid.NewGuid():N}.jsonl");
         await using var connection = await CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
         await channel.QueueDeclareAsync(source, durable: true, exclusive: false, autoDelete: false);
@@ -141,16 +142,17 @@ public sealed class QueueMigrationProcessTests : IAsyncLifetime
             await PublishAsync(channel, source, $"message-{index}");
         }
 
-        var first = await RunUtilityAsync(source, destination, "--execute", "--confirm-quiesced", "--max-messages", "2");
+        var first = await RunUtilityAsync(source, destination, "--execute", "--confirm-quiesced", "--ledger", ledger, "--max-messages", "2");
         Assert.Equal(0, first.ExitCode);
         Assert.Contains("acknowledged: 2", first.Output);
         Assert.Equal(1u, (await channel.QueueDeclarePassiveAsync(source)).MessageCount);
         Assert.Equal(2u, (await channel.QueueDeclarePassiveAsync(destination)).MessageCount);
 
-        var second = await RunUtilityAsync(source, destination, "--execute", "--confirm-quiesced", "--max-messages", "2");
+        var second = await RunUtilityAsync(source, destination, "--execute", "--confirm-quiesced", "--ledger", ledger, "--max-messages", "2");
         Assert.Equal(0, second.ExitCode);
         Assert.Equal(0u, (await channel.QueueDeclarePassiveAsync(source)).MessageCount);
         Assert.Equal(3u, (await channel.QueueDeclarePassiveAsync(destination)).MessageCount);
+        File.Delete(ledger);
     }
 
     [Fact]
