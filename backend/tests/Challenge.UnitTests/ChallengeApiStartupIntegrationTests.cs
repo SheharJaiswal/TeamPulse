@@ -19,10 +19,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
     public async Task ApiHost_AppliesMigrationsOnStartupAndProjectionReaderReadsMigratedDatabase()
     {
         using var factory = fixture.CreateFactory();
-
-        using (factory)
-        using (var client = factory.CreateClient())
-        {
+        using var client = factory.CreateClient();
             var readiness = await client.GetAsync("/health/ready");
             Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
 
@@ -34,7 +31,8 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
 
             var store = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionStore>();
             var employeeId = Guid.NewGuid();
-            var processedAtUtc = DateTime.UtcNow;
+            // MySQL datetime(6) persists microseconds; align the expected value to that precision.
+            var processedAtUtc = new DateTime(DateTime.UtcNow.Ticks / 10 * 10, DateTimeKind.Utc);
             var lifecycleEvent = new EmployeeLifecycleEvent(
                 Guid.NewGuid(),
                 "EmployeeReactivated",
@@ -61,6 +59,5 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
             Assert.True(projection.IsActive);
             Assert.Equal(7, projection.LifecycleVersion);
             Assert.Equal(processedAtUtc, projection.UpdatedAtUtc);
-        }
     }
 }

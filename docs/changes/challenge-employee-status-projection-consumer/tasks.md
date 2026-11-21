@@ -126,3 +126,11 @@
 - The only failure was the new API-host startup test. Stack trace showed `ServerVersion.AutoDetect` attempted to connect using the appsettings localhost connection string, not the Testcontainers connection string. The existing Habit API integration factory establishes test settings with both `UseSetting` and `ConfigureAppConfiguration`, and sets Testing environment.
 - Applied the same proven test-host configuration pattern in a dedicated `ChallengeApiFactory`; disabled the consumer in the in-memory test configuration. The test logic and production API startup path remain unchanged.
 - Re-run pending. Keep API-host acceptance unchecked until CI verifies host startup, migrations and projection read.
+
+
+## CI #131 result and timestamp precision correction
+
+- CI #131 for `5026138c2bcdf85f13416c572c201d50c5a7b932` passed restore, Release build (0 warnings/errors), Docker Compose validation, RabbitMQ startup/topology and all 11 Python topology tests. The .NET suite reported 230 passed / 1 failed (Challenge 53/54, Habit 24/24, Identity 100/100). [CI #131](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44876734230).
+- The API-host integration test successfully started the real Challenge API against the fresh MySQL 8.4 Testcontainers database, returned HTTP 200 from `/health/ready`, observed both production-startup migrations, and successfully wrote/read the projection through the production store. Its sole assertion failure was timestamp precision: the .NET expected value retained 100-nanosecond ticks while MySQL `datetime(6)` stores microseconds (actual value differed by 8 ticks).
+- Corrected only test data precision by truncating the generated UTC timestamp to MySQL microsecond precision before passing it to the production store. Removed redundant double-disposal of the WebApplicationFactory while keeping deterministic disposal of factory and client.
+- The API-host acceptance remains unchecked until the corrected full CI run passes. No production behavior or schema was changed.

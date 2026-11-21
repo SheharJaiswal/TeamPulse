@@ -637,3 +637,14 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - CI #130 failed only in the new Challenge API-host startup test (230/231 .NET tests passed). The failure occurred in `ServerVersion.AutoDetect` while opening a connection using the appsettings localhost endpoint; it did not reach migration assertions.
 - Compared the existing Habit API integration setup and aligned Challenge with its established `WebApplicationFactory` pattern: set Testing environment, override the connection string through `UseSetting`, and add the same connection string via in-memory app configuration. The RabbitMQ consumer is disabled for the test.
 - Added a dedicated `ChallengeApiFactory`; production code is unchanged. CI rerun is pending; the API-host migration/projection-reader acceptance remains unverified until that run passes.
+
+
+## Latest continuation checkpoint — API-host startup test reached production migration and projection read; timestamp assertion corrected
+
+- CI #131 for code commit `5026138c2bcdf85f13416c572c201d50c5a7b932` completed with failure: restore, Release build (0 warnings/errors), Docker Compose, RabbitMQ startup/topology and 11 Python tests passed; .NET results were 230 passed / 1 failed (Challenge 53/54, Habit 24/24, Identity 100/100). [CI #131](https://github.com/SheharJaiswal/TeamPulse/actions/runs/44876734230).
+- The new API-host test reached the production readiness endpoint, confirmed both migrations were applied by API startup, and successfully wrote/read the projection through the production store. The only failing assertion compared DateTime ticks beyond MySQL `datetime(6)` precision (8 ticks difference).
+- Corrected the test's generated UTC timestamp to microsecond precision and simplified WebApplicationFactory/client disposal. Production code and persistence schema are unchanged.
+- Current branch head before correction: `5026138c2bcdf85f13416c572c201d50c5a7b932`. Corrected code and this checkpoint are being committed; full CI verification is required before closing the acceptance item.
+- No local .NET/Docker test is claimed. Scope remains the approved projection-only SDD; open question 19, permanent inbox retention pending privacy/legal review, and deferred AWS EventBridge/SQS/CloudWatch remain unchanged.
+
+Updated: 2026-11-21
