@@ -1,6 +1,6 @@
 # Specification: Insight Employee Status Projection Consumer
 
-**Status:** Draft — awaiting owner approval.
+**Status:** Approved by project owner on 2026-11-21.
 **Authority:** AGENTS.md, ADR-0001, service ownership, communication conventions, event-envelope and employee-status-projection contracts.
 
 ## Service and persistence boundary

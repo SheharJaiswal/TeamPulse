@@ -1,6 +1,6 @@
 # Proposal: Insight Employee Status Projection Consumer
 
-**Status:** Draft — awaiting owner approval. No implementation is authorized until approval.
+**Status:** Approved by project owner on 2026-11-21.
 
 ## Context
 Identity owns authoritative employee lifecycle state and publishes schema-v1 EmployeeDeactivated and EmployeeReactivated events. The shared Employee Status Projection Contract v1 requires Insight to maintain its own version-aware projection; it must not query another service's database.
