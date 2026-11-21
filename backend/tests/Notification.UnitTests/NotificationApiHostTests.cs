@@ -26,8 +26,10 @@ public sealed class NotificationApiHostTests(NotificationMySqlFixture fixture) :
         using var client = factory.CreateClient();
         var live = await client.GetAsync("/health/live");
         var ready = await client.GetAsync("/health/ready");
+        var consumer = await client.GetAsync("/health/consumer");
         Assert.Equal(HttpStatusCode.OK, live.StatusCode);
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, consumer.StatusCode);
 
         await using var scope = factory.Services.CreateAsyncScope();
         var database = scope.ServiceProvider.GetRequiredService<IDbContextFactory<NotificationDbContext>>();
