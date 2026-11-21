@@ -194,3 +194,10 @@ button { cursor: pointer; }
 }
 
 .alert.success { border-color: #c9e4d2; background: #f1faf4; color: #286342; }
+
+.primary-button:disabled,
+.subtle-button:disabled {
+  cursor: wait;
+  opacity: .62;
+  transform: none;
+}
