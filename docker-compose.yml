@@ -32,11 +32,6 @@ services:
     volumes:
       - teampulse-dynamodb-data:/home/dynamodblocal/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/shell/ >/dev/null || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 10s
 
   rabbitmq:
     image: rabbitmq:4.1-management
