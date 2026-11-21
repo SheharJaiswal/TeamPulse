@@ -622,3 +622,11 @@ At the end of the SDD-only increment, the next task was the full Habit consumer 
 - Remaining test gap: explicit production API-host startup against a clean MySQL database, proving startup applies migrations and the production projection reader reads the migrated schema. Lower-level repeated migration and fresh-database health/readiness checks are covered; do not overstate them as full host-startup verification.
 - No local .NET or Docker execution is claimed; CI is the verification source. EventBridge/SQS and CloudWatch remain deferred until owner cloud setup. Inbox retention remains permanent until privacy/legal sign-off. Open question 19 still blocks employee-facing Challenge business APIs.
 - Next execution: implement the focused API-host startup/projection-reader integration test only, preserve the approved projection-only scope, and verify it in GitHub Actions.
+
+
+## Next verification increment — real Challenge API-host startup test (pending CI)
+
+- Added `ChallengeApiStartupIntegrationTests` to start the actual `Challenge.API` entry point with `WebApplicationFactory<Program>` against the isolated, fresh MySQL 8.4 Testcontainers database. The RabbitMQ consumer is explicitly disabled for this test.
+- The test calls `/health/ready`, asserts both checked-in EF migrations are applied by the production startup path, then writes and reads a projection using the production `IEmployeeStatusProjectionStore` registration.
+- Added `Microsoft.AspNetCore.Mvc.Testing` 8.0.11 to the Challenge test project.
+- This is the remaining acceptance gap identified after CI #129. It is authored but not yet verified; no passing result is claimed until the workflow completes.

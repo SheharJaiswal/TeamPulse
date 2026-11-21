@@ -44,7 +44,7 @@
 
 ## Verification gaps
 
-- [ ] Add a dedicated API-host startup integration test that starts against a clean MySQL 8.4 database, applies the checked-in migration through the production host startup path, and reads the resulting projection through the production reader. Lower-level repeated `MigrateAsync` migration-history and fresh-database health/readiness checks passed CI #128/#127; this does not prove the complete API-host startup path.
+- [ ] Dedicated API-host startup integration test authored in `ChallengeApiStartupIntegrationTests.cs`: starts the real `Program` against the fixture's fresh MySQL 8.4 database with the RabbitMQ consumer disabled, calls `/health/ready`, asserts both checked-in migrations were applied, writes through the production projection store and reads through its production reader. Awaiting CI runtime verification. Lower-level repeated migration-history and fresh-database health/readiness checks passed CI #128/#127.
 - [x] MySQL 8.4 Testcontainers: sequential same event ID/same fingerprint and same event ID/different fingerprint are covered. Concurrent same-ID/same-fingerprint and conflicting-fingerprint tests have now been added; awaiting CI verification.
 - [x] MySQL 8.4 Testcontainers: duplicate-key race safely reads the committed fingerprint after rolling back the losing insert; concurrent same-fingerprint and conflicting-fingerprint tests passed CI #128.
 - [x] MySQL 8.4 Testcontainers: concurrent N/N+1 processing leaves maximum lifecycle version; rollback leaves neither inbox nor projection mutation (existing integration tests passed CI #127).
@@ -110,3 +110,11 @@
 - Local .NET SDK and Docker CLI remain unavailable in this environment; all build/test/container evidence above is from GitHub Actions.
 - Deferred: AWS EventBridge/SQS/CloudWatch until owner cloud setup; inbox retention remains permanent until privacy/legal review; open question 19 remains unresolved and blocks employee-facing Challenge business APIs.
 - Next increment: close the explicit clean API-host startup/projection-reader test gap, without expanding Challenge product scope.
+
+
+## API-host startup migration and projection-reader test — CI pending
+
+- Added `ChallengeApiStartupIntegrationTests` using `WebApplicationFactory<Program>` and a fresh MySQL 8.4 Testcontainers fixture.
+- The test starts the actual Challenge API host with its RabbitMQ consumer disabled, calls the production readiness endpoint, asserts both checked-in EF migrations are applied, then writes and reads an employee projection through the registered production store.
+- Added `Microsoft.AspNetCore.Mvc.Testing` 8.0.11 to the Challenge test project.
+- Keep this acceptance item unchecked until GitHub Actions confirms package restore, host startup, migration execution and projection read.
