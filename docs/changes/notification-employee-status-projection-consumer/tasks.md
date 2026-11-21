@@ -17,10 +17,10 @@
 - [x] Add Notification.UnitTests and register Domain, Application and test projects in backend/TeamPulse.sln.
 - [ ] Add Notification-owned MySQL database initialization, Compose mount and safe existing-volume migration runbook.
 - [x] Implement minimal projection/inbox domain entities, schema-v1 envelope validator and transport-independent application processor.
-- [ ] Add checked-in EF migration, startup migration and production projection reader/store.
+- [x] Add checked-in EF migration and transactional projection/inbox store with reader abstraction; API startup migration remains pending.
 - [ ] Add opt-in RabbitMQ consumer with manual ack, bounded retries, reconnect and independent consumer health.
 - [ ] Upgrade only Notification source queue to quorum/DLX/DLQ with pending-message-preserving migration instructions.
-- [ ] Add unit, MySQL 8.4, RabbitMQ Testcontainers, API-host and topology contract tests.
+- [x] Add MySQL 8.4 Testcontainers coverage for migration idempotency/schema, duplicate event IDs, stale/equal ordering and concurrent maximum-version preservation; RabbitMQ/API-host tests remain pending.
 - [x] Add processor tests for strict recognized-field validation, additive unknown-field tolerance, transition consistency, note exclusion and zero persistence calls on invalid input.
 - [ ] Document local host/Compose run configuration and existing MySQL/RabbitMQ volume migrations.
 - [ ] Run full restore, Release build, solution tests, Compose validation and topology tests in CI.
@@ -59,3 +59,11 @@
 - [x] Deterministic processor tests cover valid deactivation/reactivation, exact producer source, reason-code bounds, unsupported schema, malformed/missing fields, inconsistent transitions, unknown additive fields and note non-persistence.
 - [ ] CI verification pending for the new solution projects and tests.
 - [ ] Continue with Notification infrastructure persistence/migration, API host and consumer/topology in separate increments.
+
+
+## Execution checkpoint — Notification persistence
+
+- [x] Commit `7f92cf4128f9ca3fd2f72ca4d8a8f4ac88654732` adds Notification.Infrastructure, the checked-in EF migration/model snapshot, transactional inbox/projection store, MySQL fixture/integration tests, database init SQL, Compose mount and existing-volume migration runbook.
+- [x] Persistence tests assert exact projection/inbox columns, idempotent migration, duplicate eventId, stale/equal version safety and concurrent maximum lifecycle version.
+- [ ] CI verification pending for persistence increment.
+- [ ] Add API host/startup migration, then RabbitMQ consumer/topology with safe persistent-broker migration.

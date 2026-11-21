@@ -1,3 +1,12 @@
+## Notification projection — MySQL persistence increment added
+
+- Added Notification.Infrastructure with EF Core 8/Pomelo, a checked-in initial migration/model snapshot, a transactional inbox + conditional lifecycle-version upsert store, and a read-only projection reader abstraction.
+- Added MySQL 8.4 Testcontainers coverage for exact schema columns, migration idempotency, duplicate event IDs, stale/equal versions and concurrent delivery preserving the maximum lifecycle version.
+- Added `04-notification-database.sql`, mounted it in Compose, and documented safe manual database/grant creation for existing persistent MySQL volumes. No volume reset or live database mutation was performed.
+- Commit: `7f92cf4128f9ca3fd2f72ca4d8a8f4ac88654732`. CI verification pending. Next increment is Notification.API host/startup migration and separate health endpoints.
+
+Updated: 2026-11-21
+
 ## Notification projection implementation — application core added
 
 - Owner approval for the Notification employee-status projection SDD was received on 2026-11-21. The proposal/spec/design/tasks are now marked owner-approved; the scope remains projection-only.

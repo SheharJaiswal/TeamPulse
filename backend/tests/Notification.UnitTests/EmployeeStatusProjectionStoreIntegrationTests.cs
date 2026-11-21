@@ -95,17 +95,25 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(NotificationMy
 
     private static async Task<string[]> GetColumnsAsync(NotificationDbContext database, string table)
     {
-        var connection = database.Database.GetDbConnection();
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table ORDER BY ORDINAL_POSITION";
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "@table";
-        parameter.Value = table;
-        command.Parameters.Add(parameter);
-        var columns = new System.Collections.Generic.List<string>();
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) columns.Add(reader.GetString(0));
-        return columns.ToArray();
+        await database.Database.OpenConnectionAsync();
+        try
+        {
+            var connection = database.Database.GetDbConnection();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table ORDER BY ORDINAL_POSITION";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@table";
+            parameter.Value = table;
+            command.Parameters.Add(parameter);
+            var columns = new System.Collections.Generic.List<string>();
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync()) columns.Add(reader.GetString(0));
+            return columns.ToArray();
+        }
+        finally
+        {
+            await database.Database.CloseConnectionAsync();
+        }
     }
 
     private static EmployeeLifecycleEvent CreateEvent(Guid eventId, Guid employeeId, long version, bool isActive) =>
