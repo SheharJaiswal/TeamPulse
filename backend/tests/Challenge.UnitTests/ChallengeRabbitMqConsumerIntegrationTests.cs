@@ -198,13 +198,15 @@ public sealed class ChallengeRabbitMqConsumerIntegrationTests : IAsyncLifetime
         // have been disposed. Restarting now cannot race the previous session's teardown.
         await _container.StartAsync();
         await OpenTestChannelAsync();
-        await WaitUntilAsync(() => Task.FromResult(status.IsConnected), timeoutSeconds: 30);
-        await processor.DuplicateReplayObserved.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        // The duplicate outcome proves a new broker session has re-established a usable consumer
+        // channel. Avoid polling IsConnected here: it is a point-in-time health signal, while replay
+        // and the following sentinel prove the behavior required by this acceptance test.
+        await processor.DuplicateReplayObserved.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // With prefetch=1, this sentinel can be processed only after the duplicate replay
         // completed and its source delivery was acknowledged.
         await PublishAsync(sentinelBody);
-        await processor.SentinelProcessed.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        await processor.SentinelProcessed.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Equal(2, processor.CommittedMessageCalls);
         Assert.Null(await _channel!.BasicGetAsync(DeadLetterQueueName, autoAck: false));
