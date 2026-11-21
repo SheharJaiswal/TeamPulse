@@ -28,12 +28,12 @@
 - [x] Expose create/get/resend/cancel through the HrAdmin-protected API; add authorization, validation, lifecycle and unknown-ID integration coverage.
 - [x] Add the anonymous activation endpoint with generic invalid-token responses and an IP-based fixed-window rate limit (5 attempts/minute).
 - [x] Implement Employee-only role assignment, ASP.NET Core password hashing, single-use token consumption and atomic Employee creation.
-- [ ] Implement the owner-approved secure delivery hand-off with no plaintext token in ordinary outbox/logs.
+- [x] Implement the owner-approved protected-secret delivery queue with MySQL leases, generation-aware acknowledgement, retry scheduling and expiry cleanup; the ordinary outbox remains limited to invitation reference and generation metadata.
 - [x] Add activation rate limiting and generic invalid-token responses.
-- [ ] Add remaining delivery failure/concurrency/security tests. MySQL API-host integration coverage now includes successful activation/login, duplicate redemption race, generic failures for invalid/expired/cancelled/used tokens, weak-password rejection and rate limiting; CI verification is pending.
+- [x] Add MySQL integration coverage for delivery retry scheduling, resend generation rotation, stale-lease acknowledgement rejection and expiry cleanup. Activation API-host coverage includes successful activation/login, duplicate redemption race, generic failures for invalid/expired/cancelled/used tokens, weak-password rejection and rate limiting.
 - [x] Add Mailpit to the root local Docker Compose profile (SMTP 1025, web UI 8025).
-- [ ] Update the broader Identity API contract and runbooks; invitation SDD design/spec and project status now reflect the implemented HR API surface.
-- [ ] Verify Release build, full solution tests, Compose and topology tests in CI.
+- [ ] Update the broader Identity API contract and runbooks; invitation SDD design/spec and project status reflect the implemented API and delivery worker. Add operational verification for local SMTP acceptance and recovery after process restart.
+- [ ] Verify Release build, full solution tests, Compose and topology tests in CI for the latest delivery-worker commits.
 
 ## Deferred
 - [ ] Production email provider selection and deployment configuration.
