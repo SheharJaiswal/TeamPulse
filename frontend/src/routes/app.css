@@ -49,6 +49,7 @@ button { cursor: pointer; }
 .auth-help { margin-top: 26px; color: #89958f; font-size: 11px; line-height: 1.7; text-align: center; }
 .auth-footer { margin-top: 50px; color: #9aa49f; font-size: 11px; }
 .mobile-brand { display: none; }
+.mobile-workspace-nav { display: none; }
 
 .app-shell { display: flex; min-height: 100vh; }
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 2; display: flex; flex-direction: column; width: 244px; padding: 30px 20px 20px; border-right: 1px solid var(--line); background: #fff; }
@@ -155,7 +156,13 @@ button { cursor: pointer; }
   .auth-footer { margin-top: 55px; }
   .sidebar { position: static; width: 100%; height: auto; padding: 13px 18px; border-right: 0; border-bottom: 1px solid var(--line); }
   .sidebar .brand-lockup { padding: 0; }
-  .sidebar .nav-label, .sidebar .nav-link, .sidebar-note, .sidebar-profile { display: none; }
+  .sidebar .nav-label, .sidebar > .nav-link, .sidebar-note, .sidebar-profile { display: none; }
+  .mobile-workspace-nav { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .mobile-workspace-link { display: inline-flex; align-items: center; min-height: 35px; padding: 0 12px; border-radius: 8px; color: #60716a; font-size: 12px; font-weight: 600; }
+  .mobile-workspace-link.active { background: #edf5f1; color: var(--green); }
+  .mobile-workspace-link:focus-visible { outline: 2px solid #6da797; outline-offset: 2px; }
+  .topbar-right .status-dot, .topbar-right > span:not(.breadcrumb) { display: none; }
+  .topbar-right .text-link { padding: 8px 0; }
   .app-shell { display: block; }
   .main-content { width: 100%; margin-left: 0; }
   .topbar { height: 55px; padding: 0 19px; }
