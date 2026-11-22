@@ -12,7 +12,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Infrastructure", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.UnitTests", "..\..\..\tests\Identity.UnitTests\Identity.UnitTests.csproj", "{316FFB17-37DE-475D-8838-93763E9DC23B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.AdminBootstrap", "..\..\..\Tools\Identity.AdminBootstrap\Identity.AdminBootstrap.csproj", "{B0A0C0D0-1234-4ABC-8DEF-123456789001}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.AdminBootstrap", "..\..\Tools\Identity.AdminBootstrap\Identity.AdminBootstrap.csproj", "{B0A0C0D0-1234-4ABC-8DEF-123456789001}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
