@@ -14,7 +14,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.UnitTests", "..\..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.QueueMigration.IntegrationTests", "..\..\..\tests\Insight.QueueMigration.IntegrationTests\Insight.QueueMigration.IntegrationTests.csproj", "{FB4AF301-CCAA-40F2-9637-E048F6CC430C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.QueueMigration", "..\..\..\Tools\Insight.QueueMigration\Insight.QueueMigration.csproj", "{B0A0C0D0-1234-4ABC-8DEF-123456789002}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.QueueMigration", "..\..\Tools\Insight.QueueMigration\Insight.QueueMigration.csproj", "{B0A0C0D0-1234-4ABC-8DEF-123456789002}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
