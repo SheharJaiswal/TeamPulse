@@ -14,12 +14,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.UnitTests", "..\..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.QueueMigration.IntegrationTests", "..\..\..\tests\Insight.QueueMigration.IntegrationTests\Insight.QueueMigration.IntegrationTests.csproj", "{FB4AF301-CCAA-40F2-9637-E048F6CC430C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Insight.QueueMigration", "..\..\..\Tools\Insight.QueueMigration\Insight.QueueMigration.csproj", "{B0A0C0D0-1234-4ABC-8DEF-123456789002}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B0A0C0D0-1234-4ABC-8DEF-123456789002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0A0C0D0-1234-4ABC-8DEF-123456789002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0A0C0D0-1234-4ABC-8DEF-123456789002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0A0C0D0-1234-4ABC-8DEF-123456789002}.Release|Any CPU.Build.0 = Release|Any CPU
 		{07D9C74C-FE4E-4E51-AB62-9D09F9B8C617}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{07D9C74C-FE4E-4E51-AB62-9D09F9B8C617}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{07D9C74C-FE4E-4E51-AB62-9D09F9B8C617}.Release|Any CPU.ActiveCfg = Release|Any CPU
