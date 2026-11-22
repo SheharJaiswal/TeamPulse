@@ -1,0 +1,71 @@
+name: Microservice Solutions CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/backend-foundation
+    paths:
+      - 'backend/**'
+      - '.github/workflows/microservices.yml'
+  pull_request:
+    branches:
+      - main
+      - feature/backend-foundation
+    paths:
+      - 'backend/**'
+      - '.github/workflows/microservices.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  service-build-and-test:
+    name: ${{ matrix.service }} - restore, build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - Identity
+          - Habit
+          - Challenge
+          - EventTracking
+          - Notification
+          - Insight
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Prepare integration-test containers
+        run: |
+          docker pull mysql:8.4
+          docker pull rabbitmq:4.0-alpine
+
+      - name: Restore service solution
+        run: dotnet restore "backend/src/Services/${{ matrix.service }}/${{ matrix.service }}.sln"
+
+      - name: Build service solution
+        run: dotnet build "backend/src/Services/${{ matrix.service }}/${{ matrix.service }}.sln" --configuration Release --no-restore
+
+      - name: Test service solution
+        run: dotnet test "backend/src/Services/${{ matrix.service }}/${{ matrix.service }}.sln" --configuration Release --no-build --no-restore --logger "trx;LogFileName=${{ matrix.service }}-tests.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-test-results
+          path: "**/${{ matrix.service }}-tests.trx"
+          if-no-files-found: ignore
