@@ -12,12 +12,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Infrastructure", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.UnitTests", "..\..\..\tests\Identity.UnitTests\Identity.UnitTests.csproj", "{316FFB17-37DE-475D-8838-93763E9DC23B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.AdminBootstrap", "..\..\..\Tools\Identity.AdminBootstrap\Identity.AdminBootstrap.csproj", "{B0A0C0D0-1234-4ABC-8DEF-123456789001}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B0A0C0D0-1234-4ABC-8DEF-123456789001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0A0C0D0-1234-4ABC-8DEF-123456789001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0A0C0D0-1234-4ABC-8DEF-123456789001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0A0C0D0-1234-4ABC-8DEF-123456789001}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C46AE4DC-8DC8-4570-B16C-83066FED7A54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C46AE4DC-8DC8-4570-B16C-83066FED7A54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C46AE4DC-8DC8-4570-B16C-83066FED7A54}.Release|Any CPU.ActiveCfg = Release|Any CPU
