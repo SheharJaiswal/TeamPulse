@@ -82,18 +82,78 @@ mysql -u root -p < infra/mysql/init/04-notification-database.sql
 
 The local connection strings in each API's Development configuration use `localhost:3306`, database-specific names, and the local-only `teampulse_app` credentials. If you choose different MySQL credentials, override the corresponding `ConnectionStrings__<Name>` environment variable rather than editing committed configuration.
 
-### 2. Start RabbitMQ (optional, for cross-service event delivery)
+### 2. Start and configure RabbitMQ (optional, for cross-service event delivery)
 
-The APIs can run without RabbitMQ when their consumers/outbox dispatchers are disabled (the checked-in defaults). To test local event delivery, start only the RabbitMQ dependency:
+RabbitMQ is the only application dependency in the standard local workflow that this guide runs in Docker. The Compose service uses the official RabbitMQ 4.1 management image and mounts the repository's broker configuration and definitions:
+
+- `infra/rabbitmq/rabbitmq.conf` loads the definitions file at broker startup.
+- `infra/rabbitmq/definitions.json` declares the durable topic exchange, service queues, routing-key bindings, dead-letter exchange and dead-letter queues.
+- The named queues and bindings are provisioned automatically when the container starts. You do not need to create them manually in the management UI.
+
+Start only RabbitMQ from the repository root:
 
 ```bash
 docker compose up -d rabbitmq
+docker compose ps rabbitmq
+docker compose logs -f rabbitmq
 ```
 
-Management UI: http://localhost:15672  
-Local-only credentials: `teampulse` / `local_rabbitmq_password`
+Local connection details:
 
-Do not start the full Compose stack for normal development. MySQL is expected to run as a native local service. RabbitMQ consumers and dispatchers are disabled by default; enable only the components you are actively testing. For example, Identity's dispatcher can be enabled with `OutboxDispatcher__Enabled=true` and `OutboxDispatcher__Transport=RabbitMq`. Consumer configuration is service-specific and is shown in the relevant service section below.
+| Setting | Value |
+|---|---|
+| AMQP host/port | `localhost:5672` |
+| Management UI | http://localhost:15672 |
+| Username | `teampulse` |
+| Password | `local_rabbitmq_password` |
+| Virtual host | `/` |
+| Topic exchange | `teampulse.domain.events` |
+| Dead-letter exchange | `teampulse.domain.events.dlx` |
+
+These credentials are for local development only. Do not reuse them outside your machine. The RabbitMQ data is persisted in the `teampulse-rabbitmq-data` Docker volume. To stop RabbitMQ without deleting its data, run `docker compose stop rabbitmq`. To remove the container while retaining the volume, run `docker compose rm -f rabbitmq`. Do not remove the volume unless you intentionally want to reset local broker data.
+
+#### Existing exchange and queue topology
+
+The definitions file creates the following topology:
+
+| Queue | Bound routing key | Purpose |
+|---|---|---|
+| `teampulse.habit.events` | `identity.employee.lifecycle` | Habit employee lifecycle projection |
+| `teampulse.challenge.events` | `identity.employee.lifecycle` | Challenge employee lifecycle projection |
+| `teampulse.event-tracking.events` | `identity.employee.lifecycle` | Event Tracking employee lifecycle projection |
+| `teampulse.insight.events` | `identity.employee.lifecycle` | Insight employee lifecycle projection |
+| `teampulse.notification.events` | `identity.employee.lifecycle` | Notification employee lifecycle projection |
+| `teampulse.activity.events` | `habit.activity.recorded` | Activity event consumers |
+
+The Habit, Challenge, Event Tracking and Notification lifecycle queues have corresponding dead-letter queues. The activity queue also has `teampulse.activity.events.dlq`. The configured quorum queues use a delivery limit of five and dead-letter routing. These definitions are loaded from source control; update the definitions file through an approved architecture change if the topology needs to change.
+
+#### Enable local publishers and consumers
+
+RabbitMQ being healthy does not automatically turn on message publishing or consumption. The checked-in service configuration keeps these components disabled by default so the APIs can be developed and run without a broker. Set the following environment variables in the terminal for each service you want to exercise. Keep the AMQP URI consistent with the local broker credentials above.
+
+| Service | Environment variables to enable |
+|---|---|
+| Identity | `RabbitMq__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/`; `OutboxDispatcher__Enabled=true` |
+| Habit | `HabitConsumer__Enabled=true` |
+| Challenge | `ChallengeConsumer__Enabled=true` |
+| Event Tracking | `EventTrackingConsumer__Enabled=true`; `EventTrackingOutbox__Enabled=true`; `EventTrackingPublisher__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
+| Insight | `InsightConsumer__Enabled=true`; `InsightConsumer__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
+| Notification | `NotificationConsumer__Enabled=true`; `NotificationConsumer__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
+
+For example, in the PowerShell terminal used to run Identity:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:RabbitMq__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
+$env:OutboxDispatcher__Enabled = "true"
+dotnet run --project backend/src/Services/Identity/Identity.API --urls http://localhost:5101
+```
+
+For Habit, Challenge, Event Tracking, Insight or Notification, set that service's variables from the table in its own terminal before running its `dotnet run` command. Environment variables use the .NET double-underscore convention to override nested `appsettings.json` values. The default exchange, queue names and routing keys are already in the checked-in service configuration and broker definitions; do not create alternate names in local settings.
+
+Only enable the consumers and outbox dispatchers you are actively testing. For a full local lifecycle-event flow, start RabbitMQ first, then enable the Identity publisher and the relevant downstream consumers. For activity-event publishing, enable the Event Tracking outbox and its publisher configuration as well. A service that is not enabled will not consume messages merely because its queue exists.
+
+Do not start the full Compose stack for normal development. MySQL is expected to run as a native local service. DynamoDB Local and Mailpit are separate optional dependencies and are not started by the RabbitMQ command above.
 
 ### 3. Configure the shared JWT signing key
 
