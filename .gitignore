@@ -1,8 +1,88 @@
-**/.keys/
-**/identity-dpkeys/
+# .NET build output
 **/bin/
 **/obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+*.pdb
+*.cache
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+
+# Visual Studio / JetBrains / VS Code workspace state
+.vs/
+.idea/
+*.DotSettings.user
+*.sln.iml
+.history/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Node.js / SvelteKit / frontend build output
 **/node_modules/
+**/.svelte-kit/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/storybook-static/
+**/.vite/
+**/.turbo/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Local environment files and secrets
 .env
 .env.*
 !.env.example
+!.env.template
+**/.keys/
+**/identity-dpkeys/
+.secrets/
+secrets/
+*.pfx
+*.p12
+
+# Local databases, runtime data and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+data/
+tmp/
+temp/
+*.pid
+
+# Python tooling/cache (scripts and local utilities)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Operating system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Local container / emulator state (never ignore source Compose or config files)
+.docker/
