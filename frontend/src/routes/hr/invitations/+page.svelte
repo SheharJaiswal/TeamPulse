@@ -87,7 +87,7 @@
         <div>
           <p class="eyebrow">PEOPLE & ACCESS</p>
           <h1>Employee invitations</h1>
-          <p class="muted">Invite a teammate to TeamPulse and help them get started.</p>
+          <p class="muted">Invite an employee to TeamPulse and help them get started.</p>
         </div>
         <span class="hr-access-pill"><span></span> HR access</span>
       </div>
@@ -111,7 +111,7 @@
           <div class="result-grid">
             <div><span>INVITATION ID</span><strong class="id-value">{invitation.invitationId}</strong></div>
             <div><span>ORGANIZATION</span><strong>{invitation.organizationId}</strong></div>
-            <div><span>TEAM</span><strong>{invitation.teamId}</strong></div>
+            <div><span>TEAM</span><strong>{invitation.teamId || 'Not assigned'}</strong></div>
             <div><span>EXPIRES</span><strong>{dateTime(invitation.expiresAtUtc)}</strong></div>
             <div><span>DELIVERY GENERATION</span><strong>{invitation.deliveryGeneration}</strong></div>
           </div>
@@ -150,8 +150,8 @@
               <input id="invite-organization" name="organizationId" maxlength="100" placeholder="Organization identifier" required />
             </div>
             <div class="form-field full">
-              <label for="invite-team">Team ID</label>
-              <input id="invite-team" name="teamId" maxlength="100" placeholder="Team identifier" required />
+              <label for="invite-team">Team ID <span class="muted">(optional)</span></label>
+              <input id="invite-team" name="teamId" maxlength="100" placeholder="Leave blank to assign later" />
             </div>
             <button class="primary-button full-width" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating invitation…' : 'Create invitation'} <span aria-hidden="true">→</span></button>
           </form>

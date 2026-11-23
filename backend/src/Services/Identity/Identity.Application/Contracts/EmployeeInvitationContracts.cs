@@ -6,14 +6,14 @@ public sealed record CreateEmployeeInvitationRequest(
     string Email,
     string DisplayName,
     string OrganizationId,
-    string TeamId);
+    string? TeamId = null);
 
 public sealed record EmployeeInvitationSummary(
     Guid InvitationId,
     string Email,
     string DisplayName,
     string OrganizationId,
-    string TeamId,
+    string? TeamId,
     string Status,
     DateTime CreatedAtUtc,
     DateTime ExpiresAtUtc,

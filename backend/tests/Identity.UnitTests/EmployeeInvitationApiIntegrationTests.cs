@@ -84,6 +84,34 @@ public sealed class EmployeeInvitationApiIntegrationTests : IClassFixture<MySqlI
     }
 
     [Fact]
+    public async Task CreateInvitation_WithoutTeamCreatesAnUnassignedEmployeeInvitation()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid(), "HrAdmin"));
+
+        var response = await client.PostAsJsonAsync("/api/identity/invitations", new
+        {
+            email = $"unassigned-{Guid.NewGuid():N}@example.com",
+            displayName = "Unassigned Employee",
+            organizationId = "org-test"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("teamId").ValueKind);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var invitation = await database.EmployeeInvitations.SingleAsync(
+            item => item.Id == body.GetProperty("invitationId").GetGuid());
+        Assert.Null(invitation.TeamId);
+        Assert.Equal("org-test", invitation.OrganizationId);
+    }
+
+    [Fact]
     public async Task CreateInvitation_RejectsInvalidFieldsBeforeWritingAnything()
     {
         using var factory = _fixture.CreateFactory();

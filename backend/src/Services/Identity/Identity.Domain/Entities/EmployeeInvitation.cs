@@ -8,7 +8,7 @@ public sealed class EmployeeInvitation
 
     public EmployeeInvitation(
         Guid id, string email, string normalizedEmail, string displayName,
-        string organizationId, string teamId, string tokenDigest,
+        string organizationId, string? teamId, string tokenDigest,
         Guid invitedByEmployeeId, DateTime createdAtUtc, DateTime expiresAtUtc)
     {
         if (id == Guid.Empty) throw new ArgumentException("Invitation ID is required.", nameof(id));
@@ -23,7 +23,7 @@ public sealed class EmployeeInvitation
         PendingNormalizedEmail = normalizedEmail;
         DisplayName = displayName;
         OrganizationId = organizationId;
-        TeamId = teamId;
+        TeamId = string.IsNullOrWhiteSpace(teamId) ? null : teamId.Trim();
         TokenDigest = tokenDigest;
         InvitedByEmployeeId = invitedByEmployeeId;
         CreatedAtUtc = createdAtUtc;
@@ -38,7 +38,7 @@ public sealed class EmployeeInvitation
     public string? PendingNormalizedEmail { get; private set; }
     public string DisplayName { get; private set; } = string.Empty;
     public string OrganizationId { get; private set; } = string.Empty;
-    public string TeamId { get; private set; } = string.Empty;
+    public string? TeamId { get; private set; }
     public string? TokenDigest { get; private set; }
     public Guid InvitedByEmployeeId { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }

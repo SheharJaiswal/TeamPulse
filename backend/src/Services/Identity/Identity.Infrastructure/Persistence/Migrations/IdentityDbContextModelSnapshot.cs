@@ -27,7 +27,7 @@ partial class IdentityDbContextModelSnapshot : ModelSnapshot
             b.Property<string>("OrganizationId").IsRequired().HasMaxLength(100).HasColumnType("varchar(100)");
             b.Property<string>("PasswordHash").IsRequired().HasColumnType("longtext");
             b.Property<string>("Role").IsRequired().HasMaxLength(50).HasColumnType("varchar(50)");
-            b.Property<string>("TeamId").IsRequired().HasMaxLength(100).HasColumnType("varchar(100)");
+            b.Property<string>("TeamId").HasMaxLength(100).HasColumnType("varchar(100)");
             b.Property<bool>("IsActive").HasColumnType("tinyint(1)");
             b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime(6)");
             b.HasKey("Id");

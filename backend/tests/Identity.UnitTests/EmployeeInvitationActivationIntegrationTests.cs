@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -59,6 +61,36 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
             "/api/identity/login",
             new { email = invitation.Email, password = "Strong-password-2026!" });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+    }
+
+    [Fact]
+    public async Task Activate_CreatesEmployeeWithoutTeamAssignment()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+        var invitation = await CreateInvitationAsync(factory, teamId: null);
+
+        var response = await ActivateAsync(client, invitation.Token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var employee = await database.Employees.SingleAsync(
+            item => item.NormalizedEmail == invitation.Email.ToUpperInvariant());
+
+        Assert.Equal("Employee", employee.Role);
+        Assert.Equal("org-test", employee.OrganizationId);
+        Assert.Null(employee.TeamId);
+
+        var login = await client.PostAsJsonAsync(
+            "/api/identity/login",
+            new { email = invitation.Email, password = "Strong-password-2026!" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var loginBody = await login.Content.ReadFromJsonAsync<JsonElement>();
+        var accessToken = new JwtSecurityTokenHandler().ReadJwtToken(
+            loginBody.GetProperty("accessToken").GetString()!);
+        Assert.DoesNotContain(accessToken.Claims, claim => claim.Type == "team_id");
     }
 
     [Fact]
@@ -158,7 +190,8 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
     }
 
     private static async Task<(Guid Id, string Email, string Token)> CreateInvitationAsync(
-        WebApplicationFactory<Program> factory)
+        WebApplicationFactory<Program> factory,
+        string? teamId = "team-test")
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<IEmployeeInvitationService>();
@@ -166,7 +199,7 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
         var email = $"activation-{Guid.NewGuid():N}@example.com";
         var result = await service.CreateAsync(
             Guid.NewGuid(),
-            new CreateEmployeeInvitationRequest(email, "Activation Test Employee", "org-test", "team-test"),
+            new CreateEmployeeInvitationRequest(email, "Activation Test Employee", "org-test", teamId),
             CancellationToken.None);
         Assert.Equal(EmployeeInvitationCommandStatus.Created, result.Status);
 

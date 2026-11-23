@@ -22,7 +22,7 @@ The activation request contains only the opaque token and new password. Raw toke
 ## Invitation data and state
 Proposed states: `Pending`, `Accepted`, `Cancelled`, `Expired`. Expiry may be computed from `ExpiresAtUtc`; a background cleanup job is not required for correctness.
 
-A pending invitation stores invitation ID, normalized email, display name, organization/team IDs, role fixed to Employee, token digest, created/expiry timestamps, status and minimal audit metadata. Do not persist the raw token or password. The exact storage schema and whether invitation PII should be minimized further require design review.
+A pending invitation stores invitation ID, normalized email, display name, required organization ID, optional team ID, role fixed to Employee, token digest, created/expiry timestamps, status and minimal audit metadata. An invitee may activate without a team assignment. Do not persist the raw token or password. The exact storage schema and whether invitation PII should be minimized further require design review.
 
 ## Proposed business rules
 - Only a validated HrAdmin JWT may create, inspect, resend or cancel an invitation. Actor ID comes from validated JWT `sub`.

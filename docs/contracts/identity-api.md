@@ -5,7 +5,7 @@ Base path: `/api/identity`
 ## POST /register
 
 Development bootstrap only; replace with HR provisioning for production.  
-Request: email, password, displayName, organizationId, teamId.  
+Request: email, password, displayName and organizationId are required; teamId is optional.  
 Success in Development: 200 with accessToken, tokenType, expiresAtUtc and employee summary. Errors: 400 validation; 409 duplicate email. Outside Development: 404 Not Found; no employee is created.
 
 ## POST /login
@@ -14,7 +14,7 @@ Request: email and password. Success: 200 token response. Failure: generic 401 I
 
 ## GET /me
 
-Bearer token required. Returns subject, email, displayName, organizationId, teamId and role from validated claims.
+Bearer token required. Returns subject, email, displayName, organizationId, optional teamId and role from validated claims. The teamId field is null when the employee has not been assigned to a team.
 
 ## HR lifecycle commands — implemented and verified
 
@@ -59,9 +59,9 @@ Request JSON:
 - `email`: valid email address, maximum 320 characters.
 - `displayName`: required, maximum 150 characters.
 - `organizationId`: required, maximum 100 characters.
-- `teamId`: required, maximum 100 characters.
+- `teamId`: optional; when supplied, maximum 100 characters. Omit it or send null/blank when the employee has not joined a team.
 
-Success: 201 Created with an invitation summary containing `invitationId`, `email`, `displayName`, `organizationId`, `teamId`, `status`, `createdAtUtc`, `expiresAtUtc` and `deliveryGeneration`. The response contains no activation token or URL.
+Success: 201 Created with an invitation summary containing `invitationId`, `email`, `displayName`, `organizationId`, nullable `teamId`, `status`, `createdAtUtc`, `expiresAtUtc` and `deliveryGeneration`. The response contains no activation token or URL.
 
 Errors: 400 invalid fields; 401 unauthenticated; 403 non-HrAdmin; 409 an employee or pending invitation already exists for the normalized email.
 

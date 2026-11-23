@@ -23,6 +23,17 @@ public sealed class EmployeeInvitationDomainTests
     }
 
     [Fact]
+    public void NewInvitation_AllowsMissingTeamAssignment()
+    {
+        var invitation = new EmployeeInvitation(
+            Guid.NewGuid(), "employee@example.com", "EMPLOYEE@EXAMPLE.COM",
+            "New Employee", "org-1", null, new string('A', 64),
+            Guid.NewGuid(), CreatedAtUtc, CreatedAtUtc.AddHours(24));
+
+        Assert.Null(invitation.TeamId);
+    }
+
+    [Fact]
     public void RotateToken_InvalidatesPreviousDigestAndAdvancesGeneration()
     {
         var invitation = CreateInvitation();

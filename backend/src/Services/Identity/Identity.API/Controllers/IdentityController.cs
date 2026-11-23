@@ -32,9 +32,9 @@ public sealed class IdentityController(
             return NotFound();
 
         if(string.IsNullOrWhiteSpace(request.Email)||string.IsNullOrWhiteSpace(request.DisplayName)||
-           string.IsNullOrWhiteSpace(request.OrganizationId)||string.IsNullOrWhiteSpace(request.TeamId)||
+           string.IsNullOrWhiteSpace(request.OrganizationId)||
            string.IsNullOrWhiteSpace(request.Password)||request.Password.Length<12)
-            return BadRequest(new{message="All fields are required and password must contain at least 12 characters."});
+            return BadRequest(new{message="Email, name and organization are required; team is optional and password must contain at least 12 characters."});
 
         var email=request.Email.Trim();
         var normalized=email.ToUpperInvariant();
@@ -43,10 +43,10 @@ public sealed class IdentityController(
 
         var id=Guid.NewGuid();
         var hashContext=new Employee(id,email,normalized,request.DisplayName.Trim(),"temporary",
-            request.OrganizationId.Trim(),request.TeamId.Trim(),"Employee");
+            request.OrganizationId.Trim(),request.TeamId,"Employee");
         var hash=passwordHasher.HashPassword(hashContext,request.Password);
         var employee=new Employee(id,email,normalized,request.DisplayName.Trim(),hash,
-            request.OrganizationId.Trim(),request.TeamId.Trim(),"Employee");
+            request.OrganizationId.Trim(),request.TeamId,"Employee");
         await employees.AddAsync(employee,ct);
         await employees.SaveChangesAsync(ct);
         return Ok(CreateResponse(employee));

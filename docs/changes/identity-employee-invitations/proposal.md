@@ -10,7 +10,7 @@ The owner approved the invitation feature on 2026-11-21, including asynchronous 
 
 ## Scope
 - HR-only create, resend, cancel and status endpoints in Identity.
-- Invitation persistence with normalized email, canonical organization/team identifiers, expiry/status, and a SHA-256 token digest only.
+- Invitation persistence with normalized email, required organization identifier and optional team identifier, expiry/status, and a SHA-256 token digest only.
 - Cryptographically secure 256-bit random, single-use activation tokens; never persist or log the raw token.
 - Proposed 24-hour expiry; resend invalidates the prior token; cancellation and redemption are atomic.
 - Public/anonymous activation endpoint that accepts the opaque token and a new password, without disclosing whether an email address has an account or invitation.

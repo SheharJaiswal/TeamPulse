@@ -7,7 +7,7 @@ public sealed class Employee
     private Employee() { }
 
     public Employee(Guid id, string email, string normalizedEmail, string displayName,
-        string passwordHash, string organizationId, string teamId, string role)
+        string passwordHash, string organizationId, string? teamId, string role)
     {
         Id = id;
         Email = email;
@@ -15,7 +15,7 @@ public sealed class Employee
         DisplayName = displayName;
         PasswordHash = passwordHash;
         OrganizationId = organizationId;
-        TeamId = teamId;
+        TeamId = string.IsNullOrWhiteSpace(teamId) ? null : teamId.Trim();
         Role = role;
         IsActive = true;
         LifecycleVersion = 0;
@@ -28,7 +28,7 @@ public sealed class Employee
     public string DisplayName { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public string OrganizationId { get; private set; } = string.Empty;
-    public string TeamId { get; private set; } = string.Empty;
+    public string? TeamId { get; private set; }
     public string Role { get; private set; } = "Employee";
     public bool IsActive { get; private set; }
     public long LifecycleVersion { get; private set; }

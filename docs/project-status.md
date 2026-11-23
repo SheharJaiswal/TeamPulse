@@ -1,3 +1,14 @@
+## Optional employee team membership — implementation complete, CI pending
+
+- Owner approved the rule on 2026-11-24: an employee must belong to an organization, but team membership is optional and can be assigned later. Personal employee capabilities do not require a team.
+- HR invitation API and SvelteKit form accept an omitted/blank Team ID. The invitation and employee domain/contracts now represent Team ID as nullable; activation preserves a null assignment.
+- Added an additive Identity MySQL migration to make `employees.TeamId` and `employee_invitations.TeamId` nullable without changing existing assigned-team values. The EF model snapshot and Identity API contract are updated.
+- JWTs omit `team_id` when no team is assigned; `/me` returns a null teamId. Organization ID remains required; role, invitation authorization, token, lifecycle and event behavior are unchanged.
+- Added API, domain and activation integration tests for an unassigned employee. CI verification is pending; do not treat this increment as verified until the backend and frontend workflows pass.
+- SDD: `docs/changes/identity-optional-team-membership/`.
+
+Updated: 2026-11-24
+
 ## SvelteKit shared accessibility baseline — implementation and CI verified
 
 - Added a shared keyboard-visible focus indicator for links, buttons and form controls in `frontend/src/routes/app.css`. Existing input focus border and shadow styling remains in place.

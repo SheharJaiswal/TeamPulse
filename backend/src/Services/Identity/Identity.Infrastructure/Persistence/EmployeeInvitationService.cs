@@ -31,7 +31,7 @@ public sealed class EmployeeInvitationService(
         var email = RequiredTrimmed(request.Email, nameof(request.Email), 320);
         var displayName = RequiredTrimmed(request.DisplayName, nameof(request.DisplayName), 150);
         var organizationId = RequiredTrimmed(request.OrganizationId, nameof(request.OrganizationId), 100);
-        var teamId = RequiredTrimmed(request.TeamId, nameof(request.TeamId), 100);
+        var teamId = OptionalTrimmed(request.TeamId, nameof(request.TeamId), 100);
         var normalizedEmail = email.ToUpperInvariant();
         var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
 
@@ -230,6 +230,16 @@ public sealed class EmployeeInvitationService(
         var normalized = value?.Trim();
         if (string.IsNullOrWhiteSpace(normalized) || normalized.Length > maxLength)
             throw new ArgumentException($"A value between 1 and {maxLength} characters is required.", name);
+        return normalized;
+    }
+
+    private static string? OptionalTrimmed(string? value, string name, int maxLength)
+    {
+        var normalized = value?.Trim();
+        if (string.IsNullOrEmpty(normalized))
+            return null;
+        if (normalized.Length > maxLength)
+            throw new ArgumentException($"A value cannot exceed {maxLength} characters.", name);
         return normalized;
     }
 

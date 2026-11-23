@@ -30,7 +30,7 @@ public sealed class EmployeeInvitationController(
         if (!IsValid(request))
             return BadRequest(new
             {
-                message = "Email must be valid; displayName, organizationId and teamId are required and must fit their field limits."
+                message = "Email must be valid; displayName and organizationId are required; teamId is optional. All supplied values must fit their field limits."
             });
 
         var result = await invitationService.CreateAsync(
@@ -89,7 +89,7 @@ public sealed class EmployeeInvitationController(
             !HasLength(request.Email, 320) ||
             !HasLength(request.DisplayName, 150) ||
             !HasLength(request.OrganizationId, 100) ||
-            !HasLength(request.TeamId, 100))
+            !HasOptionalLength(request.TeamId, 100))
             return false;
 
         try
@@ -105,4 +105,7 @@ public sealed class EmployeeInvitationController(
 
     private static bool HasLength(string? value, int maximum) =>
         !string.IsNullOrWhiteSpace(value) && value.Trim().Length <= maximum;
+
+    private static bool HasOptionalLength(string? value, int maximum) =>
+        string.IsNullOrWhiteSpace(value) || value.Trim().Length <= maximum;
 }

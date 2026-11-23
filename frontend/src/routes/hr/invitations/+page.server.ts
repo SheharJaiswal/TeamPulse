@@ -8,7 +8,7 @@ interface Employee {
   email: string;
   displayName: string;
   organizationId: string;
-  teamId: string;
+  teamId: string | null;
   role: string;
 }
 
@@ -17,7 +17,7 @@ interface Invitation {
   email: string;
   displayName: string;
   organizationId: string;
-  teamId: string;
+  teamId: string | null;
   status: string;
   createdAtUtc: string;
   expiresAtUtc: string;
@@ -120,8 +120,8 @@ export const actions: Actions = {
       return fail(400, { action: 'create', message: 'Enter a valid work email address.' });
     }
     if (!displayName || displayName.length > 150 || !organizationId || organizationId.length > 100 ||
-        !teamId || teamId.length > 100) {
-      return fail(400, { action: 'create', message: 'Name, organization and team are required and must fit their field limits.' });
+        teamId.length > 100) {
+      return fail(400, { action: 'create', message: 'Name and organization are required. Team is optional and cannot exceed 100 characters.' });
     }
 
     let response: Response;
@@ -129,7 +129,7 @@ export const actions: Actions = {
       response = await fetch(`${identityApiUrl()}/api/identity/invitations`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ email, displayName, organizationId, teamId })
+        body: JSON.stringify({ email, displayName, organizationId, teamId: teamId || null })
       });
     } catch {
       return fail(503, { action: 'create', message: 'Identity service is unavailable. Please try again.' });
