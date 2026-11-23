@@ -144,6 +144,7 @@ For example, in the PowerShell terminal used to run Identity:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:Jwt__SigningKey = "<the-shared-local-base64-signing-key-generated-in-step-3>"
 $env:RabbitMq__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
 $env:OutboxDispatcher__Enabled = "true"
 dotnet run --project backend/src/Services/Identity/Identity.API --urls http://localhost:5101
