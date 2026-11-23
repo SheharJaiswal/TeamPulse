@@ -23,6 +23,8 @@ Run the SvelteKit app and all .NET APIs directly on your machine. Install and st
 - MySQL Server 8.4 running on `localhost:3306`
 - Docker Desktop only if you want RabbitMQ in Docker
 
+For the RabbitMQ Docker command, management UI, local credentials, existing exchange/queue topology and per-service environment variables, follow [the root README RabbitMQ setup](../README.md#2-start-and-configure-rabbitmq-optional-for-cross-service-event-delivery).
+
 Create the local MySQL databases and application user by following [the root README database setup](../README.md#1-create-the-local-mysql-databases-and-user).
 
 ### Start the backend APIs
