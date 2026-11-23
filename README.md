@@ -25,7 +25,7 @@ The accepted MVP product defaults are recorded in [ADR-0002](docs/decisions/0002
 
 ## Technology
 
-.NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and Docker Compose. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL and DynamoDB. .NET 8 is the initial compatibility baseline.
+.NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and SvelteKit. Docker Compose is reserved for optional local infrastructure dependencies (for example RabbitMQ); application services and MySQL run natively on the developer machine. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL and DynamoDB. .NET 8 is the initial compatibility baseline.
 
 ## AWS infrastructure
 
