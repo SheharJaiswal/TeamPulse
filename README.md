@@ -31,142 +31,159 @@ The accepted MVP product defaults are recorded in [ADR-0002](docs/decisions/0002
 
 The Identity employee-lifecycle EventBridge fan-out template and deployment gates are documented in [infra/cloudformation/README.md](infra/cloudformation/README.md). The stack provisions the bus, scoped Identity publisher permission, five service-owned SQS targets, target-delivery DLQs and AWS-managed delivery alarms. It does not deploy consumers or enable the dispatcher.
 
-## Local development
+## Local development (without Docker for application services)
 
-Prerequisites: .NET 8 SDK and Docker Desktop.
+Run every TeamPulse API and the SvelteKit frontend directly on your machine. Docker is not required for the application processes. Use a locally installed MySQL 8.4 server for persistence. RabbitMQ is the only dependency in the standard local workflow that is started with Docker; it can also be installed and run natively if preferred.
 
-Set a local JWT signing key in the process environment before starting the API. Do not commit a signing key to appsettings or source control.
+### Prerequisites
+
+- .NET 8 SDK
+- Node.js 20+ and npm
+- MySQL Server 8.4 running locally on port 3306
+- Docker Desktop (only if you want to run RabbitMQ in Docker)
+- Git
+
+Check the installations:
+
+```powershell
+dotnet --version
+node --version
+npm --version
+mysql --version
+```
+
+### 1. Create the local MySQL databases and user
+
+Connect to your local MySQL server as an administrator:
+
+```sql
+CREATE DATABASE IF NOT EXISTS teampulse_identity CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'teampulse_app'@'%' IDENTIFIED BY 'local_teampulse_password';
+GRANT ALL PRIVILEGES ON teampulse_identity.* TO 'teampulse_app'@'%';
+```
+
+From the repository root, execute the checked-in database setup scripts. They create the Habit, Challenge, Event Tracking and Notification databases and grant the application user access:
 
 PowerShell:
 ```powershell
-$env:Jwt__SigningKey = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+Get-Content .\\infra\\mysql\\init\\01-habit-database.sql | mysql -u root -p
+Get-Content .\\infra\\mysql\\init\\02-challenge-database.sql | mysql -u root -p
+Get-Content .\\infra\\mysql\\init\\03-event-tracking-database.sql | mysql -u root -p
+Get-Content .\\infra\\mysql\\init\\04-notification-database.sql | mysql -u root -p
 ```
 
 Bash:
 ```bash
+mysql -u root -p < infra/mysql/init/01-habit-database.sql
+mysql -u root -p < infra/mysql/init/02-challenge-database.sql
+mysql -u root -p < infra/mysql/init/03-event-tracking-database.sql
+mysql -u root -p < infra/mysql/init/04-notification-database.sql
+```
+
+The local connection strings in each API's Development configuration use `localhost:3306`, database-specific names, and the local-only `teampulse_app` credentials. If you choose different MySQL credentials, override the corresponding `ConnectionStrings__<Name>` environment variable rather than editing committed configuration.
+
+### 2. Start RabbitMQ (optional, for cross-service event delivery)
+
+The APIs can run without RabbitMQ when their consumers/outbox dispatchers are disabled (the checked-in defaults). To test local event delivery, start only the RabbitMQ dependency:
+
+```bash
+docker compose up -d rabbitmq
+```
+
+Management UI: http://localhost:15672  
+Local-only credentials: `teampulse` / `local_rabbitmq_password`
+
+Do not start the full Compose stack for normal development. MySQL is expected to run as a native local service. RabbitMQ consumers and dispatchers are disabled by default; enable only the components you are actively testing. For example, Identity's dispatcher can be enabled with `OutboxDispatcher__Enabled=true` and `OutboxDispatcher__Transport=RabbitMq`. Consumer configuration is service-specific and is shown in the relevant service section below.
+
+### 3. Configure the shared JWT signing key
+
+Use the same signing key for Identity and every API that validates Identity-issued tokens. Generate a local key; do not commit it.
+
+PowerShell (run in each backend terminal):
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:Jwt__SigningKey = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+Bash (run in each backend terminal):
+```bash
+export ASPNETCORE_ENVIRONMENT=Development
 export Jwt__SigningKey="$(openssl rand -base64 32)"
 ```
 
-Start MySQL and the local RabbitMQ broker:
+For multiple terminal windows, generate the key once and set the same value in each terminal. Do not generate a different key per service.
+
+### 4. Restore and build the backend
+
+From the repository root:
+
 ```bash
-docker compose up -d mysql rabbitmq
 dotnet restore backend/TeamPulse.sln
 dotnet build backend/TeamPulse.sln
 ```
 
-For local cross-service event delivery, explicitly enable the outbox worker and select RabbitMQ. PowerShell:
-```powershell
-$env:OutboxDispatcher__Enabled = "true"
-$env:OutboxDispatcher__Transport = "RabbitMq"
-$env:RabbitMq__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
-dotnet run --project backend/src/Services/Identity/Identity.API
-```
+### 5. Run the APIs directly on your machine
 
-Bash:
-```bash
-export OutboxDispatcher__Enabled=true
-export OutboxDispatcher__Transport=RabbitMq
-export RabbitMq__Uri="amqp://teampulse:local_rabbitmq_password@localhost:5672/"
-dotnet run --project backend/src/Services/Identity/Identity.API
-```
+Open a separate terminal for each API. Set `ASPNETCORE_ENVIRONMENT=Development` and the shared `Jwt__SigningKey` in each terminal before running the command.
 
-The local RabbitMQ management UI is available at http://localhost:15672 (local-only credentials: `teampulse` / `local_rabbitmq_password`). Compose imports one durable topic exchange and five service-owned local queues. RabbitMQ publishes the complete TeamPulse envelope as the message body and waits for publisher confirmation. A broker outage leaves the MySQL outbox retryable. Identity liveness/readiness remains independent of broker availability.
+| Service | Local URL | Command (from repository root) |
+|---|---|---|
+| Identity API | http://localhost:5101 | `dotnet run --project backend/src/Services/Identity/Identity.API --urls http://localhost:5101` |
+| Habit API | http://localhost:5102 | `dotnet run --project backend/src/Services/Habit/Habit.API --urls http://localhost:5102` |
+| Event Tracking API | http://localhost:5103 | `dotnet run --project backend/src/Services/EventTracking/EventTracking.API --urls http://localhost:5103` |
+| Challenge API | http://localhost:5104 | `dotnet run --project backend/src/Services/Challenge/Challenge.API --urls http://localhost:5104` |
+| Notification API | http://localhost:5105 | `dotnet run --project backend/src/Services/Notification/Notification.API --urls http://localhost:5105` |
+| Insight API | http://localhost:5106 | `dotnet run --project backend/src/Services/Insight/Insight.API --urls http://localhost:5106` |
 
-The dispatcher remains disabled by default. To use the production EventBridge adapter in a cloud deployment, explicitly set `OutboxDispatcher__Transport=EventBridge`, provide `EventBridge__BusName` and `AWS_REGION`, and use the workload's AWS SDK default credentials. EventBridge provisioning is deferred until cloud infrastructure setup; no AWS credentials are needed for local RabbitMQ development.
+The first five APIs use the local MySQL databases listed above. Their checked-in EF Core migrations are applied by their hosts where configured. The Insight service uses DynamoDB for its read model; configure its DynamoDB endpoint/credentials and table before exercising Insight functionality. Cloud AWS resources are not provisioned by this local setup.
 
-The Identity API applies all pending, checked-in EF Core migrations automatically during startup before accepting requests. For local development, the MySQL container creates the `teampulse_identity` database and `teampulse_app` user. The API uses `Server=localhost;Port=3306` when run on the host. If the API is containerized on the Compose network, use `Server=mysql;Port=3306`.
+Swagger is enabled in Development for APIs that expose Swagger. Health endpoints are service-specific; Identity, Habit and Challenge expose `/health/live` and `/health/ready`.
 
-Swagger is enabled in Development. Configure orchestrator liveness against `/health/live` (process-only) and readiness against `/health/ready` (Identity MySQL connectivity). The original `/health` endpoint remains as a compatibility alias for readiness. Health responses expose aggregate status only. Local database credentials are development placeholders. The JWT signing key is intentionally absent from checked-in configuration and must be supplied through `Jwt__SigningKey`. Production secrets must come from AWS Secrets Manager or an equivalent secret store. The POST /api/identity/register bootstrap endpoint is enabled only when ASPNETCORE_ENVIRONMENT=Development; it returns 404 in Testing, Staging, Production and other non-Development environments. It must be replaced with HR provisioning before production.
+### 6. Run the SvelteKit frontend
 
-
-### Habit employee-status projection foundation
-
-Habit owns a separate logical MySQL database named `teampulse_habit`. The local MySQL initialization script creates that database and grants the local `teampulse_app` user access; production uses a separately provisioned Habit database credential. Habit applies its checked-in EF Core/Pomelo migrations at host startup before accepting requests.
-
-Run the Habit API locally after starting MySQL:
+The employee UI calls Identity, Habit and Event Tracking through the URLs in `frontend/.env.example`. From the repository root:
 
 PowerShell:
 ```powershell
-$env:ConnectionStrings__HabitDatabase = "Server=localhost;Port=3306;Database=teampulse_habit;User=teampulse_app;Password=local_teampulse_password;"
-dotnet run --project backend/src/Services/Habit/Habit.API
-```
-
-The Habit host exposes `/health/live`, `/health/ready` and `/health/consumer`; database readiness checks only the Habit database. The employee-status projection processor validates schema-v1 Identity lifecycle envelopes and atomically records the minimal event inbox marker with a strictly version-increasing projection. The RabbitMQ consumer adapter is implemented with manual acknowledgements, prefetch 1, bounded transient retries, poison/exhaustion dead-lettering and reconnect handling. It remains disabled by default and must be enabled explicitly for local development as shown below.
-
-### Automated tests
-
-Run the full test suite with `dotnet test backend/TeamPulse.sln`. Unit tests do not require external services. Identity API integration tests use Testcontainers to start a disposable MySQL 8.4 container, so Docker Desktop or another compatible Docker daemon must be running. The `.NET 8 CI` GitHub Actions workflow runs restore, build and tests on a Docker-capable GitHub-hosted runner.
-
-### Migration policy
-
-Create and commit migrations when the model changes. Startup migration application is enabled for local development and a single app instance. For production with multiple replicas, run migrations as a coordinated deployment job before rolling out application instances.
-
-### Habit RabbitMQ employee-lifecycle consumer
-
-The Habit consumer is disabled by default. To run it locally, start the existing MySQL and RabbitMQ containers, then enable the Habit consumer explicitly. PowerShell:
-
-```powershell
-$env:HabitConsumer__Enabled = "true"
-$env:HabitConsumer__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
-$env:HabitConsumer__QueueName = "teampulse.habit.events"
-dotnet run --project backend/src/Services/Habit/Habit.API
-```
-
-Bash:
-
-```bash
-export HabitConsumer__Enabled=true
-export HabitConsumer__Uri="amqp://teampulse:local_rabbitmq_password@localhost:5672/"
-export HabitConsumer__QueueName=teampulse.habit.events
-dotnet run --project backend/src/Services/Habit/Habit.API
-```
-
-The Habit consumer uses manual acknowledgements and a prefetch of one. It acknowledges only after the projection processor has committed its MySQL inbox/projection transaction. Duplicate and stale events are successful outcomes; malformed events and exhausted processing retries are rejected to the Habit-owned quorum DLQ. Transient MySQL/network failures use bounded full-jitter retries. The host reconnects to RabbitMQ with a bounded delay if the broker is unavailable.
-
-The Habit source queue is a quorum queue with a finite delivery limit and at-least-once dead-lettering to `teampulse.habit.events.dlq`. The DLX and DLQ are part of the local Compose definitions. Existing RabbitMQ volumes created before this topology change may retain the previous classic queue declaration; for a disposable local development environment only, stop Compose and recreate the RabbitMQ volume before starting the updated broker. Do not delete a volume containing messages or data you need to retain.
-
-Habit database readiness remains independent of RabbitMQ. Use `/health/consumer` to inspect the separate consumer connection state; `/health/ready` continues to report only the Habit database. No AWS credentials or EventBridge resources are required for local event delivery.
-
-
-### Challenge employee-status projection foundation
-
-Challenge owns the logical MySQL database `teampulse_challenge`; the local MySQL initialization script creates it and grants access to the development application user on a fresh data volume. Production uses separately provisioned Challenge credentials. The Challenge API applies its checked-in EF Core/Pomelo migration before starting hosted services.
-
-Run the Challenge API locally:
-
-PowerShell:
-```powershell
-$env:ConnectionStrings__ChallengeDatabase = "Server=localhost;Port=3306;Database=teampulse_challenge;User=teampulse_app;Password=local_teampulse_password;"
-dotnet run --project backend/src/Services/Challenge/Challenge.API
+Copy-Item frontend/.env.example frontend/.env
+cd frontend
+npm install
+npm run dev
 ```
 
 Bash:
 ```bash
-export ConnectionStrings__ChallengeDatabase="Server=localhost;Port=3306;Database=teampulse_challenge;User=teampulse_app;Password=local_teampulse_password;"
-dotnet run --project backend/src/Services/Challenge/Challenge.API
+cp frontend/.env.example frontend/.env
+cd frontend
+npm install
+npm run dev
 ```
 
-The Challenge API exposes `/health/live`, `/health/ready` and `/health/consumer`. Readiness checks only Challenge MySQL; RabbitMQ connectivity is reported separately. The lifecycle consumer is disabled by default. To enable it for local development:
+Open http://localhost:5173.
 
-PowerShell:
-```powershell
-$env:ChallengeConsumer__Enabled = "true"
-$env:ChallengeConsumer__Uri = "amqp://teampulse:local_rabbitmq_password@localhost:5672/"
-$env:ChallengeConsumer__QueueName = "teampulse.challenge.events"
-dotnet run --project backend/src/Services/Challenge/Challenge.API
-```
+### 7. Run tests
 
-Bash:
+Unit tests do not require Docker. Identity API integration tests use Testcontainers and therefore require a working Docker daemon. Run:
+
 ```bash
-export ChallengeConsumer__Enabled=true
-export ChallengeConsumer__Uri="amqp://teampulse:local_rabbitmq_password@localhost:5672/"
-export ChallengeConsumer__QueueName=teampulse.challenge.events
-dotnet run --project backend/src/Services/Challenge/Challenge.API
+dotnet test backend/TeamPulse.sln
 ```
 
-Challenge consumes the direct schema-v1 envelope from `teampulse.challenge.events`. It records a minimal event inbox marker and version-aware employee status projection in one Challenge database transaction. It acknowledges Applied, Stale and Duplicate messages only after commit. Invalid messages and exhausted transient retries are routed to `teampulse.challenge.events.dlq`. The Challenge queue is a quorum queue with a finite delivery limit and at-least-once dead-lettering.
+Frontend validation:
 
-This increment only materializes the employee lifecycle projection. It does not mutate programmes, eligibility, participation, completion, scores or evidence, and it does not expose Challenge business APIs. The policy for inactive employees' historical reads versus new participation/task mutations remains open question 19 and must be approved before those APIs are implemented. EventBridge/SQS deployment remains deferred until cloud infrastructure setup.
+```bash
+cd frontend
+npm run check
+npm run build
+```
+
+### 8. Local configuration and production notes
+
+- Keep secrets, local environment files, generated keys and user-specific IDE files out of source control. The root `.gitignore` excludes common .NET, Node/Svelte, IDE, test and local-secret artifacts.
+- The dispatcher remains disabled by default. For local RabbitMQ event delivery, explicitly configure the relevant publisher/consumer and dispatcher settings. EventBridge provisioning is deferred until cloud infrastructure setup; no AWS credentials are needed for the Identity/Habit/Challenge MySQL APIs.
+- The Identity API applies its checked-in EF Core migrations at startup before accepting requests. Startup migration application is intended for local development and a single app instance; production multi-replica deployments should run migrations as a coordinated deployment job.
+- The POST `/api/identity/register` bootstrap endpoint is enabled only when `ASPNETCORE_ENVIRONMENT=Development`; it returns 404 in Testing, Staging, Production and other non-Development environments. It is not public self-registration; production onboarding remains HR-controlled.
+- Production secrets must come from AWS Secrets Manager or an equivalent secret store. Local credentials shown here are development-only placeholders.
 
 ## Employee web application
 
