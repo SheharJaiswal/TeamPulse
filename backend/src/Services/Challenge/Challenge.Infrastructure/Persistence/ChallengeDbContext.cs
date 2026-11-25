@@ -7,9 +7,23 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
 {
     public DbSet<EmployeeStatusProjection> EmployeeStatusProjections => Set<EmployeeStatusProjection>();
     public DbSet<ProcessedDomainEvent> ProcessedDomainEvents => Set<ProcessedDomainEvent>();
+    public DbSet<Challenge.Domain.Entities.Challenge> Challenges => Set<Challenge.Domain.Entities.Challenge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var challenge = modelBuilder.Entity<Challenge.Domain.Entities.Challenge>();
+        challenge.ToTable("challenges");
+        challenge.HasKey(x => x.Id);
+        challenge.Property(x => x.Id).HasColumnName("id").HasColumnType("char(36)");
+        challenge.Property(x => x.OrganizationId).HasColumnName("organization_id").HasMaxLength(100).IsRequired();
+        challenge.Property(x => x.CreatedByEmployeeId).HasColumnName("created_by_employee_id").HasColumnType("char(36)").IsRequired();
+        challenge.Property(x => x.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
+        challenge.Property(x => x.Description).HasColumnName("description").HasMaxLength(1000);
+        challenge.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("date").IsRequired();
+        challenge.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("date").IsRequired();
+        challenge.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("datetime(6)").IsRequired();
+        challenge.HasIndex(x => new { x.OrganizationId, x.CreatedAtUtc }).HasDatabaseName("IX_challenges_organization_id_created_at_utc");
+
         var projection = modelBuilder.Entity<EmployeeStatusProjection>();
         projection.ToTable("employee_status_projections");
         projection.HasKey(x => x.EmployeeId);
