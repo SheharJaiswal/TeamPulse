@@ -28,6 +28,17 @@ partial class ChallengeDbContextModelSnapshot : ModelSnapshot
             b.HasIndex("OrganizationId", "CreatedAtUtc").HasDatabaseName("IX_challenges_organization_id_created_at_utc");
             b.ToTable("challenges");
         });
+        modelBuilder.Entity("Challenge.Domain.Entities.ChallengeParticipation", b =>
+        {
+            b.Property<Guid>("Id").HasColumnType("char(36)").HasColumnName("id");
+            b.Property<Guid>("ChallengeId").HasColumnType("char(36)").HasColumnName("challenge_id");
+            b.Property<Guid>("EmployeeId").HasColumnType("char(36)").HasColumnName("employee_id");
+            b.Property<DateTime>("JoinedAtUtc").HasColumnType("datetime(6)").HasColumnName("joined_at_utc");
+            b.HasKey("Id");
+            b.HasIndex("ChallengeId", "EmployeeId").IsUnique().HasDatabaseName("IX_challenge_participations_challenge_id_employee_id");
+            b.HasIndex("EmployeeId").HasDatabaseName("IX_challenge_participations_employee_id");
+            b.ToTable("challenge_participations");
+        });
         modelBuilder.Entity("Challenge.Domain.Entities.EmployeeStatusProjection", b =>
         {
             b.Property<Guid>("EmployeeId").HasColumnType("char(36)").HasColumnName("employee_id");

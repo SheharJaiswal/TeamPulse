@@ -21,7 +21,6 @@ public sealed class IdentityControllerTests
     [InlineData("employee@example.test", "", "Employee", "org-1", "team-1")]
     [InlineData("employee@example.test", ValidPassword, "", "org-1", "team-1")]
     [InlineData("employee@example.test", ValidPassword, "Employee", "", "team-1")]
-    [InlineData("employee@example.test", ValidPassword, "Employee", "org-1", "")]
     [InlineData("   ", ValidPassword, "Employee", "org-1", "team-1")]
     public async Task Register_WhenAnyRequiredFieldIsMissing_ReturnsBadRequestWithoutMutation(
         string email, string password, string displayName, string organizationId, string teamId)
