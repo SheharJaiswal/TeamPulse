@@ -14,6 +14,20 @@ partial class ChallengeDbContextModelSnapshot : ModelSnapshot
     {
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "8.0.11").HasAnnotation("Relational:MaxIdentifierLength", 64);
+        modelBuilder.Entity("Challenge.Domain.Entities.Challenge", b =>
+        {
+            b.Property<Guid>("Id").HasColumnType("char(36)").HasColumnName("id");
+            b.Property<string>("OrganizationId").IsRequired().HasMaxLength(100).HasColumnType("varchar(100)").HasColumnName("organization_id");
+            b.Property<Guid>("CreatedByEmployeeId").HasColumnType("char(36)").HasColumnName("created_by_employee_id");
+            b.Property<string>("Name").IsRequired().HasMaxLength(120).HasColumnType("varchar(120)").HasColumnName("name");
+            b.Property<string>("Description").HasMaxLength(1000).HasColumnType("varchar(1000)").HasColumnName("description");
+            b.Property<DateOnly>("StartDate").HasColumnType("date").HasColumnName("start_date");
+            b.Property<DateOnly>("EndDate").HasColumnType("date").HasColumnName("end_date");
+            b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime(6)").HasColumnName("created_at_utc");
+            b.HasKey("Id");
+            b.HasIndex("OrganizationId", "CreatedAtUtc").HasDatabaseName("IX_challenges_organization_id_created_at_utc");
+            b.ToTable("challenges");
+        });
         modelBuilder.Entity("Challenge.Domain.Entities.EmployeeStatusProjection", b =>
         {
             b.Property<Guid>("EmployeeId").HasColumnType("char(36)").HasColumnName("employee_id");
