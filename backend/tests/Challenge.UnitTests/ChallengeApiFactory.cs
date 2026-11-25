@@ -10,6 +10,8 @@ public sealed class ChallengeApiFactory(
     bool consumerEnabled = false,
     string? rabbitMqUri = null) : WebApplicationFactory<Program>
 {
+    private const string TestSigningKey = "challenge-integration-test-signing-key-at-least-32-bytes";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -18,6 +20,7 @@ public sealed class ChallengeApiFactory(
         builder.UseSetting("ChallengeConsumer:Uri", rabbitMqUri ?? string.Empty);
         builder.UseSetting("ChallengeConsumer:ReconnectDelayMilliseconds", "250");
         builder.UseSetting("ChallengeConsumer:ConnectionTimeoutMilliseconds", "1000");
+        builder.UseSetting("Jwt:SigningKey", TestSigningKey);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -26,7 +29,8 @@ public sealed class ChallengeApiFactory(
                 ["ChallengeConsumer:Enabled"] = consumerEnabled ? "true" : "false",
                 ["ChallengeConsumer:Uri"] = rabbitMqUri ?? string.Empty,
                 ["ChallengeConsumer:ReconnectDelayMilliseconds"] = "250",
-                ["ChallengeConsumer:ConnectionTimeoutMilliseconds"] = "1000"
+                ["ChallengeConsumer:ConnectionTimeoutMilliseconds"] = "1000",
+                ["Jwt:SigningKey"] = TestSigningKey
             });
         });
     }
