@@ -24,10 +24,12 @@
   <aside class="sidebar">
     <a class="brand-lockup" href="/habits"><span class="brand-mark">✓</span><span>TeamPulse</span></a>
     <p class="nav-label">HR WORKSPACE</p>
+    <a class="nav-link" href="/hr/employees/lifecycle"><span class="nav-icon">↻</span> Employee lifecycle</a>
     <a class="nav-link active" href="/hr/challenges" aria-current="page"><span class="nav-icon">✳</span> Challenges</a>
     <a class="nav-link" href="/hr/invitations"><span class="nav-icon">✉</span> Employee invitations</a>
     <a class="nav-link" href="/habits"><span class="nav-icon">◷</span> My habits</a>
     <nav class="mobile-workspace-nav" aria-label="Workspace">
+      <a class="mobile-workspace-link" href="/hr/employees/lifecycle">Lifecycle</a>
       <a class="mobile-workspace-link active" href="/hr/challenges">Challenges</a>
       <a class="mobile-workspace-link" href="/hr/invitations">Invitations</a>
       <a class="mobile-workspace-link" href="/habits">My habits</a>
