@@ -1,16 +1,19 @@
 using System;
 using System.Linq;
+using System.Text;
 using Challenge.API.HealthChecks;
 using Challenge.Application;
 using Challenge.Application.Abstractions;
 using Challenge.Infrastructure.Messaging;
 using Challenge.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +22,11 @@ var connectionString = builder.Configuration.GetConnectionString("ChallengeDatab
 var consumerOptions = builder.Configuration.GetSection(ChallengeRabbitMqConsumerOptions.SectionName)
     .Get<ChallengeRabbitMqConsumerOptions>() ?? new ChallengeRabbitMqConsumerOptions();
 consumerOptions.Validate();
+var issuer = builder.Configuration["Jwt:Issuer"] ?? "TeamPulse.Identity";
+var audience = builder.Configuration["Jwt:Audience"] ?? "TeamPulse.Services";
+var signingKey = builder.Configuration["Jwt:SigningKey"] ?? string.Empty;
+if (Encoding.UTF8.GetByteCount(signingKey) < 32)
+    throw new InvalidOperationException("Challenge JWT SigningKey must contain at least 32 UTF-8 bytes.");
 
 builder.Services.AddDbContextFactory<ChallengeDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
@@ -28,6 +36,26 @@ builder.Services.AddSingleton<ChallengeRabbitMqConsumerStatus>();
 builder.Services.AddScoped<IEmployeeStatusProjectionStore, EmployeeStatusProjectionStore>();
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddHostedService<ChallengeRabbitMqConsumer>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            NameClaimType = "name",
+            RoleClaimType = "role",
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
@@ -47,6 +75,9 @@ await using (var database = await app.Services.GetRequiredService<IDbContextFact
     await database.Database.MigrateAsync();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.MapHealthChecks("/health/consumer", new HealthCheckOptions { Predicate = check => check.Tags.Contains("consumer") });
