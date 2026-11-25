@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
@@ -83,7 +82,7 @@ async function changeStatus(
       headers: {
         authorization: `Bearer ${token}`,
         'content-type': 'application/json',
-        'Idempotency-Key': randomUUID()
+        'Idempotency-Key': crypto.randomUUID()
       },
       body: JSON.stringify({ reasonCode, note: note || null })
     });
