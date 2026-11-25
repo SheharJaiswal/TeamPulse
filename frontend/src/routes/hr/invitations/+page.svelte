@@ -46,12 +46,14 @@
       <span class="brand-mark">✓</span><span>TeamPulse</span>
     </a>
     <p class="nav-label">HR WORKSPACE</p>
+    <a class="nav-link" href="/hr/challenges"><span class="nav-icon">✳</span> Challenges</a>
     <a class="nav-link active" href="/hr/invitations" aria-current="page">
       <span class="nav-icon">✉</span> Employee invitations
     </a>
     <a class="nav-link" href="/habits"><span class="nav-icon">◷</span> My habits</a>
     <a class="nav-link" href="/activities"><span class="nav-icon">✓</span> Activity history</a>
     <nav class="mobile-workspace-nav" aria-label="Workspace">
+      <a class="mobile-workspace-link" href="/hr/challenges">Challenges</a>
       <a class="mobile-workspace-link" href="/habits">My habits</a>
       <a class="mobile-workspace-link" href="/activities">Activity history</a>
       <a class="mobile-workspace-link active" href="/hr/invitations" aria-current="page">Invitations</a>
