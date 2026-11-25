@@ -12,7 +12,7 @@ export function habitApiUrl(): string {
   return normalizeBaseUrl(env.HABIT_API_BASE_URL, 'http://localhost:5102');
 }
 
-export function eventTrackingApiUrl(): string {
+export function challengeApiUrl(): string {\n  return normalizeBaseUrl(env.CHALLENGE_API_BASE_URL, 'http://localhost:5104');\n}\n\nexport function eventTrackingApiUrl(): string {
   return normalizeBaseUrl(env.EVENT_TRACKING_API_BASE_URL, 'http://localhost:5103');
 }
 
