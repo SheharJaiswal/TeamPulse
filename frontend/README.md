@@ -45,6 +45,13 @@ $env:Jwt__SigningKey = "<the-same-local-base64-signing-key-for-all-apis>"
 dotnet run --project backend/src/Services/Habit/Habit.API --urls http://localhost:5102
 ```
 
+Start Challenge in another terminal (use the same JWT signing key as Identity):
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:Jwt__SigningKey = "<the-same-local-base64-signing-key-for-all-apis>"
+dotnet run --project backend/src/Services/Challenge/Challenge.API --urls http://localhost:5104
+```
+
 Start Event Tracking in another terminal:
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
@@ -80,7 +87,7 @@ The local API URLs are configured in `.env.example`:
 
 - Identity: http://localhost:5101
 - Habit: http://localhost:5102
-- Event Tracking: http://localhost:5103
+- Event Tracking: http://localhost:5103\n- Challenge: http://localhost:5104
 
 The Identity registration endpoint is Development-only and is not exposed as public self-registration in the employee UI. Production onboarding remains HR-controlled.
 
