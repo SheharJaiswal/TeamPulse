@@ -129,7 +129,9 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
         Assert.Equal(new[]
         {
             "20261120190000_InitialChallengeProjection",
-            "20261120200000_AddInboxContentFingerprint"
+            "20261120200000_AddInboxContentFingerprint",
+            "20261126010000_AddChallenges",
+            "20261126020000_AddChallengeParticipations"
         }, appliedMigrations);
     }
 
