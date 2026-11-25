@@ -48,13 +48,13 @@ public sealed class ChallengesController(IDbContextFactory<ChallengeDbContext> c
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         db.Challenges.Add(challenge);
         await db.SaveChangesAsync(cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = challenge.Id },
-            new ChallengeResponse(challenge.Id, challenge.Name, challenge.Description, challenge.StartDate, challenge.EndDate, challenge.CreatedAtUtc));
+        return Created("/api/challenges", new ChallengeResponse(challenge.Id, challenge.Name, challenge.Description, challenge.StartDate, challenge.EndDate, challenge.CreatedAtUtc));
     }
 
     private bool TryGetScope(out string organizationId, out Guid employeeId)
     {
         organizationId = User.FindFirstValue("organization_id") ?? string.Empty;
+        employeeId = Guid.Empty;
         return !string.IsNullOrWhiteSpace(organizationId) &&
             Guid.TryParse(User.FindFirstValue("sub"), out employeeId) && employeeId != Guid.Empty;
     }
