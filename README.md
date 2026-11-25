@@ -202,7 +202,7 @@ Swagger is enabled in Development for APIs that expose Swagger. Health endpoints
 
 ### 6. Run the SvelteKit frontend
 
-The employee UI calls Identity, Habit and Event Tracking through the URLs in `frontend/.env.example`. From the repository root:
+The SvelteKit UI calls Identity, Habit, Event Tracking and Challenge through the URLs in `frontend/.env.example`. HR administrators can open `/hr/challenges` to create and list organization challenges; the Challenge API validates the HR role and scopes records to the caller's `organization_id` claim. From the repository root:
 
 PowerShell:
 ```powershell
