@@ -61,6 +61,7 @@
       Activity history
     </a>
     {#if data.employee.role === 'HrAdmin'}
+      <a class="nav-link" href="/hr/challenges"><span class="nav-icon">✳</span> Challenges</a>
       <a class="nav-link" href="/hr/invitations">
         <span class="nav-icon">✉</span>
         Employee invitations
@@ -70,6 +71,7 @@
       <a class="mobile-workspace-link active" href="/habits" aria-current="page">My habits</a>
       <a class="mobile-workspace-link" href="/activities">Activity history</a>
       {#if data.employee.role === 'HrAdmin'}
+        <a class="mobile-workspace-link" href="/hr/challenges">Challenges</a>
         <a class="mobile-workspace-link" href="/hr/invitations">Invitations</a>
       {/if}
     </nav>
