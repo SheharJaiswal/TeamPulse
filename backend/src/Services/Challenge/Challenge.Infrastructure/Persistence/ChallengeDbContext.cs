@@ -8,6 +8,7 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
     public DbSet<EmployeeStatusProjection> EmployeeStatusProjections => Set<EmployeeStatusProjection>();
     public DbSet<ProcessedDomainEvent> ProcessedDomainEvents => Set<ProcessedDomainEvent>();
     public DbSet<Challenge.Domain.Entities.Challenge> Challenges => Set<Challenge.Domain.Entities.Challenge>();
+    public DbSet<ChallengeParticipation> ChallengeParticipations => Set<ChallengeParticipation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,6 +24,17 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
         challenge.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("date").IsRequired();
         challenge.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("datetime(6)").IsRequired();
         challenge.HasIndex(x => new { x.OrganizationId, x.CreatedAtUtc }).HasDatabaseName("IX_challenges_organization_id_created_at_utc");
+
+        var participation = modelBuilder.Entity<ChallengeParticipation>();
+        participation.ToTable("challenge_participations");
+        participation.HasKey(x => x.Id);
+        participation.Property(x => x.Id).HasColumnName("id").HasColumnType("char(36)");
+        participation.Property(x => x.ChallengeId).HasColumnName("challenge_id").HasColumnType("char(36)").IsRequired();
+        participation.Property(x => x.EmployeeId).HasColumnName("employee_id").HasColumnType("char(36)").IsRequired();
+        participation.Property(x => x.JoinedAtUtc).HasColumnName("joined_at_utc").HasColumnType("datetime(6)").IsRequired();
+        participation.HasIndex(x => new { x.ChallengeId, x.EmployeeId }).IsUnique()
+            .HasDatabaseName("IX_challenge_participations_challenge_id_employee_id");
+        participation.HasIndex(x => x.EmployeeId).HasDatabaseName("IX_challenge_participations_employee_id");
 
         var projection = modelBuilder.Entity<EmployeeStatusProjection>();
         projection.ToTable("employee_status_projections");
