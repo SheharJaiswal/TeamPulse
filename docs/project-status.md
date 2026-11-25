@@ -105,3 +105,16 @@ Updated: 2026-11-21
 - Verification: not run in this execution. Run frontend unit tests, `npm run check`, and production build; add Identity integration coverage for cross-organization denial before enabling lifecycle administration in production.
 
 Updated: 2026-11-26
+
+
+## Employee challenge participation
+
+- Added the employee-facing `/challenges` SvelteKit page with Available challenges and My challenges sections, join action, empty states and server-side feedback.
+- Added Challenge API endpoints for available challenges, joined challenges and joining a challenge. Employee operations use authenticated employee/organization claims, require the local active lifecycle projection and enforce organization ownership.
+- Added Challenge-owned participation persistence and EF migration with a unique `(challenge_id, employee_id)` index. Repeat/concurrent joins return the existing participation rather than creating duplicates.
+- Added employee Challenges navigation for Employee and HrAdmin roles; HR management remains at `/hr/challenges`.
+- No progress tracking or scoring was added because challenge goal/measurement rules are not currently defined.
+- Added change documentation under `docs/changes/employee-challenge-participation` and basic participation entity unit tests.
+- Verification has not yet run in this execution. The execution environment could not resolve GitHub to clone the repository, so backend/frontend build and tests, including API integration tests, remain required.
+
+Updated: 2026-11-26
