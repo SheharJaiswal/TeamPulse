@@ -60,8 +60,9 @@
       <span class="nav-icon">✓</span>
       Activity history
     </a>
+    <a class="nav-link" href="/challenges"><span class="nav-icon">✳</span> Challenges</a>
     {#if data.employee.role === 'HrAdmin'}
-      <a class="nav-link" href="/hr/challenges"><span class="nav-icon">✳</span> Challenges</a>
+      <a class="nav-link" href="/hr/challenges"><span class="nav-icon">＋</span> Manage challenges</a>
       <a class="nav-link" href="/hr/invitations">
         <span class="nav-icon">✉</span>
         Employee invitations
@@ -70,8 +71,9 @@
     <nav class="mobile-workspace-nav" aria-label="Workspace">
       <a class="mobile-workspace-link active" href="/habits" aria-current="page">My habits</a>
       <a class="mobile-workspace-link" href="/activities">Activity history</a>
+      <a class="mobile-workspace-link" href="/challenges">Challenges</a>
       {#if data.employee.role === 'HrAdmin'}
-        <a class="mobile-workspace-link" href="/hr/challenges">Challenges</a>
+        <a class="mobile-workspace-link" href="/hr/challenges">Manage</a>
         <a class="mobile-workspace-link" href="/hr/invitations">Invitations</a>
       {/if}
     </nav>
