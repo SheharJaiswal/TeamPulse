@@ -29,6 +29,8 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         var appliedMigrations = await database.Database.GetAppliedMigrationsAsync();
         Assert.Contains("20261120190000_InitialChallengeProjection", appliedMigrations);
         Assert.Contains("20261120200000_AddInboxContentFingerprint", appliedMigrations);
+        Assert.Contains("20261126010000_AddChallenges", appliedMigrations);
+        Assert.Contains("20261126020000_AddChallengeParticipations", appliedMigrations);
 
         var store = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionStore>();
         var employeeId = Guid.NewGuid();
