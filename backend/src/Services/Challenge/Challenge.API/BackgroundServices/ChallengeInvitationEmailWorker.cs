@@ -82,7 +82,7 @@ public sealed class ChallengeInvitationEmailWorker(
                 await client.SendMailAsync(message, cancellationToken);
                 invitation.MarkEmailSent(timeProvider.GetUtcNow().UtcDateTime);
             }
-            catch (Exception exception) when (exception is SmtpException or FormatException or InvalidOperationException)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 invitation.MarkEmailFailed();
                 logger.LogWarning(exception, "Challenge invitation email failed for employee {EmployeeId}, challenge {ChallengeId}.",
@@ -99,5 +99,5 @@ public sealed class ChallengeInvitationEmailWorker(
         $"<p>{WebUtility.HtmlEncode(challenge.Description ?? string.Empty)}</p>" +
         $"<p>Challenge dates: {challenge.StartDate:yyyy-MM-dd} to {challenge.EndDate:yyyy-MM-dd}</p>" +
         $"<p>Respond by: {challenge.RegistrationDeadline:yyyy-MM-dd}</p>" +
-        $"<p><a href=\"{WebUtility.HtmlEncode(appUrl)}\">Open TeamPulse to Join or Decline</a></p></body></html>";
+        $"<p><a href=\"{WebUtility.HtmlEncode(appUrl + (appUrl.Contains('?') ? "&" : "?") + "challengeId=" + challenge.Id)}\">Open TeamPulse to Join or Decline</a></p></body></html>";
 }
