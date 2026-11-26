@@ -196,25 +196,35 @@ public sealed class ChallengesController(
             .SingleOrDefaultAsync(x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
         if (challenge is null) return NotFound();
 
-        var invitations = await db.ChallengeInvitations.AsNoTracking().Where(x => x.ChallengeId == challengeId).ToListAsync(cancellationToken);
-        var responses = await db.ChallengeParticipations.AsNoTracking().Where(x => x.ChallengeId == challengeId).ToListAsync(cancellationToken);
+        var invitations = await db.ChallengeInvitations.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId).ToListAsync(cancellationToken);
+        var responses = await db.ChallengeParticipations.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId).ToListAsync(cancellationToken);
         var joined = responses.Where(x => x.ResponseStatus == "Joined").ToList();
-        var declined = responses.Count(x => x.ResponseStatus == "Declined");
-        var teams = await (
-            from team in db.ChallengeTeams.AsNoTracking()
-            where team.ChallengeId == challengeId
-            select new ChallengeTeamResponse(team.Id, team.Name,
-                db.ChallengeTeamMembers.Count(m => m.TeamId == team.Id),
-                (from member in db.ChallengeTeamMembers.AsNoTracking()
-                 join invite in db.ChallengeInvitations.AsNoTracking() on member.EmployeeId equals invite.EmployeeId
-                 where member.TeamId == team.Id && invite.ChallengeId == challengeId
-                 select new TeamMemberResponse(member.EmployeeId, invite.DisplayName, invite.Email)).ToList())
-        ).ToListAsync(cancellationToken);
+        var teams = await db.ChallengeTeams.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId).OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        var memberships = await db.ChallengeTeamMembers.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId).ToListAsync(cancellationToken);
+        var invitationsByEmployee = invitations.ToDictionary(x => x.EmployeeId);
+        var membersByTeam = memberships.GroupBy(x => x.TeamId).ToDictionary(x => x.Key, x => x.ToList());
+
+        var teamResponses = teams.Select(team =>
+        {
+            var teamMembers = membersByTeam.TryGetValue(team.Id, out var teamMemberships)
+                ? teamMemberships.Select(member =>
+                {
+                    invitationsByEmployee.TryGetValue(member.EmployeeId, out var invite);
+                    return new TeamMemberResponse(member.EmployeeId, invite?.DisplayName ?? "Employee", invite?.Email ?? string.Empty);
+                }).ToList()
+                : new System.Collections.Generic.List<TeamMemberResponse>();
+            return new ChallengeTeamResponse(team.Id, team.Name, teamMembers.Count, teamMembers);
+        }).ToList();
 
         var participants = joined.Select(response =>
         {
-            var invite = invitations.SingleOrDefault(x => x.EmployeeId == response.EmployeeId);
-            var team = teams.FirstOrDefault(x => x.Members.Any(m => m.EmployeeId == response.EmployeeId));
+            invitationsByEmployee.TryGetValue(response.EmployeeId, out var invite);
+            var membership = memberships.SingleOrDefault(x => x.EmployeeId == response.EmployeeId);
+            var team = membership is null ? null : teams.SingleOrDefault(x => x.Id == membership.TeamId);
             return new RegistrationParticipantResponse(response.EmployeeId, invite?.DisplayName ?? "Employee",
                 invite?.Email ?? string.Empty, response.RespondedAtUtc, team?.Id, team?.Name);
         }).ToList();
@@ -222,8 +232,8 @@ public sealed class ChallengesController(
         return Ok(new RegistrationSummaryResponse(challenge.Id, challenge.Name, challenge.Description,
             challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline,
             challenge.RegistrationClosedAtUtc, challenge.TeamsFinalizedAtUtc,
-            invitations.Count, joined.Count, declined, Math.Max(0, invitations.Count - responses.Count),
-            participants, teams));
+            invitations.Count, joined.Count, responses.Count(x => x.ResponseStatus == "Declined"),
+            Math.Max(0, invitations.Count - responses.Count), participants, teamResponses));
     }
 
     [HttpPost("{challengeId:guid}/registration/close")]
