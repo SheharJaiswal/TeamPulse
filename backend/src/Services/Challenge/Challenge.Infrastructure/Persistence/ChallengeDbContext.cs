@@ -11,6 +11,7 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
     public DbSet<ChallengeParticipation> ChallengeParticipations => Set<ChallengeParticipation>();
     public DbSet<ChallengeTeam> ChallengeTeams => Set<ChallengeTeam>();
     public DbSet<ChallengeTeamMember> ChallengeTeamMembers => Set<ChallengeTeamMember>();
+    public DbSet<ChallengeInvitation> ChallengeInvitations => Set<ChallengeInvitation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +64,20 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
         member.HasIndex(x => new { x.ChallengeId, x.EmployeeId }).IsUnique()
             .HasDatabaseName("IX_challenge_team_members_challenge_id_employee_id");
         member.HasIndex(x => x.TeamId).HasDatabaseName("IX_challenge_team_members_team_id");
+
+        var invitation = modelBuilder.Entity<ChallengeInvitation>();
+        invitation.ToTable("challenge_invitations");
+        invitation.HasKey(x => x.Id);
+        invitation.Property(x => x.Id).HasColumnName("id").HasColumnType("char(36)");
+        invitation.Property(x => x.ChallengeId).HasColumnName("challenge_id").HasColumnType("char(36)").IsRequired();
+        invitation.Property(x => x.EmployeeId).HasColumnName("employee_id").HasColumnType("char(36)").IsRequired();
+        invitation.Property(x => x.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
+        invitation.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(150).IsRequired();
+        invitation.Property(x => x.InvitedAtUtc).HasColumnName("invited_at_utc").HasColumnType("datetime(6)").IsRequired();
+        invitation.Property(x => x.EmailSentAtUtc).HasColumnName("email_sent_at_utc").HasColumnType("datetime(6)");
+        invitation.Property(x => x.EmailDeliveryStatus).HasColumnName("email_delivery_status").HasMaxLength(20).IsRequired();
+        invitation.HasIndex(x => new { x.ChallengeId, x.EmployeeId }).IsUnique()
+            .HasDatabaseName("IX_challenge_invitations_challenge_id_employee_id");
 
         var projection = modelBuilder.Entity<EmployeeStatusProjection>();
         projection.ToTable("employee_status_projections");
