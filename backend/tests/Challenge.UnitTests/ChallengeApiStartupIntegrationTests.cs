@@ -3,6 +3,8 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net.Http.Headers;
+using Challenge.Domain.Entities;
 using Challenge.Application.Abstractions;
 using Challenge.Application.Contracts;
 using Challenge.Infrastructure.Persistence;
@@ -93,4 +95,63 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, consumer.StatusCode);
     }
+    [Theory]
+    [InlineData("Employee")]
+    [InlineData("HrAdmin")]
+    public async Task AvailableChallenges_BootstrapsMissingProjectionForAuthenticatedActiveUser(string role)
+    {
+        using var factory = fixture.CreateFactory();
+        var employeeId = Guid.NewGuid();
+        const string organizationId = "projection-bootstrap-org";
+        await using (var database = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
+        {
+            database.Challenges.Add(new Challenge.Domain.Entities.Challenge(
+                Guid.NewGuid(), organizationId, Guid.NewGuid(), "Active challenge", null,
+                DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                DateTime.UtcNow));
+            await database.SaveChangesAsync();
+            Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == employeeId));
+        }
+
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", ChallengeApiFactory.CreateToken(employeeId, organizationId, role));
+
+        using var response = await client.GetAsync("/api/challenges/available");
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Active challenge", body);
+
+        await using var verify = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync();
+        var projection = await verify.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.True(projection.IsActive);
+        Assert.Equal(0, projection.LifecycleVersion);
+    }
+
+    [Fact]
+    public async Task AvailableChallenges_DoesNotOverwriteExistingInactiveProjection()
+    {
+        using var factory = fixture.CreateFactory();
+        var employeeId = Guid.NewGuid();
+        const string organizationId = "projection-inactive-org";
+        await using (var database = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
+        {
+            database.EmployeeStatusProjections.Add(new EmployeeStatusProjection(
+                employeeId, false, 3, DateTime.UtcNow));
+            await database.SaveChangesAsync();
+        }
+
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", ChallengeApiFactory.CreateToken(employeeId, organizationId, "Employee"));
+
+        using var response = await client.GetAsync("/api/challenges/available");
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, response.StatusCode);
+
+        await using var verify = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync();
+        var projection = await verify.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.False(projection.IsActive);
+        Assert.Equal(3, projection.LifecycleVersion);
+    }
+
 }
