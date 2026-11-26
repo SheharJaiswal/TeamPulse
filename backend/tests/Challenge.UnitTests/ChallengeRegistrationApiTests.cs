@@ -28,7 +28,7 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
         await using (var db = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
         {
             var challenge = new Challenge.Domain.Entities.Challenge(challengeId, organizationId, Guid.NewGuid(),
-                "Acknowledgement test", null, today, today.AddDays(5), now, today.AddDays(2));
+                "Acknowledgement test", null, today.AddDays(3), today.AddDays(8), now, today.AddDays(2));
             db.Challenges.Add(challenge);
             db.ChallengeInvitations.Add(new ChallengeInvitation(Guid.NewGuid(), challengeId, joinedEmployeeId,
                 "joined@example.test", "Joined Employee", now));
