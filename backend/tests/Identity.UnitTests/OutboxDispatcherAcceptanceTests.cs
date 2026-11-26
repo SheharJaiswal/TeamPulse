@@ -332,7 +332,9 @@ public sealed class OutboxDispatcherReplayIntegrationTests : IClassFixture<MySql
             "ThrottlingException", CancellationToken.None));
         Assert.Empty(await store.ClaimBatchAsync(1, TimeSpan.FromSeconds(60), CancellationToken.None));
 
-        await Task.Delay(TimeSpan.FromMilliseconds(2200));
+        // Leave a wider margin than the retry deadline so MySQL DATETIME precision and CI scheduling
+        // cannot make this assertion race the persisted NextAttemptAtUtc value.
+        await Task.Delay(TimeSpan.FromMilliseconds(3500));
         var retryClaim = Assert.Single(await store.ClaimBatchAsync(
             1, TimeSpan.FromSeconds(60), CancellationToken.None));
 

@@ -16,6 +16,9 @@ interface Challenge {
   description: string | null;
   startDate: string;
   endDate: string;
+  registrationDeadline: string;
+  registrationClosedAtUtc: string | null;
+  teamsFinalizedAtUtc: string | null;
   createdAtUtc: string;
 }
 
@@ -70,17 +73,19 @@ export const actions: Actions = {
     const description = String(form.get('description') ?? '').trim();
     const startDate = String(form.get('startDate') ?? '');
     const endDate = String(form.get('endDate') ?? '');
+    const registrationDeadline = String(form.get('registrationDeadline') ?? '');
     if (!name || name.length > 120) return fail(400, { message: 'Challenge name must contain 1 to 120 characters.' });
     if (description.length > 1000) return fail(400, { message: 'Description cannot exceed 1,000 characters.' });
-    if (!isCalendarDate(startDate) || !isCalendarDate(endDate) || endDate < startDate) {
-      return fail(400, { message: 'Choose valid start and end dates. End date cannot be before start date.' });
+    if (!isCalendarDate(startDate) || !isCalendarDate(endDate) || !isCalendarDate(registrationDeadline) ||
+      endDate < startDate || registrationDeadline < new Date().toISOString().slice(0, 10) || registrationDeadline > startDate) {
+      return fail(400, { message: 'Choose valid dates. Registration deadline must be today or before the challenge start date.' });
     }
     let response: Response;
     try {
       response = await fetch(`${challengeApiUrl()}/api/challenges`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ name, description: description || null, startDate, endDate })
+        body: JSON.stringify({ name, description: description || null, startDate, endDate, registrationDeadline })
       });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable. Please try again.' });

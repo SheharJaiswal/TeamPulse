@@ -326,6 +326,14 @@ public sealed class IdentityControllerTests
             return Task.FromResult(Employees.SingleOrDefault(x => x.Id == id));
         }
 
+        public Task<IReadOnlyList<Employee>> GetActiveByOrganizationAsync(string organizationId, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<Employee> activeEmployees = Employees
+                .Where(x => x.OrganizationId == organizationId && x.IsActive && x.Role == "Employee")
+                .ToList();
+            return Task.FromResult(activeEmployees);
+        }
+
         public Task AddAsync(Employee employee, CancellationToken cancellationToken)
         {
             AddCalls++;

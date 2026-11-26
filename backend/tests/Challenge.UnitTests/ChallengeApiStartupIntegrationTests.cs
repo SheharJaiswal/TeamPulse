@@ -33,6 +33,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         Assert.Contains("20261120200000_AddInboxContentFingerprint", appliedMigrations);
         Assert.Contains("20261126010000_AddChallenges", appliedMigrations);
         Assert.Contains("20261126020000_AddChallengeParticipations", appliedMigrations);
+        Assert.Contains("20261127010000_AddChallengeRegistrationAndTeams", appliedMigrations);
 
         var store = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionStore>();
         var employeeId = Guid.NewGuid();
@@ -101,6 +102,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
     public async Task AvailableChallenges_DeniesAuthenticatedUserWhenLifecycleProjectionIsMissing(string role)
     {
         using var factory = fixture.CreateFactory();
+        using var client = factory.CreateClient(); // Applies migrations before database setup.
         var employeeId = Guid.NewGuid();
         const string organizationId = "missing-projection-org";
         await using (var database = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
@@ -113,7 +115,6 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
             Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == employeeId));
         }
 
-        using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(employeeId, organizationId, role));
 
@@ -130,6 +131,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
     public async Task AvailableChallenges_AllowsEmployeeAndHrAdminWithActiveProjection(string role)
     {
         using var factory = fixture.CreateFactory();
+        using var client = factory.CreateClient(); // Applies the latest schema before inserting invitations.
         var employeeId = Guid.NewGuid();
         const string organizationId = "active-projection-org";
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -138,13 +140,15 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         {
             database.EmployeeStatusProjections.Add(new EmployeeStatusProjection(
                 employeeId, true, 1, DateTime.UtcNow));
-            database.Challenges.Add(new Challenge.Domain.Entities.Challenge(
+            var challenge = new Challenge.Domain.Entities.Challenge(
                 Guid.NewGuid(), organizationId, Guid.NewGuid(), "Available challenge", null,
-                today, today.AddDays(7), DateTime.UtcNow));
+                today, today.AddDays(7), DateTime.UtcNow);
+            database.Challenges.Add(challenge);
+            database.ChallengeInvitations.Add(new ChallengeInvitation(
+                Guid.NewGuid(), challenge.Id, employeeId, "employee@example.test", "Employee", DateTime.UtcNow));
             await database.SaveChangesAsync();
         }
 
-        using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(employeeId, organizationId, role));
 

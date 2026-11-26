@@ -7,7 +7,8 @@ public sealed class Challenge
     private Challenge() { }
 
     public Challenge(Guid id, string organizationId, Guid createdByEmployeeId, string name,
-        string? description, DateOnly startDate, DateOnly endDate, DateTime createdAtUtc)
+        string? description, DateOnly startDate, DateOnly endDate, DateTime createdAtUtc,
+        DateOnly? registrationDeadline = null)
     {
         if (id == Guid.Empty) throw new ArgumentException("Challenge ID is required.", nameof(id));
         if (string.IsNullOrWhiteSpace(organizationId)) throw new ArgumentException("Organization is required.", nameof(organizationId));
@@ -16,6 +17,8 @@ public sealed class Challenge
         if (description?.Length > 1000) throw new ArgumentException("Description cannot exceed 1,000 characters.", nameof(description));
         if (endDate < startDate) throw new ArgumentException("End date cannot be before start date.");
         if (createdAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("Creation time must be UTC.", nameof(createdAtUtc));
+        var deadline = registrationDeadline ?? startDate;
+        if (deadline > startDate) throw new ArgumentException("Registration deadline cannot be after challenge start date.", nameof(registrationDeadline));
 
         Id = id;
         OrganizationId = organizationId.Trim();
@@ -24,6 +27,7 @@ public sealed class Challenge
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
         StartDate = startDate;
         EndDate = endDate;
+        RegistrationDeadline = deadline;
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -34,5 +38,25 @@ public sealed class Challenge
     public string? Description { get; private set; }
     public DateOnly StartDate { get; private set; }
     public DateOnly EndDate { get; private set; }
+    public DateOnly RegistrationDeadline { get; private set; }
+    public DateTime? RegistrationClosedAtUtc { get; private set; }
+    public DateTime? TeamsFinalizedAtUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
+
+    public bool CloseRegistration(DateTime closedAtUtc)
+    {
+        if (closedAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("Closure time must be UTC.", nameof(closedAtUtc));
+        if (RegistrationClosedAtUtc.HasValue) return false;
+        RegistrationClosedAtUtc = closedAtUtc;
+        return true;
+    }
+
+    public bool FinalizeTeams(DateTime finalizedAtUtc)
+    {
+        if (finalizedAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("Finalization time must be UTC.", nameof(finalizedAtUtc));
+        if (TeamsFinalizedAtUtc.HasValue) return false;
+        if (!RegistrationClosedAtUtc.HasValue) throw new InvalidOperationException("Registration must be closed before teams can be finalized.");
+        TeamsFinalizedAtUtc = finalizedAtUtc;
+        return true;
+    }
 }

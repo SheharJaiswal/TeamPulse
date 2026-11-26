@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using Challenge.API.HealthChecks;
+using Challenge.API.BackgroundServices;
 using Challenge.Application;
 using Challenge.Application.Abstractions;
 using Challenge.Infrastructure.Messaging;
@@ -30,6 +31,7 @@ var signingKey = builder.Configuration["Jwt:SigningKey"] ?? string.Empty;
 if (Encoding.UTF8.GetByteCount(signingKey) < 32)
     throw new InvalidOperationException("Challenge JWT SigningKey must contain at least 32 UTF-8 bytes.");
 
+builder.Services.AddHttpClient();
 builder.Services.AddDbContextFactory<ChallengeDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 builder.Services.AddSingleton(TimeProvider.System);
@@ -38,6 +40,7 @@ builder.Services.AddSingleton<ChallengeRabbitMqConsumerStatus>();
 builder.Services.AddScoped<IEmployeeStatusProjectionStore, EmployeeStatusProjectionStore>();
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddHostedService<ChallengeRabbitMqConsumer>();
+builder.Services.AddHostedService<ChallengeInvitationEmailWorker>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
