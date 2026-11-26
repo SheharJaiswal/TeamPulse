@@ -18,6 +18,7 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
     public async Task EmployeeAcknowledgement_RegistrationCloseExcludesPendingEmployees()
     {
         using var factory = fixture.CreateFactory();
+        using var joinedClient = factory.CreateClient(); // Starts the API host and applies pending migrations.
         var organizationId = "registration-" + Guid.NewGuid().ToString("N");
         var joinedEmployeeId = Guid.NewGuid();
         var pendingEmployeeId = Guid.NewGuid();
@@ -39,7 +40,6 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
             await db.SaveChangesAsync();
         }
 
-        using var joinedClient = factory.CreateClient();
         joinedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(joinedEmployeeId, organizationId, "Employee"));
         using var joined = await joinedClient.PostAsJsonAsync($"/api/challenges/{challengeId}/response", new { status = "Joined" });
@@ -65,6 +65,7 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
     public async Task HrCanCreateMultipleTeamsAndFinalizeWhenEveryJoinedEmployeeIsAssigned()
     {
         using var factory = fixture.CreateFactory();
+        using var client = factory.CreateClient(); // Starts the API host and applies pending migrations.
         var organizationId = "teams-" + Guid.NewGuid().ToString("N");
         var employeeIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
         var challengeId = Guid.NewGuid();
@@ -86,7 +87,6 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
             await db.SaveChangesAsync();
         }
 
-        using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(Guid.NewGuid(), organizationId, "HrAdmin"));
 
