@@ -60,6 +60,7 @@ public partial class AddChallengeRegistrationAndTeams : Migration
         migrationBuilder.DropColumn(name: "registration_deadline", table: "challenges");
         migrationBuilder.DropColumn(name: "registration_closed_at_utc", table: "challenges");
         migrationBuilder.DropColumn(name: "teams_finalized_at_utc", table: "challenges");
+        migrationBuilder.Sql("UPDATE challenge_participations SET joined_at_utc = responded_at_utc WHERE joined_at_utc IS NULL");
         migrationBuilder.DropColumn(name: "response_status", table: "challenge_participations");
         migrationBuilder.DropColumn(name: "responded_at_utc", table: "challenge_participations");
         migrationBuilder.AlterColumn<DateTime>(name: "joined_at_utc", table: "challenge_participations", type: "datetime(6)", nullable: false,
