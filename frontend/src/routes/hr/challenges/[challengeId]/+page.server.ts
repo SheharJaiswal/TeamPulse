@@ -155,5 +155,59 @@ export const actions: Actions = {
     }
     if (!response.ok) return fail(response.status === 409 ? 409 : 502, { message: await responseMessage(response, 'Teams could not be finalized.') });
     return { success: true, message: 'Teams finalized. Employee team assignments are now locked.' };
+  },
+  updateTeam: async ({ cookies, fetch, params, request }) => {
+    const token = requireSession(cookies);
+    await verifyHr(token, cookies, fetch);
+    const challengeId = params.challengeId ?? '';
+    if (!isGuid(challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
+    const form = await request.formData();
+    const teamId = String(form.get('teamId') ?? '');
+    const name = String(form.get('teamName') ?? '').trim();
+    const employeeIds = form.getAll('employeeIds').map(value => String(value));
+    if (!isGuid(teamId)) return fail(400, { message: 'Invalid team identifier.' });
+    if (!name || name.length > 100) return fail(400, { message: 'Team name must contain 1 to 100 characters.' });
+    if (employeeIds.some(id => !isGuid(id)) || new Set(employeeIds).size !== employeeIds.length)
+      return fail(400, { message: 'Team members must be valid and unique.' });
+    let response: Response;
+    try {
+      response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams/${teamId}`, {
+        method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, employeeIds })
+      });
+    } catch {
+      return fail(503, { message: 'Challenge service is unavailable.' });
+    }
+    if (response.status === 401) {
+      expireSession(cookies);
+      redirect(303, '/login');
+    }
+    if (!response.ok) return fail(response.status === 409 || response.status === 400 ? response.status : 502, {
+      message: await responseMessage(response, 'Team could not be updated.')
+    });
+    return { success: true, message: `${name} updated.` };
+  },
+  deleteTeam: async ({ cookies, fetch, params, request }) => {
+    const token = requireSession(cookies);
+    await verifyHr(token, cookies, fetch);
+    const challengeId = params.challengeId ?? '';
+    if (!isGuid(challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
+    const form = await request.formData();
+    const teamId = String(form.get('teamId') ?? '');
+    const teamName = String(form.get('teamName') ?? 'Team');
+    if (!isGuid(teamId)) return fail(400, { message: 'Invalid team identifier.' });
+    let response: Response;
+    try {
+      response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams/${teamId}`, { method: 'DELETE' });
+    } catch {
+      return fail(503, { message: 'Challenge service is unavailable.' });
+    }
+    if (response.status === 401) {
+      expireSession(cookies);
+      redirect(303, '/login');
+    }
+    if (!response.ok) return fail(response.status === 409 ? 409 : 502, {
+      message: await responseMessage(response, 'Team could not be deleted.')
+    });
+    return { success: true, message: `${teamName} deleted. Its members are now unassigned.` };
   }
 };
