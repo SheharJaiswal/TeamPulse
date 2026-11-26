@@ -30,6 +30,7 @@ var signingKey = builder.Configuration["Jwt:SigningKey"] ?? string.Empty;
 if (Encoding.UTF8.GetByteCount(signingKey) < 32)
     throw new InvalidOperationException("Challenge JWT SigningKey must contain at least 32 UTF-8 bytes.");
 
+builder.Services.AddHttpClient();
 builder.Services.AddDbContextFactory<ChallengeDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 builder.Services.AddSingleton(TimeProvider.System);
