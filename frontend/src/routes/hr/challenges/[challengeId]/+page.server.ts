@@ -94,10 +94,11 @@ export const actions: Actions = {
   close: async ({ cookies, fetch, params }) => {
     const token = requireSession(cookies);
     await verifyHr(token, cookies, fetch);
-    if (!isGuid(params.challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
+    const challengeId = params.challengeId ?? '';
+    if (!isGuid(challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
     let response: Response;
     try {
-      response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${params.challengeId}/registration/close`, { method: 'POST' });
+      response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/registration/close`, { method: 'POST' });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable.' });
     }
@@ -111,7 +112,8 @@ export const actions: Actions = {
   createTeam: async ({ cookies, fetch, params, request }) => {
     const token = requireSession(cookies);
     await verifyHr(token, cookies, fetch);
-    if (!isGuid(params.challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
+    const challengeId = params.challengeId ?? '';
+    if (!isGuid(challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
     const form = await request.formData();
     const name = String(form.get('teamName') ?? '').trim();
     const employeeIds = form.getAll('employeeIds').map(value => String(value));
@@ -121,7 +123,7 @@ export const actions: Actions = {
     }
     let createResponse: Response;
     try {
-      createResponse = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${params.challengeId}/teams`, {
+      createResponse = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams`, {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name })
       });
     } catch {
@@ -137,7 +139,7 @@ export const actions: Actions = {
     const created = (await createResponse.json()) as { id: string };
     let assignResponse: Response;
     try {
-      assignResponse = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${params.challengeId}/teams/${created.id}/members`, {
+      assignResponse = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams/${created.id}/members`, {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ employeeIds })
       });
     } catch {
@@ -154,7 +156,7 @@ export const actions: Actions = {
     if (!isGuid(params.challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
     let response: Response;
     try {
-      response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${params.challengeId}/teams/finalize`, { method: 'POST' });
+      response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams/finalize`, { method: 'POST' });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable.' });
     }
