@@ -8,6 +8,7 @@ using Insight.Infrastructure.Persistence;
 using Insight.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 var consumerOptions = builder.Configuration.GetSection(InsightRabbitMqConsumerOptions.SectionName)
@@ -44,6 +45,33 @@ builder.Services.AddSingleton<IEmployeeStatusProjectionStore, DynamoDbEmployeeSt
 builder.Services.AddSingleton<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddSingleton<InsightDynamoDbTableInitializer>();
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "Enter a valid JWT access token. Swagger sends it as: Authorization: Bearer {token}",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<InsightDynamoDbHealthCheck>("insight-dynamodb", tags: new[] { "ready" })
@@ -55,6 +83,12 @@ if (dynamoOptions.InitializeLocalTable)
 {
     await app.Services.GetRequiredService<InsightDynamoDbTableInitializer>()
         .InitializeAsync(app.Lifetime.ApplicationStopping);
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
