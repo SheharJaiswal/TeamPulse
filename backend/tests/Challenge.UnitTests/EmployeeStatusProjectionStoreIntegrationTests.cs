@@ -223,6 +223,34 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
     }
 
     [Fact]
+    public async Task ProcessAsync_AuthoritativeActiveSnapshotRepairsProjectionAtSameVersion()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        var store = new EmployeeStatusProjectionStore(factory);
+        var employeeId = Guid.NewGuid();
+
+        Assert.Equal(ProjectionProcessingOutcome.Applied,
+            await store.ProcessAsync(CreateEvent(Guid.NewGuid(), employeeId, 4, false),
+                DateTime.UtcNow, CancellationToken.None));
+
+        var snapshot = CreateEvent(Guid.NewGuid(), employeeId, 4, true) with
+        {
+            EventType = "EmployeeActiveSnapshot",
+            PreviousStatus = "active",
+            NewStatus = "active"
+        };
+        Assert.Equal(ProjectionProcessingOutcome.Applied,
+            await store.ProcessAsync(snapshot, DateTime.UtcNow, CancellationToken.None));
+
+        await using var database = await factory.CreateDbContextAsync();
+        var projection = await database.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.True(projection.IsActive);
+        Assert.Equal(4, projection.LifecycleVersion);
+        Assert.Equal(2, await database.ProcessedDomainEvents.CountAsync(x => x.EmployeeId == employeeId));
+    }
+
+    [Fact]
     public async Task ProcessAsync_RecordsEqualVersionAsStaleWithoutChangingProjection()
     {
         using var provider = await CreateProviderAsync();
