@@ -52,6 +52,10 @@ public sealed class EmployeeStatusProjectionProcessor(IEmployeeStatusProjectionS
             isActive = false;
         else if (envelope.EventType == "EmployeeReactivated" && payload.PreviousStatus == "inactive" && payload.NewStatus == "active")
             isActive = true;
+        else if (envelope.EventType == "EmployeeActivated" && payload.PreviousStatus == "pending" && payload.NewStatus == "active")
+            isActive = true;
+        else if (envelope.EventType == "EmployeeActiveSnapshot" && payload.PreviousStatus == "active" && payload.NewStatus == "active")
+            isActive = true;
         else return false;
 
         var fingerprint = LifecycleEventFingerprint.Create(envelope, payload);
