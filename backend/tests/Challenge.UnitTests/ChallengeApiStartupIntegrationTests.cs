@@ -139,9 +139,12 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         {
             database.EmployeeStatusProjections.Add(new EmployeeStatusProjection(
                 employeeId, true, 1, DateTime.UtcNow));
-            database.Challenges.Add(new Challenge.Domain.Entities.Challenge(
+            var challenge = new Challenge.Domain.Entities.Challenge(
                 Guid.NewGuid(), organizationId, Guid.NewGuid(), "Available challenge", null,
-                today, today.AddDays(7), DateTime.UtcNow));
+                today, today.AddDays(7), DateTime.UtcNow);
+            database.Challenges.Add(challenge);
+            database.ChallengeInvitations.Add(new ChallengeInvitation(
+                Guid.NewGuid(), challenge.Id, employeeId, "employee@example.test", "Employee", DateTime.UtcNow));
             await database.SaveChangesAsync();
         }
 
