@@ -124,7 +124,7 @@ export const actions: Actions = {
     let createResponse: Response;
     try {
       createResponse = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams`, {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name })
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, employeeIds })
       });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable.' });
@@ -133,20 +133,8 @@ export const actions: Actions = {
       expireSession(cookies);
       redirect(303, '/login');
     }
-    if (!createResponse.ok) return fail(createResponse.status === 409 ? 409 : 502, {
-      message: await responseMessage(createResponse, 'Team could not be created.')
-    });
-    const created = (await createResponse.json()) as { id: string };
-    let assignResponse: Response;
-    try {
-      assignResponse = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams/${created.id}/members`, {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ employeeIds })
-      });
-    } catch {
-      return fail(503, { message: 'Team was created, but member assignment failed. Refresh and retry with the unassigned employees.' });
-    }
-    if (!assignResponse.ok) return fail(assignResponse.status === 409 || assignResponse.status === 400 ? assignResponse.status : 502, {
-      message: await responseMessage(assignResponse, 'Team was created, but members could not be assigned.')
+    if (!createResponse.ok) return fail(createResponse.status === 409 || createResponse.status === 400 ? createResponse.status : 502, {
+      message: await responseMessage(createResponse, 'Team could not be created or its members could not be assigned.')
     });
     return { success: true, message: `${name} created with ${employeeIds.length} employees.` };
   },
