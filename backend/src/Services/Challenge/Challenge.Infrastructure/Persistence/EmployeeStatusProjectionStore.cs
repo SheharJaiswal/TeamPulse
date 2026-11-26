@@ -49,11 +49,14 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
                 : ProjectionProcessingOutcome.DuplicateEventIntegrityViolation;
         }
 
-        // The session-scoped flag reports whether the atomic upsert actually applied
-        // a strictly newer version. Initialize it to 1 for the insert path; the
-        // duplicate-key path overwrites it before the projection columns are assigned.
+        // The session-scoped flag reports whether the atomic upsert applied a newer
+        // lifecycle version or an authoritative active snapshot at the same version.
+        // Initialize it to 1 for the insert path; the duplicate-key path overwrites it.
         await database.Database.ExecuteSqlRawAsync(
             "SET @teampulse_challenge_projection_applied = 1;",
+            cancellationToken);
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"SET @teampulse_challenge_projection_is_snapshot = {(lifecycleEvent.EventType == "EmployeeActiveSnapshot" ? 1 : 0)};",
             cancellationToken);
 
         await database.Database.ExecuteSqlInterpolatedAsync($"""
@@ -65,9 +68,14 @@ public sealed class EmployeeStatusProjectionStore(IDbContextFactory<ChallengeDbC
             ON DUPLICATE KEY UPDATE
                 is_active = IF(
                     (@teampulse_challenge_projection_applied := IF(
-                        incoming.lifecycle_version > employee_status_projections.lifecycle_version, 1, 0)) = 1,
+                        incoming.lifecycle_version > employee_status_projections.lifecycle_version OR
+                        (incoming.lifecycle_version = employee_status_projections.lifecycle_version AND
+                         @teampulse_challenge_projection_is_snapshot = 1), 1, 0)) = 1,
                     incoming.is_active, employee_status_projections.is_active),
-                updated_at_utc = IF(incoming.lifecycle_version > employee_status_projections.lifecycle_version,
+                updated_at_utc = IF(
+                    incoming.lifecycle_version > employee_status_projections.lifecycle_version OR
+                    (incoming.lifecycle_version = employee_status_projections.lifecycle_version AND
+                     @teampulse_challenge_projection_is_snapshot = 1),
                     incoming.updated_at_utc, employee_status_projections.updated_at_utc),
                 lifecycle_version = GREATEST(employee_status_projections.lifecycle_version, incoming.lifecycle_version);
             """, cancellationToken);
