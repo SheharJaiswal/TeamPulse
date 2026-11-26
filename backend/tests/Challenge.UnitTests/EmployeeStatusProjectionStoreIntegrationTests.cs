@@ -251,6 +251,33 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
     }
 
     [Fact]
+    public async Task ProcessAsync_DelayedActiveSnapshotCannotUndoNewerDeactivation()
+    {
+        using var provider = await CreateProviderAsync();
+        var factory = provider.GetRequiredService<IDbContextFactory<ChallengeDbContext>>();
+        var store = new EmployeeStatusProjectionStore(factory);
+        var employeeId = Guid.NewGuid();
+
+        Assert.Equal(ProjectionProcessingOutcome.Applied,
+            await store.ProcessAsync(CreateEvent(Guid.NewGuid(), employeeId, 5, false),
+                DateTime.UtcNow, CancellationToken.None));
+
+        var delayedSnapshot = CreateEvent(Guid.NewGuid(), employeeId, 4, true) with
+        {
+            EventType = "EmployeeActiveSnapshot",
+            PreviousStatus = "active",
+            NewStatus = "active"
+        };
+        Assert.Equal(ProjectionProcessingOutcome.Stale,
+            await store.ProcessAsync(delayedSnapshot, DateTime.UtcNow, CancellationToken.None));
+
+        await using var database = await factory.CreateDbContextAsync();
+        var projection = await database.EmployeeStatusProjections.SingleAsync(x => x.EmployeeId == employeeId);
+        Assert.False(projection.IsActive);
+        Assert.Equal(5, projection.LifecycleVersion);
+    }
+
+    [Fact]
     public async Task ProcessAsync_RecordsEqualVersionAsStaleWithoutChangingProjection()
     {
         using var provider = await CreateProviderAsync();
