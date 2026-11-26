@@ -263,7 +263,8 @@ public sealed class ChallengesController(
             return Conflict(new { message = "A team with this name already exists in the challenge." });
         var team = new ChallengeTeam(Guid.NewGuid(), challengeId, request.Name, timeProvider.GetUtcNow().UtcDateTime);
         db.ChallengeTeams.Add(team);
-        await db.SaveChangesAsync(cancellationToken);
+        try { await db.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateException) { return Conflict(new { message = "A team with this name already exists in the challenge." }); }
         return Created($"/api/challenges/{challengeId}/teams/{team.Id}", new { team.Id, team.Name });
     }
 
