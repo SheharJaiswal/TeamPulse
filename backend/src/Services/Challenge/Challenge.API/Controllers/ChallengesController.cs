@@ -253,6 +253,10 @@ public sealed class ChallengesController(
         if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
         if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100)
             return BadRequest(new { message = "Team name must contain 1 to 100 characters." });
+        if (request.EmployeeIds is not null && (request.EmployeeIds.Any(x => x == Guid.Empty) ||
+            request.EmployeeIds.Distinct().Count() != request.EmployeeIds.Count))
+            return BadRequest(new { message = "Select valid, unique employees for the team." });
+
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         var challenge = await db.Challenges.SingleOrDefaultAsync(
             x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
@@ -261,11 +265,27 @@ public sealed class ChallengesController(
         if (challenge.TeamsFinalizedAtUtc.HasValue) return Conflict(new { message = "Teams have already been finalized." });
         if (await db.ChallengeTeams.AnyAsync(x => x.ChallengeId == challengeId && x.Name == request.Name.Trim(), cancellationToken))
             return Conflict(new { message = "A team with this name already exists in the challenge." });
-        var team = new ChallengeTeam(Guid.NewGuid(), challengeId, request.Name, timeProvider.GetUtcNow().UtcDateTime);
+
+        var employeeIds = request.EmployeeIds ?? new System.Collections.Generic.List<Guid>();
+        if (employeeIds.Count > 0)
+        {
+            var joinedIds = await db.ChallengeParticipations
+                .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined")
+                .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
+            if (employeeIds.Any(x => !joinedIds.Contains(x)))
+                return BadRequest(new { message = "Only employees who joined the challenge can be assigned to a team." });
+            if (await db.ChallengeTeamMembers.AnyAsync(x => x.ChallengeId == challengeId && employeeIds.Contains(x.EmployeeId), cancellationToken))
+                return Conflict(new { message = "An employee is already assigned to a team in this challenge." });
+        }
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var team = new ChallengeTeam(Guid.NewGuid(), challengeId, request.Name, now);
         db.ChallengeTeams.Add(team);
+        foreach (var employeeId in employeeIds)
+            db.ChallengeTeamMembers.Add(new ChallengeTeamMember(Guid.NewGuid(), challengeId, team.Id, employeeId, now));
         try { await db.SaveChangesAsync(cancellationToken); }
-        catch (DbUpdateException) { return Conflict(new { message = "A team with this name already exists in the challenge." }); }
-        return Created($"/api/challenges/{challengeId}/teams/{team.Id}", new { team.Id, team.Name });
+        catch (DbUpdateException) { return Conflict(new { message = "A team with this name or one of its employees is already assigned." }); }
+        return Created($"/api/challenges/{challengeId}/teams/{team.Id}", new { team.Id, team.Name, assignedCount = employeeIds.Count });
     }
 
     [HttpPost("{challengeId:guid}/teams/{teamId:guid}/members")]
@@ -362,7 +382,7 @@ public sealed class ChallengesController(
         DateOnly RegistrationDeadline, string ResponseStatus, DateTime? JoinedAtUtc, string? TeamName);
     public sealed record SetChallengeResponseRequest(string Status);
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
-    public sealed record CreateChallengeTeamRequest(string Name);
+    public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);
     public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);
     public sealed record TeamMemberResponse(Guid EmployeeId, string DisplayName, string Email);
     public sealed record ChallengeTeamResponse(Guid Id, string Name, int MemberCount, System.Collections.Generic.List<TeamMemberResponse> Members);
