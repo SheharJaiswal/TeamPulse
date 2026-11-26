@@ -50,6 +50,7 @@ public sealed class ChallengesController(
         if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
 
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        // Invitation persistence is the audience boundary for challenge discovery and acknowledgement.
         var challenges = await db.Challenges.AsNoTracking()
             .Where(x => x.OrganizationId == organizationId && x.EndDate >= today &&
                 x.RegistrationDeadline >= today && x.RegistrationClosedAtUtc == null &&
