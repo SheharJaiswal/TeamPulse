@@ -50,7 +50,22 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
 
         Assert.Equal("Employee", employee.Role);
         Assert.True(employee.IsActive);
+        Assert.Equal(1, employee.LifecycleVersion);
         Assert.NotEqual("temporary", employee.PasswordHash);
+
+        var activationOutbox = await database.OutboxMessages
+            .Where(message => message.EventType == "EmployeeActivated")
+            .ToListAsync();
+        var activationMessage = Assert.Single(activationOutbox, message =>
+            JsonDocument.Parse(message.Payload).RootElement
+                .GetProperty("payload").GetProperty("employeeId").GetString() == employee.Id.ToString());
+        using var activationJson = JsonDocument.Parse(activationMessage.Payload);
+        var activationPayload = activationJson.RootElement.GetProperty("payload");
+        Assert.Equal("EmployeeActivated", activationJson.RootElement.GetProperty("eventType").GetString());
+        Assert.Equal("pending", activationPayload.GetProperty("previousStatus").GetString());
+        Assert.Equal("active", activationPayload.GetProperty("newStatus").GetString());
+        Assert.Equal("hr-admin-api", activationPayload.GetProperty("source").GetString());
+        Assert.Equal(1, activationPayload.GetProperty("lifecycleVersion").GetInt64());
         Assert.Equal("Accepted", consumedInvitation.Status);
         Assert.Null(consumedInvitation.TokenDigest);
         Assert.Null(consumedInvitation.PendingNormalizedEmail);
