@@ -29,4 +29,15 @@ public sealed class ChallengeParticipation
     public string ResponseStatus { get; private set; } = "Joined";
     public DateTime RespondedAtUtc { get; private set; }
     public DateTime? JoinedAtUtc { get; private set; }
+
+    public void ChangeResponse(string responseStatus, DateTime respondedAtUtc)
+    {
+        if (responseStatus is not ("Joined" or "Declined"))
+            throw new ArgumentException("Response must be Joined or Declined.", nameof(responseStatus));
+        if (respondedAtUtc.Kind != DateTimeKind.Utc)
+            throw new ArgumentException("Response time must be UTC.", nameof(respondedAtUtc));
+        ResponseStatus = responseStatus;
+        RespondedAtUtc = respondedAtUtc;
+        JoinedAtUtc = responseStatus == "Joined" ? respondedAtUtc : null;
+    }
 }
