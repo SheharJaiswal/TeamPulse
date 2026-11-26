@@ -66,8 +66,7 @@
     <section class="page-content challenge-page">
       <div class="welcome-row"><div><p class="eyebrow">TEAM WELLBEING</p><h1>Challenges</h1><p class="muted">Join a shared goal and take small steps together.</p></div><span class="count-pill">{data.myChallenges.length} responses</span></div>
 
-      {#if formMessage}<div class="alert" role="alert">{formMessage}</div>{/if}
-      {#if successMessage}<div class="alert success" role="status">{successMessage}</div>{/if}
+      {#if formMessage}<div class:success={Boolean(successMessage)} class="alert" role={successMessage ? 'status' : 'alert'}>{formMessage}</div>{/if}
 
       <div class="section-heading"><div><h2>Available challenges</h2><p class="muted">Challenges open to employees in your organization.</p></div><span class="count-pill">{data.availableChallenges.length} available</span></div>
       {#if data.availableChallenges.length === 0}
