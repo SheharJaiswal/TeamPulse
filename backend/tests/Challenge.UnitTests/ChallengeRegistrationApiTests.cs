@@ -90,7 +90,7 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(Guid.NewGuid(), organizationId, "HrAdmin"));
 
-        using var created = await client.PostAsJsonAsync($"/api/challenges/{challengeId}/teams", new { name = "Team Alpha", employeeIds });
+        using var created = await client.PostAsJsonAsync($"/api/challenges/{challengeId}/teams", new { name = "Team Alpha", employeeIds = new[] { employeeIds[0] } });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var team = await created.Content.ReadFromJsonAsync<TeamCreatedResponse>();
         Assert.NotNull(team);
@@ -99,6 +99,11 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
             $"/api/challenges/{challengeId}/teams/{team.Id}",
             new { name = "Team Alpha Updated", employeeIds });
         Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        await using (var afterUpdate = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
+        {
+            Assert.Equal(2, await afterUpdate.ChallengeTeamMembers.CountAsync(x => x.TeamId == team.Id));
+            Assert.Equal("Team Alpha Updated", (await afterUpdate.ChallengeTeams.SingleAsync(x => x.Id == team.Id)).Name);
+        }
 
         using var deleted = await client.DeleteAsync($"/api/challenges/{challengeId}/teams/{team.Id}");
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
