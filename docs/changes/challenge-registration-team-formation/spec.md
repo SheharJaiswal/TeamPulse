@@ -10,6 +10,7 @@
 
 ## Employee acknowledgement
 
+- Available challenges are visible only to employees who have a persisted invitation for that challenge.
 - Employee and HrAdmin may read their own challenge invitations and respond.
 - Join records an explicit Joined response; Decline records Declined.
 - A response is unique per challenge and employee. Repeating the same response is idempotent.
