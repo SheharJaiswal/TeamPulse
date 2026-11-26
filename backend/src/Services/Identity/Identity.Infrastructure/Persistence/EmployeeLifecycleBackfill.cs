@@ -33,6 +33,12 @@ public static class EmployeeLifecycleBackfill
             .AsTracking()
             .ToListAsync(cancellationToken);
 
+        if (activeEmployees.Count == 0)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return;
+        }
+
         foreach (var employee in activeEmployees)
             employee.InitializeActiveLifecycleVersion();
 
