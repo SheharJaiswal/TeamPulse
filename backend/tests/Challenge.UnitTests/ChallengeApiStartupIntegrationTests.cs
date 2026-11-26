@@ -114,7 +114,6 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
             Assert.False(await database.EmployeeStatusProjections.AnyAsync(x => x.EmployeeId == employeeId));
         }
 
-        using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(employeeId, organizationId, role));
 
@@ -131,6 +130,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
     public async Task AvailableChallenges_AllowsEmployeeAndHrAdminWithActiveProjection(string role)
     {
         using var factory = fixture.CreateFactory();
+        using var client = factory.CreateClient(); // Applies the latest schema before inserting invitations.
         var employeeId = Guid.NewGuid();
         const string organizationId = "active-projection-org";
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
