@@ -90,14 +90,10 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(Guid.NewGuid(), organizationId, "HrAdmin"));
 
-        using var created = await client.PostAsJsonAsync($"/api/challenges/{challengeId}/teams", new { name = "Team Alpha" });
+        using var created = await client.PostAsJsonAsync($"/api/challenges/{challengeId}/teams", new { name = "Team Alpha", employeeIds });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var team = await created.Content.ReadFromJsonAsync<TeamCreatedResponse>();
         Assert.NotNull(team);
-
-        using var assigned = await client.PostAsJsonAsync($"/api/challenges/{challengeId}/teams/{team!.Id}/members",
-            new { employeeIds });
-        Assert.Equal(HttpStatusCode.OK, assigned.StatusCode);
 
         using var finalized = await client.PostAsync($"/api/challenges/{challengeId}/teams/finalize", null);
         Assert.Equal(HttpStatusCode.OK, finalized.StatusCode);
