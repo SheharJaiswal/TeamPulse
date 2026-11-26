@@ -53,6 +53,7 @@ public sealed class ChallengesController(
         var challenges = await db.Challenges.AsNoTracking()
             .Where(x => x.OrganizationId == organizationId && x.EndDate >= today &&
                 x.RegistrationDeadline >= today && x.RegistrationClosedAtUtc == null &&
+                db.ChallengeInvitations.Any(i => i.ChallengeId == x.Id && i.EmployeeId == employeeId) &&
                 !db.ChallengeParticipations.Any(p => p.ChallengeId == x.Id && p.EmployeeId == employeeId))
             .OrderBy(x => x.StartDate).ThenBy(x => x.Name)
             .Select(x => new ChallengeResponse(x.Id, x.Name, x.Description, x.StartDate, x.EndDate,
