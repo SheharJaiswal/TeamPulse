@@ -30,6 +30,18 @@ public partial class AddChallengeRegistrationAndTeams : Migration
         migrationBuilder.AlterColumn<DateTime>(name: "joined_at_utc", table: "challenge_participations", type: "datetime(6)", nullable: true,
             oldClrType: typeof(DateTime), oldType: "datetime(6)");
 
+        migrationBuilder.CreateTable(name: "challenge_invitations", columns: table => new
+        {
+            id = table.Column<Guid>(type: "char(36)", nullable: false),
+            challenge_id = table.Column<Guid>(type: "char(36)", nullable: false),
+            employee_id = table.Column<Guid>(type: "char(36)", nullable: false),
+            email = table.Column<string>(type: "varchar(320)", maxLength: 320, nullable: false),
+            display_name = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false),
+            invited_at_utc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+            email_sent_at_utc = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+            email_delivery_status = table.Column<string>(type: "varchar(20)", maxLength: 20, nullable: false)
+        }, constraints: table => table.PrimaryKey("PK_challenge_invitations", x => x.id));
+
         migrationBuilder.CreateTable(name: "challenge_teams", columns: table => new
         {
             id = table.Column<Guid>(type: "char(36)", nullable: false),
@@ -47,6 +59,7 @@ public partial class AddChallengeRegistrationAndTeams : Migration
             assigned_at_utc = table.Column<DateTime>(type: "datetime(6)", nullable: false)
         }, constraints: table => table.PrimaryKey("PK_challenge_team_members", x => x.id));
 
+        migrationBuilder.CreateIndex(name: "IX_challenge_invitations_challenge_id_employee_id", table: "challenge_invitations", columns: new[] { "challenge_id", "employee_id" }, unique: true);
         migrationBuilder.CreateIndex(name: "IX_challenge_teams_challenge_id_name", table: "challenge_teams", columns: new[] { "challenge_id", "name" }, unique: true);
         migrationBuilder.CreateIndex(name: "IX_challenge_team_members_challenge_id_employee_id", table: "challenge_team_members", columns: new[] { "challenge_id", "employee_id" }, unique: true);
         migrationBuilder.CreateIndex(name: "IX_challenge_team_members_team_id", table: "challenge_team_members", column: "team_id");
