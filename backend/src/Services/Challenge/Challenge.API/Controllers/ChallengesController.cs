@@ -253,9 +253,10 @@ public sealed class ChallengesController(
         if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
         if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100)
             return BadRequest(new { message = "Team name must contain 1 to 100 characters." });
-        if (request.EmployeeIds is not null && (request.EmployeeIds.Any(x => x == Guid.Empty) ||
-            request.EmployeeIds.Distinct().Count() != request.EmployeeIds.Count))
-            return BadRequest(new { message = "Select valid, unique employees for the team." });
+        if (request.EmployeeIds is null || request.EmployeeIds.Count == 0 ||
+            request.EmployeeIds.Any(x => x == Guid.Empty) ||
+            request.EmployeeIds.Distinct().Count() != request.EmployeeIds.Count)
+            return BadRequest(new { message = "Select one or more valid, unique joined employees for the team." });
 
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         var challenge = await db.Challenges.SingleOrDefaultAsync(
@@ -266,17 +267,14 @@ public sealed class ChallengesController(
         if (await db.ChallengeTeams.AnyAsync(x => x.ChallengeId == challengeId && x.Name == request.Name.Trim(), cancellationToken))
             return Conflict(new { message = "A team with this name already exists in the challenge." });
 
-        var employeeIds = request.EmployeeIds ?? new System.Collections.Generic.List<Guid>();
-        if (employeeIds.Count > 0)
-        {
-            var joinedIds = await db.ChallengeParticipations
-                .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined")
-                .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
-            if (employeeIds.Any(x => !joinedIds.Contains(x)))
-                return BadRequest(new { message = "Only employees who joined the challenge can be assigned to a team." });
-            if (await db.ChallengeTeamMembers.AnyAsync(x => x.ChallengeId == challengeId && employeeIds.Contains(x.EmployeeId), cancellationToken))
-                return Conflict(new { message = "An employee is already assigned to a team in this challenge." });
-        }
+        var employeeIds = request.EmployeeIds;
+        var joinedIds = await db.ChallengeParticipations
+            .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined")
+            .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
+        if (employeeIds.Any(x => !joinedIds.Contains(x)))
+            return BadRequest(new { message = "Only employees who joined the challenge can be assigned to a team." });
+        if (await db.ChallengeTeamMembers.AnyAsync(x => x.ChallengeId == challengeId && employeeIds.Contains(x.EmployeeId), cancellationToken))
+            return Conflict(new { message = "An employee is already assigned to a team in this challenge." });
 
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var team = new ChallengeTeam(Guid.NewGuid(), challengeId, request.Name, now);
