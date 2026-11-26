@@ -74,8 +74,7 @@ public sealed class ChallengesController(
         var participations = await (
             from participation in db.ChallengeParticipations.AsNoTracking()
             join challenge in db.Challenges.AsNoTracking() on participation.ChallengeId equals challenge.Id
-            where participation.EmployeeId == employeeId && participation.ResponseStatus == "Joined" &&
-                challenge.OrganizationId == organizationId
+            where participation.EmployeeId == employeeId && challenge.OrganizationId == organizationId
             orderby participation.RespondedAtUtc descending
             select new MyChallengeResponse(challenge.Id, challenge.Name, challenge.Description,
                 challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline,
@@ -326,7 +325,7 @@ public sealed class ChallengesController(
     {
         var identityBaseUrl = configuration["Identity:BaseUrl"] ?? "https://localhost:61329";
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{identityBaseUrl.TrimEnd('/')}/api/identity/employees/active");
-        var authorization = Request.Headers.Authorization.ToString();
+        var authorization = Request.Headers["Authorization"].ToString();
         if (string.IsNullOrWhiteSpace(authorization)) return null;
         request.Headers.TryAddWithoutValidation("Authorization", authorization);
         try
