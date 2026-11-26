@@ -102,6 +102,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
     public async Task AvailableChallenges_DeniesAuthenticatedUserWhenLifecycleProjectionIsMissing(string role)
     {
         using var factory = fixture.CreateFactory();
+        using var client = factory.CreateClient(); // Applies migrations before database setup.
         var employeeId = Guid.NewGuid();
         const string organizationId = "missing-projection-org";
         await using (var database = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
@@ -148,7 +149,6 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
             await database.SaveChangesAsync();
         }
 
-        using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", ChallengeApiFactory.CreateToken(employeeId, organizationId, role));
 
