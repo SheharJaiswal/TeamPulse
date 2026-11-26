@@ -219,7 +219,8 @@ public sealed class ChallengesController(
                 invite?.Email ?? string.Empty, response.RespondedAtUtc, team?.Id, team?.Name);
         }).ToList();
 
-        return Ok(new RegistrationSummaryResponse(challenge.Id, challenge.RegistrationDeadline,
+        return Ok(new RegistrationSummaryResponse(challenge.Id, challenge.Name, challenge.Description,
+            challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline,
             challenge.RegistrationClosedAtUtc, challenge.TeamsFinalizedAtUtc,
             invitations.Count, joined.Count, declined, Math.Max(0, invitations.Count - responses.Count),
             participants, teams));
@@ -402,7 +403,8 @@ public sealed class ChallengesController(
     public sealed record TeamMemberResponse(Guid EmployeeId, string DisplayName, string Email);
     public sealed record ChallengeTeamResponse(Guid Id, string Name, int MemberCount, System.Collections.Generic.List<TeamMemberResponse> Members);
     public sealed record RegistrationParticipantResponse(Guid EmployeeId, string DisplayName, string Email, DateTime RespondedAtUtc, Guid? TeamId, string? TeamName);
-    public sealed record RegistrationSummaryResponse(Guid ChallengeId, DateOnly RegistrationDeadline, DateTime? RegistrationClosedAtUtc,
+    public sealed record RegistrationSummaryResponse(Guid ChallengeId, string ChallengeName, string? Description,
+        DateOnly StartDate, DateOnly EndDate, DateOnly RegistrationDeadline, DateTime? RegistrationClosedAtUtc,
         DateTime? TeamsFinalizedAtUtc, int InvitedCount, int JoinedCount, int DeclinedCount, int PendingCount,
         System.Collections.Generic.List<RegistrationParticipantResponse> Participants,
         System.Collections.Generic.List<ChallengeTeamResponse> Teams);
