@@ -53,40 +53,55 @@ public sealed class ChallengeInvitationEmailWorker(
 
         foreach (var invitation in invitations)
         {
-            try
-            {
-                var challenge = await db.Challenges.AsNoTracking()
-                    .SingleOrDefaultAsync(x => x.Id == invitation.ChallengeId, cancellationToken);
-                if (challenge is null)
-                {
-                    invitation.MarkEmailFailed();
-                    continue;
-                }
-
-                using var message = new MailMessage
-                {
-                    From = new MailAddress(fromAddress, fromName),
-                    Subject = $"You're invited: {challenge.Name}",
-                    Body = BuildBody(invitation.DisplayName, challenge, appUrl),
-                    IsBodyHtml = true
-                };
-                message.To.Add(new MailAddress(invitation.Email));
-                using var client = new SmtpClient(host, port)
-                {
-                    EnableSsl = configuration.GetValue<bool>("ChallengeInvitationEmail:EnableSsl"),
-                    Timeout = 15000
-                };
-                var userName = configuration["ChallengeInvitationEmail:UserName"];
-                if (!string.IsNullOrWhiteSpace(userName))
-                    client.Credentials = new System.Net.NetworkCredential(userName, configuration["ChallengeInvitationEmail:Password"]);
-                await client.SendMailAsync(message, cancellationToken);
-                invitation.MarkEmailSent(timeProvider.GetUtcNow().UtcDateTime);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            var challenge = await db.Challenges.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.Id == invitation.ChallengeId, cancellationToken);
+            if (challenge is null)
             {
                 invitation.MarkEmailFailed();
-                logger.LogWarning(exception, "Challenge invitation email failed for employee {EmployeeId}, challenge {ChallengeId}.",
-                    invitation.EmployeeId, invitation.ChallengeId);
+                await db.SaveChangesAsync(cancellationToken);
+                continue;
+            }
+
+            var delivered = false;
+            for (var attempt = 1; attempt <= 3 && !delivered; attempt++)
+            {
+                try
+                {
+                    using var message = new MailMessage
+                    {
+                        From = new MailAddress(fromAddress, fromName),
+                        Subject = $"You're invited: {challenge.Name}",
+                        Body = BuildBody(invitation.DisplayName, challenge, appUrl),
+                        IsBodyHtml = true
+                    };
+                    message.To.Add(new MailAddress(invitation.Email));
+                    using var client = new SmtpClient(host, port)
+                    {
+                        EnableSsl = configuration.GetValue<bool>("ChallengeInvitationEmail:EnableSsl"),
+                        Timeout = 15000
+                    };
+                    var userName = configuration["ChallengeInvitationEmail:UserName"];
+                    if (!string.IsNullOrWhiteSpace(userName))
+                        client.Credentials = new System.Net.NetworkCredential(userName, configuration["ChallengeInvitationEmail:Password"]);
+                    await client.SendMailAsync(message, cancellationToken);
+                    invitation.MarkEmailSent(timeProvider.GetUtcNow().UtcDateTime);
+                    delivered = true;
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    if (attempt == 3)
+                    {
+                        invitation.MarkEmailFailed();
+                        logger.LogWarning(exception, "Challenge invitation email failed after three attempts for employee {EmployeeId}, challenge {ChallengeId}.",
+                            invitation.EmployeeId, invitation.ChallengeId);
+                    }
+                    else
+                    {
+                        logger.LogInformation(exception, "Retrying challenge invitation email attempt {Attempt} for employee {EmployeeId}.",
+                            attempt + 1, invitation.EmployeeId);
+                        await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
+                    }
+                }
             }
             await db.SaveChangesAsync(cancellationToken);
         }
