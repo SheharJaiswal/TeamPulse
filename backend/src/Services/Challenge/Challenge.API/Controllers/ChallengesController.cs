@@ -267,7 +267,7 @@ public sealed class ChallengesController(
         if (await db.ChallengeTeams.AnyAsync(x => x.ChallengeId == challengeId && x.Name == request.Name.Trim(), cancellationToken))
             return Conflict(new { message = "A team with this name already exists in the challenge." });
 
-        var employeeIds = request.EmployeeIds;
+        var employeeIds = request.EmployeeIds!;
         var joinedIds = await db.ChallengeParticipations
             .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined")
             .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
@@ -346,7 +346,9 @@ public sealed class ChallengesController(
         request.Headers.TryAddWithoutValidation("Authorization", authorization);
         try
         {
-            using var response = await httpClientFactory.CreateClient().SendAsync(request, cancellationToken);
+            using var client = httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            using var response = await client.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("Identity employee directory returned {StatusCode} during challenge invitation.", response.StatusCode);
