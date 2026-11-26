@@ -31,6 +31,10 @@ interface Team {
 }
 interface Registration {
   challengeId: string;
+  challengeName: string;
+  description: string | null;
+  startDate: string;
+  endDate: string;
   registrationDeadline: string;
   registrationClosedAtUtc: string | null;
   teamsFinalizedAtUtc: string | null;
