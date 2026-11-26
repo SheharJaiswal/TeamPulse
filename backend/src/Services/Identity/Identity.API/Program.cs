@@ -167,6 +167,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await dbContext.Database.MigrateAsync();
+    await EmployeeLifecycleBackfill.RunAsync(dbContext, TimeProvider.System, System.Threading.CancellationToken.None);
 }
 
 if (app.Environment.IsDevelopment())
