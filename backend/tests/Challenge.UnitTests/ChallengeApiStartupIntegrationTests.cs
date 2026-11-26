@@ -33,6 +33,7 @@ public sealed class ChallengeApiStartupIntegrationTests(ChallengeMySqlFixture fi
         Assert.Contains("20261120200000_AddInboxContentFingerprint", appliedMigrations);
         Assert.Contains("20261126010000_AddChallenges", appliedMigrations);
         Assert.Contains("20261126020000_AddChallengeParticipations", appliedMigrations);
+        Assert.Contains("20261127010000_AddChallengeRegistrationAndTeams", appliedMigrations);
 
         var store = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionStore>();
         var employeeId = Guid.NewGuid();
