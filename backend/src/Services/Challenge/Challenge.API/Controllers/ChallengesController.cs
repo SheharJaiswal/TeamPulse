@@ -77,10 +77,12 @@ public sealed class ChallengesController(
             select new MyChallengeResponse(challenge.Id, challenge.Name, challenge.Description,
                 challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline,
                 participation.ResponseStatus, participation.JoinedAtUtc,
-                (from member in db.ChallengeTeamMembers.AsNoTracking()
-                 join team in db.ChallengeTeams.AsNoTracking() on member.TeamId equals team.Id
-                 where member.ChallengeId == challenge.Id && member.EmployeeId == employeeId
-                 select team.Name).FirstOrDefault())
+                challenge.TeamsFinalizedAtUtc.HasValue
+                    ? (from member in db.ChallengeTeamMembers.AsNoTracking()
+                       join team in db.ChallengeTeams.AsNoTracking() on member.TeamId equals team.Id
+                       where member.ChallengeId == challenge.Id && member.EmployeeId == employeeId
+                       select team.Name).FirstOrDefault()
+                    : null)
         ).ToListAsync(cancellationToken);
         return Ok(participations);
     }
