@@ -16,8 +16,13 @@ interface Challenge {
   description: string | null;
   startDate: string;
   endDate: string;
+  registrationDeadline: string;
+  registrationClosedAtUtc?: string | null;
+  teamsFinalizedAtUtc?: string | null;
   createdAtUtc?: string;
-  joinedAtUtc?: string;
+  responseStatus?: 'Joined' | 'Declined';
+  joinedAtUtc?: string | null;
+  teamName?: string | null;
 }
 
 function requireSession(cookies: Cookies): string {
@@ -85,9 +90,10 @@ export const actions: Actions = {
 
     let response: Response;
     try {
-      response = await fetch(`${challengeApiUrl()}/api/challenges/${challengeId}/join`, {
+      response = await fetch(`${challengeApiUrl()}/api/challenges/${challengeId}/response`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${token}` }
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Joined' })
       });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable. Please try again.' });
@@ -102,5 +108,32 @@ export const actions: Actions = {
       });
     }
     return { success: true, message: 'You have joined the challenge.' };
+  },
+  decline: async ({ request, cookies, fetch }) => {
+    const token = requireSession(cookies);
+    const form = await request.formData();
+    const challengeId = String(form.get('challengeId') ?? '');
+    if (!isGuid(challengeId)) return fail(400, { message: 'Choose a valid challenge.' });
+
+    let response: Response;
+    try {
+      response = await fetch(`${challengeApiUrl()}/api/challenges/${challengeId}/response`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'Declined' })
+      });
+    } catch {
+      return fail(503, { message: 'Challenge service is unavailable. Please try again.' });
+    }
+    if (response.status === 401) {
+      expireSession(cookies);
+      redirect(303, '/login');
+    }
+    if (!response.ok) {
+      return fail([400, 403, 404, 409].includes(response.status) ? response.status : 502, {
+        message: await responseMessage(response, 'Your response could not be saved.')
+      });
+    }
+    return { success: true, message: 'You have declined this challenge.' };
   }
 };
