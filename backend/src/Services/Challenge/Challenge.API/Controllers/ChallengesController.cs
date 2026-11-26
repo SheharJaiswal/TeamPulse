@@ -296,10 +296,11 @@ public sealed class ChallengesController(
     public async Task<IActionResult> UpdateTeam(Guid challengeId, Guid teamId, UpdateChallengeTeamRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
+        var employeeIds = request?.EmployeeIds;
         if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100)
             return BadRequest(new { message = "Team name must contain 1 to 100 characters." });
-        if (request.EmployeeIds is null || request.EmployeeIds.Any(x => x == Guid.Empty) ||
-            request.EmployeeIds.Distinct().Count() != request.EmployeeIds.Count)
+        if (employeeIds is null || employeeIds.Any(x => x == Guid.Empty) ||
+            employeeIds.Distinct().Count() != employeeIds.Count)
             return BadRequest(new { message = "Team members must be valid and unique." });
 
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
@@ -320,24 +321,24 @@ public sealed class ChallengesController(
         var joinedIds = await db.ChallengeParticipations
             .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined")
             .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
-        if (request.EmployeeIds.Any(x => !joinedIds.Contains(x)))
+        if (employeeIds.Any(x => !joinedIds.Contains(x)))
             return BadRequest(new { message = "Only employees who joined the challenge can be assigned to a team." });
         if (await db.ChallengeTeamMembers.AnyAsync(
-            x => x.ChallengeId == challengeId && x.TeamId != teamId && request.EmployeeIds.Contains(x.EmployeeId), cancellationToken))
+            x => x.ChallengeId == challengeId && x.TeamId != teamId && employeeIds.Contains(x.EmployeeId), cancellationToken))
             return Conflict(new { message = "An employee is already assigned to another team in this challenge." });
 
         var existingMembers = await db.ChallengeTeamMembers
             .Where(x => x.ChallengeId == challengeId && x.TeamId == teamId).ToListAsync(cancellationToken);
-        var requestedIds = request.EmployeeIds.ToHashSet();
+        var requestedIds = employeeIds.ToHashSet();
         var existingIds = existingMembers.Select(x => x.EmployeeId).ToHashSet();
         db.ChallengeTeamMembers.RemoveRange(existingMembers.Where(x => !requestedIds.Contains(x.EmployeeId)));
         team.UpdateName(name);
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        foreach (var employeeId in request.EmployeeIds.Where(x => !existingIds.Contains(x)))
+        foreach (var employeeId in employeeIds.Where(x => !existingIds.Contains(x)))
             db.ChallengeTeamMembers.Add(new ChallengeTeamMember(Guid.NewGuid(), challengeId, teamId, employeeId, now));
         try { await db.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateException) { return Conflict(new { message = "The team name or member assignments conflict with existing challenge data." }); }
-        return Ok(new { team.Id, team.Name, assignedCount = request.EmployeeIds.Count });
+        return Ok(new { team.Id, team.Name, assignedCount = employeeIds.Count });
     }
 
     [HttpDelete("{challengeId:guid}/teams/{teamId:guid}")]
