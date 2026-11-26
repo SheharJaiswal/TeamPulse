@@ -56,6 +56,7 @@
           <div class="form-field full"><label for="challenge-description">Description <span>Optional</span></label><textarea id="challenge-description" name="description" maxlength="1000" rows="4" placeholder="Describe the challenge goal and how to take part."></textarea></div>
           <div class="form-field"><label for="challenge-start">Start date</label><input id="challenge-start" name="startDate" type="date" value={toLocalDateInputValue()} required /></div>
           <div class="form-field"><label for="challenge-end">End date</label><input id="challenge-end" name="endDate" type="date" value={toLocalDateInputValue()} required /></div>
+          <div class="form-field"><label for="challenge-registration-deadline">Registration deadline</label><input id="challenge-registration-deadline" name="registrationDeadline" type="date" value={toLocalDateInputValue()} required /><small>Employees must Join or Decline by this date. HR closes registration before forming teams.</small></div>
           <div class="form-actions full"><button class="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creating…' : 'Create challenge →'}</button></div>
         </form>
       </section>
@@ -65,7 +66,7 @@
       {:else}
         <div class="habit-grid">
           {#each data.challenges as challenge (challenge.id)}
-            <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Organization challenge</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'No description provided.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{challenge.startDate}</strong></div><div><span class="detail-label">ENDS</span><strong>{challenge.endDate}</strong></div></div><div class="habit-footer"><span>Created {new Date(challenge.createdAtUtc).toLocaleDateString()}</span></div></article>
+            <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Organization challenge</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'No description provided.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{challenge.startDate}</strong></div><div><span class="detail-label">ENDS</span><strong>{challenge.endDate}</strong></div></div><div class="habit-footer"><span>Registration: {challenge.registrationClosedAtUtc ? 'Closed' : 'Open'} · Deadline {challenge.registrationDeadline}</span><a class="primary-button" href={`/hr/challenges/${challenge.id}`}>Manage registration & teams →</a></div></article>
           {/each}
         </div>
       {/if}
@@ -73,6 +74,6 @@
   </main>
 </div>
 <style>
-  .hr-page{max-width:1240px}.hr-access-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #d9eee5;border-radius:999px;color:#247653;background:#f2faf6;font-size:12px;font-weight:700;white-space:nowrap}.hr-access-pill span{width:7px;height:7px;border-radius:50%;background:#39a878;display:inline-block}.challenge-create{margin-bottom:30px}
+  .hr-page{max-width:1240px}.hr-access-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #d9eee5;border-radius:999px;color:#247653;background:#f2faf6;font-size:12px;font-weight:700;white-space:nowrap}.hr-access-pill span{width:7px;height:7px;border-radius:50%;background:#39a878;display:inline-block}.challenge-create{margin-bottom:30px}.create-form small{display:block;margin-top:7px;color:#75817d;font-size:11px;line-height:1.5}.habit-footer .primary-button{display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
   @media(max-width:650px){.welcome-row{align-items:flex-start}}
 </style>
