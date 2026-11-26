@@ -29,6 +29,24 @@ public sealed class EmployeeStatusProjectionProcessorTests
         Assert.DoesNotContain("private HR note", JsonSerializer.Serialize(captured));
     }
 
+    [Theory]
+    [InlineData("EmployeeActivated", "pending", "active")]
+    [InlineData("EmployeeActiveSnapshot", "active", "active")]
+    public async Task ProcessAsync_MapsInitialActivationAndActiveSnapshot(string eventType, string previousStatus, string newStatus)
+    {
+        var store = new RecordingStore();
+        var processor = new EmployeeStatusProjectionProcessor(store, TimeProvider.System);
+        var result = await processor.ProcessAsync(
+            CreateMessage(eventType, previousStatus, newStatus, 1, Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.Equal(ProjectionProcessingOutcome.Applied, result);
+        var captured = Assert.IsType<EmployeeLifecycleEvent>(store.LastEvent);
+        Assert.True(captured.IsActive);
+        Assert.Equal(eventType, captured.EventType);
+        Assert.Equal(1, captured.LifecycleVersion);
+    }
+
     [Fact]
     public async Task ProcessAsync_ClassifiesInvalidProducerAndMalformedActor()
     {
