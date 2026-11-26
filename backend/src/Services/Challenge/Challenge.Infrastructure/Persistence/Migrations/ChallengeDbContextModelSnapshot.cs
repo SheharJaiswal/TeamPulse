@@ -66,6 +66,20 @@ partial class ChallengeDbContextModelSnapshot : ModelSnapshot
             b.HasIndex("TeamId").HasDatabaseName("IX_challenge_team_members_team_id");
             b.ToTable("challenge_team_members");
         });
+        modelBuilder.Entity("Challenge.Domain.Entities.ChallengeInvitation", b =>
+        {
+            b.Property<Guid>("Id").HasColumnType("char(36)").HasColumnName("id");
+            b.Property<Guid>("ChallengeId").HasColumnType("char(36)").HasColumnName("challenge_id");
+            b.Property<Guid>("EmployeeId").HasColumnType("char(36)").HasColumnName("employee_id");
+            b.Property<string>("Email").IsRequired().HasMaxLength(320).HasColumnType("varchar(320)").HasColumnName("email");
+            b.Property<string>("DisplayName").IsRequired().HasMaxLength(150).HasColumnType("varchar(150)").HasColumnName("display_name");
+            b.Property<DateTime>("InvitedAtUtc").HasColumnType("datetime(6)").HasColumnName("invited_at_utc");
+            b.Property<DateTime?>("EmailSentAtUtc").HasColumnType("datetime(6)").HasColumnName("email_sent_at_utc");
+            b.Property<string>("EmailDeliveryStatus").IsRequired().HasMaxLength(20).HasColumnType("varchar(20)").HasColumnName("email_delivery_status");
+            b.HasKey("Id");
+            b.HasIndex("ChallengeId", "EmployeeId").IsUnique().HasDatabaseName("IX_challenge_invitations_challenge_id_employee_id");
+            b.ToTable("challenge_invitations");
+        });
         modelBuilder.Entity("Challenge.Domain.Entities.EmployeeStatusProjection", b =>
         {
             b.Property<Guid>("EmployeeId").HasColumnType("char(36)").HasColumnName("employee_id");
