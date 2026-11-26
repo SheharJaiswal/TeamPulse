@@ -110,6 +110,7 @@ public sealed class ChallengesController(
             x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
         if (challenge is null) return NotFound(new { message = "Challenge was not found in your organization." });
 
+        // Registration closure/deadline is the hard boundary: pending invitees cannot join after it.
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         if (challenge.RegistrationClosedAtUtc.HasValue || challenge.RegistrationDeadline < today)
             return Conflict(new { message = "Challenge registration is closed. Pending employees are not participants." });
