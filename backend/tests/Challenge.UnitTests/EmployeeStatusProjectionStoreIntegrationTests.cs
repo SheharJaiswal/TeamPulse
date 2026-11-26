@@ -131,7 +131,8 @@ public sealed class EmployeeStatusProjectionStoreIntegrationTests(ChallengeMySql
             "20261120190000_InitialChallengeProjection",
             "20261120200000_AddInboxContentFingerprint",
             "20261126010000_AddChallenges",
-            "20261126020000_AddChallengeParticipations"
+            "20261126020000_AddChallengeParticipations",
+            "20261127010000_AddChallengeRegistrationAndTeams"
         }, appliedMigrations);
     }
 
