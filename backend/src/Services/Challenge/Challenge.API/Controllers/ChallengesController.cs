@@ -328,10 +328,12 @@ public sealed class ChallengesController(
 
         var existingMembers = await db.ChallengeTeamMembers
             .Where(x => x.ChallengeId == challengeId && x.TeamId == teamId).ToListAsync(cancellationToken);
-        db.ChallengeTeamMembers.RemoveRange(existingMembers);
+        var requestedIds = request.EmployeeIds.ToHashSet();
+        var existingIds = existingMembers.Select(x => x.EmployeeId).ToHashSet();
+        db.ChallengeTeamMembers.RemoveRange(existingMembers.Where(x => !requestedIds.Contains(x.EmployeeId)));
         team.UpdateName(name);
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        foreach (var employeeId in request.EmployeeIds)
+        foreach (var employeeId in request.EmployeeIds.Where(x => !existingIds.Contains(x)))
             db.ChallengeTeamMembers.Add(new ChallengeTeamMember(Guid.NewGuid(), challengeId, teamId, employeeId, now));
         try { await db.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateException) { return Conflict(new { message = "The team name or member assignments conflict with existing challenge data." }); }
