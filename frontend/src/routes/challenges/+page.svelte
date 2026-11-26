@@ -64,7 +64,7 @@
   <main class="main-content">
     <header class="topbar"><span class="breadcrumb">Workspace / <strong>Challenges</strong></span><div class="topbar-right"><span class="status-dot"></span><span>Team wellbeing</span><div class="avatar small">{data.employee.displayName.slice(0, 1).toUpperCase()}</div></div></header>
     <section class="page-content challenge-page">
-      <div class="welcome-row"><div><p class="eyebrow">TEAM WELLBEING</p><h1>Challenges</h1><p class="muted">Join a shared goal and take small steps together.</p></div><span class="count-pill">{data.myChallenges.length} joined</span></div>
+      <div class="welcome-row"><div><p class="eyebrow">TEAM WELLBEING</p><h1>Challenges</h1><p class="muted">Join a shared goal and take small steps together.</p></div><span class="count-pill">{data.myChallenges.length} responses</span></div>
 
       {#if formMessage}<div class="alert" role="alert">{formMessage}</div>{/if}
       {#if successMessage}<div class="alert success" role="status">{successMessage}</div>{/if}
@@ -87,13 +87,13 @@
       {/if}
 
       <section class="my-challenges-section">
-        <div class="section-heading"><div><h2>My responses</h2><p class="muted">Your acknowledgement and assigned challenge team.</p></div><span class="count-pill">{data.myChallenges.length} joined</span></div>
+        <div class="section-heading"><div><h2>My responses</h2><p class="muted">Your acknowledgement and assigned challenge team.</p></div><span class="count-pill">{data.myChallenges.length} responses</span></div>
         {#if data.myChallenges.length === 0}
-          <section class="empty-state"><div class="empty-illustration">✓</div><h3>Your challenge journey starts here</h3><p>Join an available challenge and it will appear in this list.</p></section>
+          <section class="empty-state"><div class="empty-illustration">✓</div><h3>Your challenge journey starts here</h3><p>Your Join or Decline acknowledgement will appear here.</p></section>
         {:else}
           <div class="habit-grid">
             {#each data.myChallenges as challenge (challenge.id)}
-              <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Challenge response</span><span class="active-indicator"><i></i> {challenge.responseStatus}</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div><div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined' && data.myChallenges.some(item => item.id === challenge.id)}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
+              <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Challenge response</span><span class="active-indicator"><i></i> {challenge.responseStatus}</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div><div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined'}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
             {/each}
           </div>
         {/if}
