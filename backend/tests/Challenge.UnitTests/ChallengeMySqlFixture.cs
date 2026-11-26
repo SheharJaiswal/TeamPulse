@@ -16,6 +16,16 @@ public sealed class ChallengeMySqlFixture : IAsyncLifetime
     public string ConnectionString => _database.GetConnectionString();
 
     public ChallengeApiFactory CreateFactory() => new(ConnectionString);
-    public Task InitializeAsync() => _database.StartAsync();
+
+    public async Task InitializeAsync()
+    {
+        await _database.StartAsync();
+
+        // Apply the complete schema once before test cases run in parallel against this fixture.
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        using var readiness = await client.GetAsync("/health/ready");
+        readiness.EnsureSuccessStatusCode();
+    }
     public async Task DisposeAsync() => await _database.DisposeAsync();
 }
