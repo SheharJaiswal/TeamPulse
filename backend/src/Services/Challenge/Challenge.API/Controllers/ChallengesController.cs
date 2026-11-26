@@ -1,10 +1,8 @@
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Net.Mail;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -179,7 +177,6 @@ public sealed class ChallengesController(
                 employee.Email, employee.DisplayName, now));
         await db.SaveChangesAsync(cancellationToken);
 
-        await SendInvitationEmails(db, challenge, activeEmployees, cancellationToken);
         return Created("/api/challenges", new ChallengeResponse(challenge.Id, challenge.Name, challenge.Description,
             challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline, challenge.RegistrationClosedAtUtc,
             challenge.TeamsFinalizedAtUtc, challenge.CreatedAtUtc));
@@ -343,49 +340,6 @@ public sealed class ChallengesController(
             logger.LogWarning(exception, "Identity employee directory is unavailable during challenge invitation.");
             return null;
         }
-    }
-
-    private async Task SendInvitationEmails(ChallengeDbContext db, Challenge.Domain.Entities.Challenge challenge,
-        ActiveEmployee[] employees, CancellationToken cancellationToken)
-    {
-        if (!configuration.GetValue<bool>("ChallengeInvitationEmail:Enabled"))
-        {
-            logger.LogWarning("Challenge invitation email is disabled; invitations are recorded but not emailed for challenge {ChallengeId}.", challenge.Id);
-            return;
-        }
-        var host = configuration["ChallengeInvitationEmail:Host"] ?? "localhost";
-        var port = configuration.GetValue<int?>("ChallengeInvitationEmail:Port") ?? 1025;
-        var fromAddress = configuration["ChallengeInvitationEmail:FromAddress"] ?? "no-reply@teampulse.local";
-        var fromName = configuration["ChallengeInvitationEmail:FromName"] ?? "TeamPulse";
-        var appUrl = configuration["ChallengeInvitationEmail:ApplicationBaseUrl"] ?? "http://localhost:5173/challenges";
-        foreach (var employee in employees)
-        {
-            var invitation = await db.ChallengeInvitations.SingleAsync(
-                x => x.ChallengeId == challenge.Id && x.EmployeeId == employee.EmployeeId, cancellationToken);
-            try
-            {
-                using var message = new MailMessage
-                {
-                    From = new MailAddress(fromAddress, fromName),
-                    Subject = $"You're invited: {challenge.Name}",
-                    Body = $"<html><body><p>Hello {WebUtility.HtmlEncode(employee.DisplayName)},</p><p>HR has invited you to <strong>{WebUtility.HtmlEncode(challenge.Name)}</strong>.</p><p>{WebUtility.HtmlEncode(challenge.Description ?? string.Empty)}</p><p>Challenge dates: {challenge.StartDate:yyyy-MM-dd} to {challenge.EndDate:yyyy-MM-dd}</p><p>Respond by: {challenge.RegistrationDeadline:yyyy-MM-dd}</p><p><a href=\"{WebUtility.HtmlEncode(appUrl)}\">Open TeamPulse to Join or Decline</a></p></body></html>",
-                    IsBodyHtml = true
-                };
-                message.To.Add(new MailAddress(employee.Email));
-                using var client = new SmtpClient(host, port) { EnableSsl = configuration.GetValue<bool>("ChallengeInvitationEmail:EnableSsl"), Timeout = 15000 };
-                var userName = configuration["ChallengeInvitationEmail:UserName"];
-                if (!string.IsNullOrWhiteSpace(userName))
-                    client.Credentials = new System.Net.NetworkCredential(userName, configuration["ChallengeInvitationEmail:Password"]);
-                await client.SendMailAsync(message, cancellationToken);
-                invitation.MarkEmailSent(timeProvider.GetUtcNow().UtcDateTime);
-            }
-            catch (Exception exception) when (exception is SmtpException or FormatException or InvalidOperationException)
-            {
-                invitation.MarkEmailFailed();
-                logger.LogWarning(exception, "Challenge invitation email failed for employee {EmployeeId}, challenge {ChallengeId}.", employee.EmployeeId, challenge.Id);
-            }
-        }
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task<bool> IsActiveEmployee(ChallengeDbContext db, Guid employeeId, CancellationToken cancellationToken) =>
