@@ -153,7 +153,8 @@ export const actions: Actions = {
   finalize: async ({ cookies, fetch, params }) => {
     const token = requireSession(cookies);
     await verifyHr(token, cookies, fetch);
-    if (!isGuid(params.challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
+    const challengeId = params.challengeId ?? '';
+    if (!isGuid(challengeId)) return fail(400, { message: 'Invalid challenge identifier.' });
     let response: Response;
     try {
       response = await callApi(fetch, token, `${challengeApiUrl()}/api/challenges/${challengeId}/teams/finalize`, { method: 'POST' });
