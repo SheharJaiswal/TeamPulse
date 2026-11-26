@@ -80,20 +80,20 @@
               <h3>{challenge.name}</h3>
               <p class="habit-description">{challenge.description || 'Take part in this organization challenge.'}</p>
               <div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div>
-              <div class="habit-footer"><span>Join to add this to My challenges.</span><form method="POST" action="?/join" use:enhance={handleEnhance} aria-busy={isJoining}><input type="hidden" name="challengeId" value={challenge.id} /><button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Joining…' : 'Join challenge →'}</button></form></div>
+              <div class="habit-footer"><span>Respond by {dateLabel(challenge.registrationDeadline)}.</span><div class="response-actions"><form method="POST" action="?/join" use:enhance={handleEnhance} aria-busy={isJoining}><input type="hidden" name="challengeId" value={challenge.id} /><button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Join challenge'}</button></form><form method="POST" action="?/decline" use:enhance={handleEnhance} aria-busy={isJoining}><input type="hidden" name="challengeId" value={challenge.id} /><button class="secondary-button" type="submit" disabled={isJoining}>Decline</button></form></div></div>
             </article>
           {/each}
         </div>
       {/if}
 
       <section class="my-challenges-section">
-        <div class="section-heading"><div><h2>My challenges</h2><p class="muted">Challenges you have joined.</p></div><span class="count-pill">{data.myChallenges.length} joined</span></div>
+        <div class="section-heading"><div><h2>My responses</h2><p class="muted">Your acknowledgement and assigned challenge team.</p></div><span class="count-pill">{data.myChallenges.length} joined</span></div>
         {#if data.myChallenges.length === 0}
           <section class="empty-state"><div class="empty-illustration">✓</div><h3>Your challenge journey starts here</h3><p>Join an available challenge and it will appear in this list.</p></section>
         {:else}
           <div class="habit-grid">
             {#each data.myChallenges as challenge (challenge.id)}
-              <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Joined challenge</span><span class="active-indicator"><i></i> Joined</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div><div class="habit-footer"><span>Joined {challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}</span></div></article>
+              <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Challenge response</span><span class="active-indicator"><i></i> {challenge.responseStatus}</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div><div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined' && data.myChallenges.some(item => item.id === challenge.id)}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
             {/each}
           </div>
         {/if}
@@ -102,6 +102,6 @@
   </main>
 </div>
 <style>
-  .challenge-page{max-width:1240px}.challenge-card h3{margin-top:17px}.challenge-card .habit-footer{gap:12px;align-items:center}.challenge-card .primary-button{min-height:37px;padding:0 13px;font-size:10px;white-space:nowrap}.challenge-card .habit-footer form{margin:0}.my-challenges-section{margin-top:42px}
-  @media(max-width:650px){.challenge-card .habit-footer{align-items:flex-start;flex-direction:column}.challenge-card .habit-footer form,.challenge-card .primary-button{width:100%}}
+  .challenge-page{max-width:1240px}.challenge-card h3{margin-top:17px}.challenge-card .habit-footer{gap:12px;align-items:center}.challenge-card .primary-button{min-height:37px;padding:0 13px;font-size:10px;white-space:nowrap}.challenge-card .habit-footer form{margin:0}.response-actions{display:flex;gap:8px;flex-wrap:wrap}.response-actions form{margin:0}.secondary-button{min-height:37px;padding:0 13px;border:1px solid #dce5e0;border-radius:10px;background:#fff;color:#41524b;font-size:10px;font-weight:700;cursor:pointer}.my-challenges-section{margin-top:42px}
+  @media(max-width:650px){.challenge-card .habit-footer{align-items:flex-start;flex-direction:column}.challenge-card .habit-footer form,.challenge-card .primary-button,.response-actions{width:100%}.response-actions form{flex:1}.response-actions button{width:100%}}
 </style>
