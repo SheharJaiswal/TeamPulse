@@ -12,6 +12,25 @@ public sealed class ChallengeApiFactory(
 {
     private const string TestSigningKey = "challenge-integration-test-signing-key-at-least-32-bytes";
 
+    public static string CreateToken(System.Guid employeeId, string organizationId, string role)
+    {
+        var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+            System.Text.Encoding.UTF8.GetBytes(TestSigningKey));
+        var credentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(
+            key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+        var claims = new[]
+        {
+            new System.Security.Claims.Claim("sub", employeeId.ToString()),
+            new System.Security.Claims.Claim("organization_id", organizationId),
+            new System.Security.Claims.Claim("role", role)
+        };
+        var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: "TeamPulse.Identity", audience: "TeamPulse.Services", claims: claims,
+            notBefore: System.DateTime.UtcNow.AddMinutes(-1),
+            expires: System.DateTime.UtcNow.AddMinutes(10), signingCredentials: credentials);
+        return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");

@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Identity.Application.Abstractions;
 using Identity.Application.Contracts;
 using Identity.Domain.Entities;
@@ -97,6 +98,34 @@ public sealed class EmployeeInvitationActivationService(
             invitation.TeamId,
             "Employee");
 
+        if (!employee.InitializeActiveLifecycleVersion())
+            throw new InvalidOperationException("Newly activated employee lifecycle version could not be initialized.");
+
+        var eventId = Guid.NewGuid();
+        var correlationId = Guid.NewGuid();
+        var envelope = new EmployeeLifecycleEventEnvelope(
+            eventId,
+            "EmployeeActivated",
+            1,
+            nowUtc,
+            correlationId,
+            new EmployeeLifecycleEventPayload(
+                employee.Id,
+                employee.Id,
+                "hr-admin-api",
+                "pending",
+                "active",
+                employee.LifecycleVersion,
+                "employee-invitation-activated",
+                null));
+        database.OutboxMessages.Add(new OutboxMessage(
+            eventId,
+            "EmployeeActivated",
+            1,
+            nowUtc,
+            correlationId,
+            JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web))));
+
         database.Employees.Add(employee);
         if (!invitation.Accept(nowUtc))
         {
@@ -149,6 +178,14 @@ public sealed class EmployeeInvitationActivationService(
         if (secret is not null)
             database.InvitationDeliverySecrets.Remove(secret);
     }
+
+    private sealed record EmployeeLifecycleEventEnvelope(
+        Guid EventId, string EventType, int SchemaVersion, DateTime OccurredAtUtc,
+        Guid CorrelationId, EmployeeLifecycleEventPayload Payload);
+
+    private sealed record EmployeeLifecycleEventPayload(
+        Guid EmployeeId, Guid ActorEmployeeId, string Source, string PreviousStatus,
+        string NewStatus, long LifecycleVersion, string ReasonCode, string? Note);
 
     private static EmployeeInvitationActivationResult Invalid() =>
         new(EmployeeInvitationActivationStatus.Invalid);

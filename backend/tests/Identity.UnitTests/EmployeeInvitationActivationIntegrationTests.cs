@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+using System.Threading;
 using System.Net;
 using System.Net.Http.Json;
 using System.IdentityModel.Tokens.Jwt;
@@ -9,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Identity.Application.Abstractions;
 using Identity.Application.Contracts;
 using Identity.Infrastructure.Persistence;
+using Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -50,7 +54,22 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
 
         Assert.Equal("Employee", employee.Role);
         Assert.True(employee.IsActive);
+        Assert.Equal(1, employee.LifecycleVersion);
         Assert.NotEqual("temporary", employee.PasswordHash);
+
+        var activationOutbox = await database.OutboxMessages
+            .Where(message => message.EventType == "EmployeeActivated")
+            .ToListAsync();
+        var activationMessage = Assert.Single(activationOutbox, message =>
+            JsonDocument.Parse(message.Payload).RootElement
+                .GetProperty("payload").GetProperty("employeeId").GetString() == employee.Id.ToString());
+        using var activationJson = JsonDocument.Parse(activationMessage.Payload);
+        var activationPayload = activationJson.RootElement.GetProperty("payload");
+        Assert.Equal("EmployeeActivated", activationJson.RootElement.GetProperty("eventType").GetString());
+        Assert.Equal("pending", activationPayload.GetProperty("previousStatus").GetString());
+        Assert.Equal("active", activationPayload.GetProperty("newStatus").GetString());
+        Assert.Equal("hr-admin-api", activationPayload.GetProperty("source").GetString());
+        Assert.Equal(1, activationPayload.GetProperty("lifecycleVersion").GetInt64());
         Assert.Equal("Accepted", consumedInvitation.Status);
         Assert.Null(consumedInvitation.TokenDigest);
         Assert.Null(consumedInvitation.PendingNormalizedEmail);
@@ -61,6 +80,46 @@ public sealed class EmployeeInvitationActivationIntegrationTests : IClassFixture
             "/api/identity/login",
             new { email = invitation.Email, password = "Strong-password-2026!" });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+    }
+
+    [Fact]
+    public async Task LifecycleBackfill_PublishesOneActiveSnapshotAndInitializesLegacyVersion()
+    {
+        using var factory = _fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        await EnsureDatabaseAsync(client);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var employeeId = Guid.NewGuid();
+        var employee = new Employee(
+            employeeId,
+            $"backfill-{employeeId:N}@example.com",
+            $"BACKFILL-{employeeId:N}@EXAMPLE.COM",
+            "Backfill Employee",
+            "password-hash",
+            "org-test",
+            null,
+            "Employee");
+        database.Employees.Add(employee);
+        await database.SaveChangesAsync();
+        Assert.Equal(0, employee.LifecycleVersion);
+
+        await EmployeeLifecycleBackfill.RunAsync(database, TimeProvider.System, CancellationToken.None);
+        await EmployeeLifecycleBackfill.RunAsync(database, TimeProvider.System, CancellationToken.None);
+
+        Assert.Equal(1, employee.LifecycleVersion);
+        var snapshots = await database.OutboxMessages
+            .Where(message => message.EventType == "EmployeeActiveSnapshot")
+            .ToListAsync();
+        var snapshot = Assert.Single(snapshots, message =>
+            JsonDocument.Parse(message.Payload).RootElement
+                .GetProperty("payload").GetProperty("employeeId").GetString() == employeeId.ToString());
+        using var snapshotJson = JsonDocument.Parse(snapshot.Payload);
+        var payload = snapshotJson.RootElement.GetProperty("payload");
+        Assert.Equal("EmployeeActiveSnapshot", snapshotJson.RootElement.GetProperty("eventType").GetString());
+        Assert.Equal("active", payload.GetProperty("newStatus").GetString());
+        Assert.Equal(1, payload.GetProperty("lifecycleVersion").GetInt64());
     }
 
     [Fact]
