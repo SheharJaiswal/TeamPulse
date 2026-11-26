@@ -5,7 +5,8 @@
 - HR creates a challenge with a registration deadline that is not earlier than the current date and not later than the challenge start date.
 - Challenge creation opens registration and triggers invitations to eligible active employees in the same organization.
 - Invitation email contains challenge name, description, dates, registration deadline, and an authenticated application link. It does not contain a bearer token.
-- Email failure is recorded/logged and does not change response status.
+- Invitation delivery is queued in Challenge-owned persistence and processed by a background SMTP worker.
+- SMTP delivery retries transient failures up to three attempts; final failure is recorded/logged and does not change employee response status.
 
 ## Employee acknowledgement
 
