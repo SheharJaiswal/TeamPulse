@@ -16,7 +16,16 @@ interface Challenge {
   description: string | null;
   startDate: string;
   endDate: string;
+  registrationDeadline: string;
+  registrationClosedAtUtc: string | null;
+  teamsFinalizedAtUtc: string | null;
   createdAtUtc: string;
+}
+interface ActiveEmployee {
+  employeeId: string;
+  email: string;
+  displayName: string;
+  organizationId: string;
 }
 
 function requireSession(cookies: Cookies): string {
@@ -48,17 +57,26 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
   const token = requireSession(cookies);
   const employee = await getHrEmployee(token, cookies, fetch);
   let response: Response;
+  let employeesResponse: Response;
   try {
-    response = await fetch(`${challengeApiUrl()}/api/challenges`, { headers: { authorization: `Bearer ${token}` } });
+    [response, employeesResponse] = await Promise.all([
+      fetch(`${challengeApiUrl()}/api/challenges`, { headers: { authorization: `Bearer ${token}` } }),
+      fetch(`${identityApiUrl()}/api/identity/employees/active`, { headers: { authorization: `Bearer ${token}` } })
+    ]);
   } catch {
-    error(503, 'Challenge service is unavailable. Check that the Challenge API is running.');
+    error(503, 'Challenge or Identity service is unavailable. Check that both APIs are running.');
   }
-  if (response.status === 401) {
+  if (response.status === 401 || employeesResponse.status === 401) {
     expireSession(cookies);
     redirect(303, '/login');
   }
   if (!response.ok) error(response.status === 403 ? 403 : 502, 'Challenges could not be loaded.');
-  return { employee, challenges: (await response.json()) as Challenge[] };
+  if (!employeesResponse.ok) error(employeesResponse.status === 403 ? 403 : 502, 'Employee directory could not be loaded.');
+  return {
+    employee,
+    challenges: (await response.json()) as Challenge[],
+    activeEmployees: (await employeesResponse.json()) as ActiveEmployee[]
+  };
 };
 
 export const actions: Actions = {
@@ -70,17 +88,19 @@ export const actions: Actions = {
     const description = String(form.get('description') ?? '').trim();
     const startDate = String(form.get('startDate') ?? '');
     const endDate = String(form.get('endDate') ?? '');
+    const registrationDeadline = String(form.get('registrationDeadline') ?? '');
     if (!name || name.length > 120) return fail(400, { message: 'Challenge name must contain 1 to 120 characters.' });
     if (description.length > 1000) return fail(400, { message: 'Description cannot exceed 1,000 characters.' });
-    if (!isCalendarDate(startDate) || !isCalendarDate(endDate) || endDate < startDate) {
-      return fail(400, { message: 'Choose valid start and end dates. End date cannot be before start date.' });
+    if (!isCalendarDate(startDate) || !isCalendarDate(endDate) || !isCalendarDate(registrationDeadline) ||
+      endDate < startDate || registrationDeadline < new Date().toLocaleDateString('en-CA') || registrationDeadline > startDate) {
+      return fail(400, { message: 'Choose valid dates. Registration deadline must be today or before the challenge start date.' });
     }
     let response: Response;
     try {
       response = await fetch(`${challengeApiUrl()}/api/challenges`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ name, description: description || null, startDate, endDate })
+        body: JSON.stringify({ name, description: description || null, startDate, endDate, registrationDeadline })
       });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable. Please try again.' });
