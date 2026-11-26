@@ -54,6 +54,7 @@ public partial class AddChallengeRegistrationAndTeams : Migration
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropTable(name: "challenge_invitations");
         migrationBuilder.DropTable(name: "challenge_team_members");
         migrationBuilder.DropTable(name: "challenge_teams");
         migrationBuilder.DropColumn(name: "registration_deadline", table: "challenges");
