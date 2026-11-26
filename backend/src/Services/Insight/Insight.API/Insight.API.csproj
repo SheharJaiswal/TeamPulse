@@ -4,4 +4,7 @@
     <ProjectReference Include="../Insight.Application/Insight.Application.csproj" />
     <ProjectReference Include="../Insight.Infrastructure/Insight.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
 </Project>
