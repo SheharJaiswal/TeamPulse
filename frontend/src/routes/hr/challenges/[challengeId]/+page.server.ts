@@ -69,10 +69,9 @@ async function verifyHr(token: string, cookies: Cookies, fetcher: typeof fetch):
   if (employee.role !== 'HrAdmin') error(403, 'HR administrator access is required.');
 }
 async function callApi(fetcher: typeof fetch, token: string, url: string, init?: RequestInit): Promise<Response> {
-  return fetcher(url, {
-    ...init,
-    headers: { authorization: `Bearer ${token}`, ...(init?.headers ?? {}) }
-  });
+  const headers = new Headers(init?.headers);
+  headers.set('authorization', `Bearer ${token}`);
+  return fetcher(url, { ...init, headers });
 }
 export const load: PageServerLoad = async ({ cookies, fetch, params }) => {
   const token = requireSession(cookies);
