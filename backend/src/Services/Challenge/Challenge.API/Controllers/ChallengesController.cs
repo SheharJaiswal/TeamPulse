@@ -37,7 +37,6 @@ public sealed class ChallengesController(IDbContextFactory<ChallengeDbContext> c
     {
         if (!TryGetScope(out var organizationId, out var employeeId)) return Unauthorized();
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        await EnsureActiveProjectionFromAuthenticatedTokenAsync(db, employeeId, cancellationToken);
         if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
 
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
@@ -59,7 +58,6 @@ public sealed class ChallengesController(IDbContextFactory<ChallengeDbContext> c
     {
         if (!TryGetScope(out var organizationId, out var employeeId)) return Unauthorized();
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        await EnsureActiveProjectionFromAuthenticatedTokenAsync(db, employeeId, cancellationToken);
         if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
 
         var participations = await (
@@ -81,7 +79,6 @@ public sealed class ChallengesController(IDbContextFactory<ChallengeDbContext> c
         if (!TryGetScope(out var organizationId, out var employeeId)) return Unauthorized();
 
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        await EnsureActiveProjectionFromAuthenticatedTokenAsync(db, employeeId, cancellationToken);
         if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
 
         var challenge = await db.Challenges.AsNoTracking()
@@ -135,21 +132,6 @@ public sealed class ChallengesController(IDbContextFactory<ChallengeDbContext> c
         db.Challenges.Add(challenge);
         await db.SaveChangesAsync(cancellationToken);
         return Created("/api/challenges", new ChallengeResponse(challenge.Id, challenge.Name, challenge.Description, challenge.StartDate, challenge.EndDate, challenge.CreatedAtUtc));
-    }
-
-    // Identity only issues JWTs to active employees. Bootstrap a missing local read-model
-    // row from that validated authentication context so employees provisioned before the
-    // lifecycle consumer was enabled are not permanently denied. INSERT IGNORE is atomic
-    // and never overwrites an existing inactive projection from a lifecycle event.
-    private async Task EnsureActiveProjectionFromAuthenticatedTokenAsync(
-        ChallengeDbContext db, Guid employeeId, CancellationToken cancellationToken)
-    {
-        var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
-        await db.Database.ExecuteSqlInterpolatedAsync($@"
-            INSERT IGNORE INTO employee_status_projections
-                (employee_id, is_active, lifecycle_version, updated_at_utc)
-            VALUES ({employeeId}, 1, 0, {nowUtc});",
-            cancellationToken);
     }
 
     private static async Task<bool> IsActiveEmployee(ChallengeDbContext db, Guid employeeId, CancellationToken cancellationToken) =>
