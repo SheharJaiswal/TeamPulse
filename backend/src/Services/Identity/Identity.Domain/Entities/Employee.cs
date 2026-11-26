@@ -34,6 +34,15 @@ public sealed class Employee
     public long LifecycleVersion { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
 
+    public bool InitializeActiveLifecycleVersion()
+    {
+        if (!IsActive || LifecycleVersion != 0)
+            return false;
+
+        LifecycleVersion = 1;
+        return true;
+    }
+
     public bool ChangeActiveState(bool isActive)
     {
         if (IsActive == isActive)
