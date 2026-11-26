@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using Challenge.API.HealthChecks;
+using Challenge.API.BackgroundServices;
 using Challenge.Application;
 using Challenge.Application.Abstractions;
 using Challenge.Infrastructure.Messaging;
@@ -39,6 +40,7 @@ builder.Services.AddSingleton<ChallengeRabbitMqConsumerStatus>();
 builder.Services.AddScoped<IEmployeeStatusProjectionStore, EmployeeStatusProjectionStore>();
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddHostedService<ChallengeRabbitMqConsumer>();
+builder.Services.AddHostedService<ChallengeInvitationEmailWorker>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
