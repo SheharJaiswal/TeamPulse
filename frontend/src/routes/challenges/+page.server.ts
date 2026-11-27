@@ -1,8 +1,9 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { randomUUID } from 'node:crypto';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { challengeApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
-import { isGuid } from '$lib/validation.js';
+import { challengeApiUrl, eventTrackingApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
+import { isCalendarDate, isGuid } from '$lib/validation.js';
 
 interface Employee {
   employeeId: string;
@@ -23,6 +24,16 @@ interface Challenge {
   responseStatus?: 'Joined' | 'Declined';
   joinedAtUtc?: string | null;
   teamName?: string | null;
+  goalInstructions: string;
+  goalTarget: number;
+  goalUnit: string;
+}
+interface ActivityEntry { id: string; challengeId: string; activityDate: string; quantity: number; submittedAtUtc: string; }
+interface ActivityProgress { challengeId: string; totalQuantity: number; entries: ActivityEntry[]; }
+interface MyChallengeWithProgress extends Challenge {
+  progress: ActivityProgress | null;
+  progressAvailable: boolean;
+  activityKey: string;
 }
 
 function requireSession(cookies: Cookies): string {
@@ -74,14 +85,62 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
     const status = availableResponse.status === 403 || myResponse.status === 403 ? 403 : 502;
     error(status, 'Your challenges could not be loaded. Please try again.');
   }
+  const joinedChallenges = (await myResponse.json()) as Challenge[];
+  const myChallenges = await Promise.all(joinedChallenges.map(async challenge => {
+    const activityKey = randomUUID();
+    if (challenge.responseStatus !== 'Joined') {
+      return { ...challenge, progress: null, progressAvailable: true, activityKey } as MyChallengeWithProgress;
+    }
+    try {
+      const progressResponse = await fetch(`${eventTrackingApiUrl()}/api/challenge-activities/mine?challengeId=${challenge.id}`, { headers });
+      if (progressResponse.status === 401) {
+        expireSession(cookies);
+        redirect(303, '/login');
+      }
+      if (!progressResponse.ok) return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
+      return { ...challenge, progress: (await progressResponse.json()) as ActivityProgress, progressAvailable: true, activityKey } as MyChallengeWithProgress;
+    } catch {
+      return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
+    }
+  }));
   return {
     employee,
+    todayDate: new Date().toISOString().slice(0, 10),
     availableChallenges: (await availableResponse.json()) as Challenge[],
-    myChallenges: (await myResponse.json()) as Challenge[]
+    myChallenges
   };
 };
 
 export const actions: Actions = {
+  logActivity: async ({ request, cookies, fetch }) => {
+    const token = requireSession(cookies);
+    const form = await request.formData();
+    const challengeId = String(form.get('challengeId') ?? '');
+    const idempotencyKey = String(form.get('idempotencyKey') ?? '');
+    const activityDate = String(form.get('activityDate') ?? '');
+    const quantity = Number(form.get('quantity'));
+    if (!isGuid(challengeId) || !isGuid(idempotencyKey) || !isCalendarDate(activityDate) ||
+      !Number.isFinite(quantity) || quantity <= 0 || quantity > 1000 || Math.round(quantity * 100) !== quantity * 100) {
+      return fail(400, { message: 'Enter a valid activity date and quantity (greater than zero, up to 1,000, max two decimals).' });
+    }
+    let response: Response;
+    try {
+      response = await fetch(`${eventTrackingApiUrl()}/api/challenge-activities`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ challengeId, activityDate, quantity, idempotencyKey })
+      });
+    } catch {
+      return fail(503, { message: 'Activity Tracking service is unavailable. Please try again.' });
+    }
+    if (response.status === 401) {
+      expireSession(cookies);
+      redirect(303, '/login');
+    }
+    if (!response.ok) return fail([400, 403, 404, 409].includes(response.status) ? response.status : 502,
+      { message: await responseMessage(response, 'Your challenge activity could not be saved.') });
+    return { success: true, message: 'Activity logged. Your challenge progress has been updated.' };
+  },
   join: async ({ request, cookies, fetch }) => {
     const token = requireSession(cookies);
     const form = await request.formData();
