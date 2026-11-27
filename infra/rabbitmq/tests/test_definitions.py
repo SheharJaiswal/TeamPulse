@@ -155,6 +155,7 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
     def test_activity_event_has_dedicated_source_and_dead_letter_bindings(self):
         bindings = {(item["source"], item["destination"], item["routing_key"]) for item in self.definitions["bindings"]}
         self.assertIn((EXCHANGE, ACTIVITY_QUEUE, "habit.activity.recorded"), bindings)
+        self.assertIn((EXCHANGE, ACTIVITY_QUEUE, "challenge.activity.recorded"), bindings)
         self.assertIn((DLX, ACTIVITY_DLQ, ACTIVITY_DEAD_ROUTING_KEY), bindings)
 
 
