@@ -1,6 +1,6 @@
 # Tasks: Employee Activity Summary Insights
 
-**Status:** Approved for implementation.
+**Status:** Implementation in progress; CI verification pending.
 
 ## SDD
 - [x] Confirm metric, storage and self-only API scope with owner.
@@ -8,16 +8,18 @@
 - [x] Finalize proposal/spec/design and acceptance mapping.
 
 ## Implementation
-- [ ] Add daily activity summary domain/application contracts and processor.
-- [ ] Add MySQL schema/migration and transactional inbox + aggregate store.
-- [ ] Add dedicated Insight activity RabbitMQ consumer and DLQ handling.
-- [ ] Add employee-self-only API and JWT subject validation.
-- [ ] Add queue/DLQ bindings and topology contract tests.
-- [ ] Add unit, MySQL, API and RabbitMQ integration tests.
-- [ ] Update README/local configuration and project status.
-- [ ] Run Release build and complete backend/Insight/topology CI.
+- [x] Add daily activity summary contracts and event processor.
+- [x] Add MySQL schema/migration and transactional inbox + aggregate store.
+- [x] Add dedicated Insight activity RabbitMQ consumer and DLQ handling.
+- [x] Add employee-self-only API and JWT subject validation.
+- [x] Add queue/DLQ bindings and topology contract tests.
+- [x] Add event processor unit tests.
+- [x] Update README/local configuration.
+- [ ] Add/verify MySQL transaction and concurrency integration tests.
+- [ ] Add/verify API authorization and RabbitMQ acknowledgement/DLQ integration tests.
+- [ ] Run Release build and complete backend/Insight/topology CI; fix any failures.
 
 ## Review and handoff
 - [ ] Review privacy, cross-employee access, atomicity, event compatibility and queue topology.
-- [ ] Open/update PR to `feature/backend-foundation`.
+- [ ] Update PR to ready for review only after checks pass.
 - [ ] Merge only after review and required CI pass.
