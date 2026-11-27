@@ -37,7 +37,8 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"] = "TeamPulse.Services.IntegrationTests",
                 ["Jwt:SigningKey"] = "integration-test-signing-key-at-least-32-bytes",
                 ["Jwt:AccessTokenMinutes"] = "15",
-                ["InvitationEmail:Enabled"] = "false"
+                ["InvitationEmail:Enabled"] = "false",
+                ["OutboxDispatcher:Enabled"] = "false"
             }.Concat(_additionalSettings).GroupBy(pair => pair.Key)
                 .ToDictionary(group => group.Key, group => group.Last().Value));
         });
