@@ -90,17 +90,18 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
     if (challenge.responseStatus !== 'Joined') {
       return { ...challenge, progress: null, progressAvailable: true, activityKey } as MyChallengeWithProgress;
     }
+    let progressResponse: Response;
     try {
-      const progressResponse = await fetch(`${eventTrackingApiUrl()}/api/challenge-activities/mine?challengeId=${challenge.id}`, { headers });
-      if (progressResponse.status === 401) {
-        expireSession(cookies);
-        redirect(303, '/login');
-      }
-      if (!progressResponse.ok) return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
-      return { ...challenge, progress: (await progressResponse.json()) as ActivityProgress, progressAvailable: true, activityKey } as MyChallengeWithProgress;
+      progressResponse = await fetch(`${eventTrackingApiUrl()}/api/challenge-activities/mine?challengeId=${challenge.id}`, { headers });
     } catch {
       return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
     }
+    if (progressResponse.status === 401) {
+      expireSession(cookies);
+      redirect(303, '/login');
+    }
+    if (!progressResponse.ok) return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
+    return { ...challenge, progress: (await progressResponse.json()) as ActivityProgress, progressAvailable: true, activityKey } as MyChallengeWithProgress;
   }));
   return {
     employee,
