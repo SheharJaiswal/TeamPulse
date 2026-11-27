@@ -291,6 +291,79 @@ public sealed class ChallengesController(
         return Created($"/api/challenges/{challengeId}/teams/{team.Id}", new { team.Id, team.Name, assignedCount = employeeIds.Count });
     }
 
+    [HttpPut("{challengeId:guid}/teams/{teamId:guid}")]
+    [Authorize(Roles = "HrAdmin")]
+    public async Task<IActionResult> UpdateTeam(Guid challengeId, Guid teamId, UpdateChallengeTeamRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
+        var employeeIds = request?.EmployeeIds;
+        if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100)
+            return BadRequest(new { message = "Team name must contain 1 to 100 characters." });
+        if (employeeIds is null || employeeIds.Any(x => x == Guid.Empty) ||
+            employeeIds.Distinct().Count() != employeeIds.Count)
+            return BadRequest(new { message = "Team members must be valid and unique." });
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var challenge = await db.Challenges.SingleOrDefaultAsync(
+            x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
+        if (challenge is null) return NotFound();
+        if (!challenge.RegistrationClosedAtUtc.HasValue) return Conflict(new { message = "Close registration before editing teams." });
+        if (challenge.TeamsFinalizedAtUtc.HasValue) return Conflict(new { message = "Teams have already been finalized." });
+
+        var team = await db.ChallengeTeams.SingleOrDefaultAsync(
+            x => x.Id == teamId && x.ChallengeId == challengeId, cancellationToken);
+        if (team is null) return NotFound();
+        var name = request.Name.Trim();
+        if (await db.ChallengeTeams.AnyAsync(
+            x => x.ChallengeId == challengeId && x.Id != teamId && x.Name == name, cancellationToken))
+            return Conflict(new { message = "A team with this name already exists in the challenge." });
+
+        var joinedIds = await db.ChallengeParticipations
+            .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined")
+            .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
+        if (employeeIds.Any(x => !joinedIds.Contains(x)))
+            return BadRequest(new { message = "Only employees who joined the challenge can be assigned to a team." });
+        if (await db.ChallengeTeamMembers.AnyAsync(
+            x => x.ChallengeId == challengeId && x.TeamId != teamId && employeeIds.Contains(x.EmployeeId), cancellationToken))
+            return Conflict(new { message = "An employee is already assigned to another team in this challenge." });
+
+        var existingMembers = await db.ChallengeTeamMembers
+            .Where(x => x.ChallengeId == challengeId && x.TeamId == teamId).ToListAsync(cancellationToken);
+        var requestedIds = employeeIds.ToHashSet();
+        var existingIds = existingMembers.Select(x => x.EmployeeId).ToHashSet();
+        db.ChallengeTeamMembers.RemoveRange(existingMembers.Where(x => !requestedIds.Contains(x.EmployeeId)));
+        team.UpdateName(name);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        foreach (var employeeId in employeeIds.Where(x => !existingIds.Contains(x)))
+            db.ChallengeTeamMembers.Add(new ChallengeTeamMember(Guid.NewGuid(), challengeId, teamId, employeeId, now));
+        try { await db.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateException) { return Conflict(new { message = "The team name or member assignments conflict with existing challenge data." }); }
+        return Ok(new { team.Id, team.Name, assignedCount = employeeIds.Count });
+    }
+
+    [HttpDelete("{challengeId:guid}/teams/{teamId:guid}")]
+    [Authorize(Roles = "HrAdmin")]
+    public async Task<IActionResult> DeleteTeam(Guid challengeId, Guid teamId, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var challenge = await db.Challenges.SingleOrDefaultAsync(
+            x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
+        if (challenge is null) return NotFound();
+        if (!challenge.RegistrationClosedAtUtc.HasValue) return Conflict(new { message = "Close registration before deleting teams." });
+        if (challenge.TeamsFinalizedAtUtc.HasValue) return Conflict(new { message = "Teams have already been finalized." });
+
+        var team = await db.ChallengeTeams.SingleOrDefaultAsync(
+            x => x.Id == teamId && x.ChallengeId == challengeId, cancellationToken);
+        if (team is null) return NotFound();
+        var members = await db.ChallengeTeamMembers
+            .Where(x => x.ChallengeId == challengeId && x.TeamId == teamId).ToListAsync(cancellationToken);
+        db.ChallengeTeamMembers.RemoveRange(members);
+        db.ChallengeTeams.Remove(team);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("{challengeId:guid}/teams/{teamId:guid}/members")]
     [Authorize(Roles = "HrAdmin")]
     public async Task<IActionResult> AssignTeamMembers(Guid challengeId, Guid teamId, AssignChallengeTeamMembersRequest request, CancellationToken cancellationToken)
@@ -389,6 +462,7 @@ public sealed class ChallengesController(
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
     public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);
     public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);
+    public sealed record UpdateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds);
     public sealed record TeamMemberResponse(Guid EmployeeId, string DisplayName, string Email);
     public sealed record ChallengeTeamResponse(Guid Id, string Name, int MemberCount, System.Collections.Generic.List<TeamMemberResponse> Members);
     public sealed record RegistrationParticipantResponse(Guid EmployeeId, string DisplayName, string Email, DateTime RespondedAtUtc, Guid? TeamId, string? TeamName);
