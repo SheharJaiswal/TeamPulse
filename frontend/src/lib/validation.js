@@ -31,6 +31,6 @@ export function toLocalDateInputValue(date = new Date()) {
  * @param {string} value
  */
 export function parseUtcTimestamp(value) {
-  const hasZone = /(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(value);
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
   return new Date(hasZone ? value : `${value}Z`);
 }
