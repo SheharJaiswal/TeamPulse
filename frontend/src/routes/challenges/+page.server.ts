@@ -133,10 +133,7 @@ export const actions: Actions = {
     } catch {
       return fail(503, { message: 'Activity Tracking service is unavailable. Please try again.' });
     }
-    if (response.status === 401) {
-      expireSession(cookies);
-      redirect(303, '/login');
-    }
+    if (response.status === 401) return fail(401, { message: 'Activity Tracking rejected this request. Your session is still active; please retry or contact support if it persists.' });
     if (!response.ok) return fail([400, 403, 404, 409].includes(response.status) ? response.status : 502,
       { message: await responseMessage(response, 'Your challenge activity could not be saved.') });
     return { success: true, message: 'Activity logged. Your challenge progress has been updated.' };
