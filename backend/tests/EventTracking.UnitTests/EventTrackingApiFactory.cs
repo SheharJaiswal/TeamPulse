@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventTracking.UnitTests;
 
-public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null, Func<HttpMessageHandler>? habitApiHandlerFactory = null, Func<HttpMessageHandler>? challengeApiHandlerFactory = null) : WebApplicationFactory<Program>
+public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null, Func<HttpMessageHandler>? habitApiHandlerFactory = null, Func<HttpMessageHandler>? challengeApiHandlerFactory = null, TimeProvider? timeProvider = null) : WebApplicationFactory<Program>
 {
     private const string JwtSigningKey = "event-tracking-integration-test-signing-key-32-bytes-minimum";
 
@@ -35,6 +35,11 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
         });
         builder.ConfigureServices(services =>
         {
+            if (timeProvider is not null)
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton(timeProvider);
+            }
             if (habitApiHandlerFactory is not null)
                 services.AddHttpClient("HabitApi").ConfigurePrimaryHttpMessageHandler(habitApiHandlerFactory);
             if (challengeApiHandlerFactory is not null)
