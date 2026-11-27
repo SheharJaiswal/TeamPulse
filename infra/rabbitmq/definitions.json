@@ -238,6 +238,14 @@
       "destination_type": "queue",
       "routing_key": "habit.activity.recorded.dead",
       "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.activity.events",
+      "destination_type": "queue",
+      "routing_key": "challenge.activity.recorded",
+      "arguments": []
     }
   ]
 }
