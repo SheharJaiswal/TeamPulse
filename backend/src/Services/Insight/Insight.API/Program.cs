@@ -112,6 +112,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<InsightDynamoDbHealthCheck>("insight-dynamodb", tags: new[] { "ready" })
+    .AddCheck<InsightActivityDatabaseHealthCheck>("insight-activity-database", tags: new[] { "ready" })
     .AddCheck<InsightConsumerHealthCheck>("insight-consumer", tags: new[] { "consumer" });
 
 var app = builder.Build();
