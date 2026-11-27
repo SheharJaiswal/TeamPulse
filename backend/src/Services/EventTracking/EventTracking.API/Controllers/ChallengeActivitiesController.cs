@@ -20,7 +20,6 @@ namespace EventTracking.API.Controllers;
 [Route("api/challenge-activities")]
 public sealed class ChallengeActivitiesController(
     IChallengeActivitySubmissionStore submissions,
-    IEmployeeStatusProjectionReader employeeStatuses,
     IHttpClientFactory httpClientFactory,
     TimeProvider timeProvider) : ControllerBase
 {
@@ -31,11 +30,6 @@ public sealed class ChallengeActivitiesController(
         if (request is null || request.ChallengeId == Guid.Empty || request.IdempotencyKey == Guid.Empty ||
             request.Quantity <= 0 || request.Quantity > 1000000m || decimal.Round(request.Quantity, 2) != request.Quantity)
             return BadRequest(new { message = "Choose a challenge, idempotency key and quantity greater than zero up to 1,000,000 (max two decimal places)." });
-
-        var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
-        if (employeeStatus is null)
-            return StatusCode(503, new { message = "Employee status is not available yet. Please retry." });
-        if (!employeeStatus.IsActive) return Forbid();
 
         var existing = await submissions.GetByIdempotencyKeyAsync(employeeId, request.IdempotencyKey, cancellationToken);
         if (existing is not null) return ExistingResult(existing, request);
