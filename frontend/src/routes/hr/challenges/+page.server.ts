@@ -74,8 +74,14 @@ export const actions: Actions = {
     const startDate = String(form.get('startDate') ?? '');
     const endDate = String(form.get('endDate') ?? '');
     const registrationDeadline = String(form.get('registrationDeadline') ?? '');
+    const goalInstructions = String(form.get('goalInstructions') ?? '').trim();
+    const goalTarget = Number(form.get('goalTarget'));
+    const goalUnit = String(form.get('goalUnit') ?? '').trim();
     if (!name || name.length > 120) return fail(400, { message: 'Challenge name must contain 1 to 120 characters.' });
     if (description.length > 1000) return fail(400, { message: 'Description cannot exceed 1,000 characters.' });
+    if (!goalInstructions || goalInstructions.length > 500 || !Number.isFinite(goalTarget) || goalTarget <= 0 || goalTarget > 1000000 || Math.round(goalTarget * 100) !== goalTarget * 100 || !goalUnit || goalUnit.length > 30) {
+      return fail(400, { message: 'Enter action instructions (1–500 characters), a target up to 1,000,000 with at most two decimals, and a unit (1–30 characters).' });
+    }
     if (!isCalendarDate(startDate) || !isCalendarDate(endDate) || !isCalendarDate(registrationDeadline) ||
       endDate < startDate || registrationDeadline < new Date().toISOString().slice(0, 10) || registrationDeadline > startDate) {
       return fail(400, { message: 'Choose valid dates. Registration deadline must be today or before the challenge start date.' });
@@ -85,7 +91,7 @@ export const actions: Actions = {
       response = await fetch(`${challengeApiUrl()}/api/challenges`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ name, description: description || null, startDate, endDate, registrationDeadline })
+        body: JSON.stringify({ name, description: description || null, startDate, endDate, registrationDeadline, goalInstructions, goalTarget, goalUnit })
       });
     } catch {
       return fail(503, { message: 'Challenge service is unavailable. Please try again.' });
