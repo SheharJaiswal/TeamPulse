@@ -111,6 +111,43 @@ public sealed class ChallengeActivitySubmissionApiIntegrationTests : IAsyncLifet
         Assert.Equal("Bearer", goalHandler.ForwardedAuthorizationScheme);
     }
 
+    [Fact]
+    public async Task ProgressRead_WhenEmployeeStatusProjectionIsMissing_ReturnsServiceUnavailable()
+    {
+        var challengeId = Guid.NewGuid();
+        using var factory = new EventTrackingApiFactory(database.GetConnectionString(),
+            challengeApiHandlerFactory: () => new StubChallengeApiHandler("{}"));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid()));
+
+        using var response = await client.GetAsync($"/api/challenge-activities/mine?challengeId={challengeId}");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProgressRead_WhenEmployeeIsInactive_ReturnsForbidden()
+    {
+        var employeeId = Guid.NewGuid();
+        var challengeId = Guid.NewGuid();
+        using var factory = new EventTrackingApiFactory(database.GetConnectionString(),
+            challengeApiHandlerFactory: () => new StubChallengeApiHandler("{}"));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(employeeId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+            await using var db = await dbFactory.CreateDbContextAsync();
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(employeeId, false, 1, DateTime.UtcNow));
+            await db.SaveChangesAsync();
+        }
+
+        using var response = await client.GetAsync($"/api/challenge-activities/mine?challengeId={challengeId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private static string CreateToken(Guid employeeId)
     {
         var token = new JwtSecurityToken(
