@@ -209,7 +209,15 @@ public sealed class EmployeeInvitationService(
             database.InvitationDeliverySecrets.Add(new InvitationDeliverySecret(
                 Guid.NewGuid(), invitation.Id, invitation.DeliveryGeneration,
                 protectedToken, createdAtUtc));
+            return;
         }
+
+        // ExecuteUpdate bypasses EF's change tracker. Refresh any existing tracked
+        // delivery-secret instance so subsequent reads in this scope see the new token.
+        var tracked = database.ChangeTracker.Entries<InvitationDeliverySecret>()
+            .SingleOrDefault(entry => entry.Entity.InvitationId == invitation.Id);
+        if (tracked is not null)
+            await tracked.ReloadAsync(cancellationToken);
     }
 
     private async Task RemoveDeliverySecretAsync(
