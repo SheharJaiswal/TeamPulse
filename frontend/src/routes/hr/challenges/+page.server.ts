@@ -20,6 +20,9 @@ interface Challenge {
   registrationClosedAtUtc: string | null;
   teamsFinalizedAtUtc: string | null;
   createdAtUtc: string;
+  goalInstructions: string;
+  goalTarget: number;
+  goalUnit: string;
 }
 
 function requireSession(cookies: Cookies): string {
@@ -79,7 +82,7 @@ export const actions: Actions = {
     const goalUnit = String(form.get('goalUnit') ?? '').trim();
     if (!name || name.length > 120) return fail(400, { message: 'Challenge name must contain 1 to 120 characters.' });
     if (description.length > 1000) return fail(400, { message: 'Description cannot exceed 1,000 characters.' });
-    if (!goalInstructions || goalInstructions.length > 500 || !Number.isFinite(goalTarget) || goalTarget <= 0 || goalTarget > 1000000 || Math.round(goalTarget * 100) !== goalTarget * 100 || !goalUnit || goalUnit.length > 30) {
+    if (!goalInstructions || goalInstructions.length > 500 || !Number.isFinite(goalTarget) || goalTarget <= 0 || goalTarget > 1000000 || Math.abs(goalTarget * 100 - Math.round(goalTarget * 100)) > 0.000001 || !goalUnit || goalUnit.length > 30) {
       return fail(400, { message: 'Enter action instructions (1–500 characters), a target up to 1,000,000 with at most two decimals, and a unit (1–30 characters).' });
     }
     if (!isCalendarDate(startDate) || !isCalendarDate(endDate) || !isCalendarDate(registrationDeadline) ||
