@@ -24,6 +24,9 @@ partial class ChallengeDbContextModelSnapshot : ModelSnapshot
             b.Property<DateOnly>("StartDate").HasColumnType("date").HasColumnName("start_date");
             b.Property<DateOnly>("EndDate").HasColumnType("date").HasColumnName("end_date");
             b.Property<DateOnly>("RegistrationDeadline").HasColumnType("date").HasColumnName("registration_deadline");
+            b.Property<string>("GoalInstructions").IsRequired().HasMaxLength(500).HasColumnType("varchar(500)").HasColumnName("goal_instructions");
+            b.Property<decimal>("GoalTarget").HasColumnType("decimal(12,2)").HasColumnName("goal_target");
+            b.Property<string>("GoalUnit").IsRequired().HasMaxLength(30).HasColumnType("varchar(30)").HasColumnName("goal_unit");
             b.Property<DateTime?>("RegistrationClosedAtUtc").HasColumnType("datetime(6)").HasColumnName("registration_closed_at_utc");
             b.Property<DateTime?>("TeamsFinalizedAtUtc").HasColumnType("datetime(6)").HasColumnName("teams_finalized_at_utc");
             b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime(6)").HasColumnName("created_at_utc");
