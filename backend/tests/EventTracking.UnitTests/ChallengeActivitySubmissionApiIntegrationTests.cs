@@ -112,6 +112,53 @@ public sealed class ChallengeActivitySubmissionApiIntegrationTests : IAsyncLifet
     }
 
     [Fact]
+    public async Task TeamProgressIncludesActivitySubmittedByAnotherAssignedTeammate()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var challengeId = Guid.NewGuid();
+        var employeeOne = Guid.NewGuid();
+        var employeeTwo = Guid.NewGuid();
+        var goalHandler = new StubChallengeApiHandler(JsonSerializer.Serialize(new
+        {
+            challengeId,
+            goalInstructions = "Walk and record steps together.",
+            goalTarget = 10000m,
+            goalUnit = "steps",
+            startDate = today.ToString("yyyy-MM-dd"),
+            endDate = today.AddDays(7).ToString("yyyy-MM-dd"),
+            teamMemberEmployeeIds = new[] { employeeOne, employeeTwo }
+        }));
+        using var factory = new EventTrackingApiFactory(database.GetConnectionString(),
+            challengeApiHandlerFactory: () => goalHandler);
+        using var client = factory.CreateClient();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+            await using var db = await dbFactory.CreateDbContextAsync();
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(employeeOne, true, 1, DateTime.UtcNow));
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(employeeTwo, true, 1, DateTime.UtcNow));
+            await db.SaveChangesAsync();
+        }
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(employeeTwo));
+        using var logged = await client.PostAsJsonAsync("/api/challenge-activities", new
+        {
+            challengeId,
+            activityDate = today.ToString("yyyy-MM-dd"),
+            quantity = 3000m,
+            idempotencyKey = Guid.NewGuid()
+        });
+        Assert.Equal(HttpStatusCode.Created, logged.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(employeeOne));
+        using var progressResponse = await client.GetAsync($"/api/challenge-activities/mine?challengeId={challengeId}");
+        Assert.Equal(HttpStatusCode.OK, progressResponse.StatusCode);
+        using var progress = JsonDocument.Parse(await progressResponse.Content.ReadAsStringAsync());
+        Assert.Equal(3000m, progress.RootElement.GetProperty("totalQuantity").GetDecimal());
+        Assert.Equal(employeeTwo, progress.RootElement.GetProperty("entries")[0].GetProperty("employeeId").GetGuid());
+    }
+
+    [Fact]
     public async Task EmployeeCanSubmitActivityOnLocalChallengeStartDateWhileUtcDateIsPreviousDay()
     {
         var utcNow = new DateTimeOffset(2026, 11, 27, 20, 14, 0, TimeSpan.Zero);
