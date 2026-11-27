@@ -12,8 +12,8 @@ public sealed class ChallengeActivitySubmission
         if (id == Guid.Empty) throw new ArgumentException("Submission ID is required.", nameof(id));
         if (employeeId == Guid.Empty) throw new ArgumentException("Employee ID is required.", nameof(employeeId));
         if (challengeId == Guid.Empty) throw new ArgumentException("Challenge ID is required.", nameof(challengeId));
-        if (quantity <= 0 || quantity > 1000m || decimal.Round(quantity, 2) != quantity)
-            throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be greater than zero, no more than 1,000, and have at most two decimal places.");
+        if (quantity <= 0 || quantity > 1000000m || decimal.Round(quantity, 2) != quantity)
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be greater than zero, no more than 1,000,000, and have at most two decimal places.");
         if (idempotencyKey == Guid.Empty) throw new ArgumentException("Idempotency key is required.", nameof(idempotencyKey));
         if (submittedAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("Submission timestamp must be UTC.", nameof(submittedAtUtc));
         Id = id; EmployeeId = employeeId; ChallengeId = challengeId; ActivityDate = activityDate;
