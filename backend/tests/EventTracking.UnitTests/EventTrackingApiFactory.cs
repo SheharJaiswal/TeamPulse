@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EventTracking.UnitTests;
 
-public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null, Func<HttpMessageHandler>? habitApiHandlerFactory = null) : WebApplicationFactory<Program>
+public sealed class EventTrackingApiFactory(string connectionString, string? rabbitMqUri = null, Func<HttpMessageHandler>? habitApiHandlerFactory = null, Func<HttpMessageHandler>? challengeApiHandlerFactory = null) : WebApplicationFactory<Program>
 {
     private const string JwtSigningKey = "event-tracking-integration-test-signing-key-32-bytes-minimum";
 
@@ -29,6 +29,7 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
                 ["Jwt:Audience"] = "TeamPulse.Services",
                 ["Jwt:SigningKey"] = JwtSigningKey,
                 ["HabitApi:BaseUrl"] = "http://localhost:5102/",
+                ["ChallengeApi:BaseUrl"] = "http://localhost:5104/",
                 ["EventTrackingOutbox:Enabled"] = "false"
             });
         });
@@ -36,6 +37,8 @@ public sealed class EventTrackingApiFactory(string connectionString, string? rab
         {
             if (habitApiHandlerFactory is not null)
                 services.AddHttpClient("HabitApi").ConfigurePrimaryHttpMessageHandler(habitApiHandlerFactory);
+            if (challengeApiHandlerFactory is not null)
+                services.AddHttpClient("ChallengeApi").ConfigurePrimaryHttpMessageHandler(challengeApiHandlerFactory);
             services.RemoveAll<EventTrackingRabbitMqConsumerOptions>();
             services.AddSingleton(new EventTrackingRabbitMqConsumerOptions
             {
