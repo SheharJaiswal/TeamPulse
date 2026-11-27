@@ -20,7 +20,7 @@ public sealed class ChallengeGoalDomainTests
     [Fact]
     public void Constructor_RejectsInvalidGoalTarget()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new Challenge(Guid.NewGuid(), "org", Guid.NewGuid(),
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Challenge.Domain.Entities.Challenge(Guid.NewGuid(), "org", Guid.NewGuid(),
             "Walking", null, new DateOnly(2026, 11, 28), new DateOnly(2026, 12, 4), DateTime.UtcNow,
             new DateOnly(2026, 11, 27), "Walk every day.", 0m, "steps"));
     }
