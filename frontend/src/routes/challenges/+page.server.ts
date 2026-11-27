@@ -1,5 +1,4 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { randomUUID } from 'node:crypto';
 import type { Actions, Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { challengeApiUrl, eventTrackingApiUrl, identityApiUrl, responseMessage } from '$lib/server/api';
@@ -87,7 +86,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
   }
   const joinedChallenges = (await myResponse.json()) as Challenge[];
   const myChallenges = await Promise.all(joinedChallenges.map(async challenge => {
-    const activityKey = randomUUID();
+    const activityKey = globalThis.crypto.randomUUID();
     if (challenge.responseStatus !== 'Joined') {
       return { ...challenge, progress: null, progressAvailable: true, activityKey } as MyChallengeWithProgress;
     }
