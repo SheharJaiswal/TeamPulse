@@ -12,6 +12,7 @@ public sealed class MySqlActivitySummaryStoreIntegrationTests
     public async Task DuplicateEventDoesNotIncrementAndConcurrentEventsAreCounted()
     {
         await using var mysql = new MySqlBuilder()
+            .WithImage("mysql:8.4")
             .WithDatabase("teampulse_insight_test")
             .WithUsername("insight_test")
             .WithPassword("insight_test_password")
@@ -19,7 +20,7 @@ public sealed class MySqlActivitySummaryStoreIntegrationTests
         await mysql.StartAsync();
 
         var options = new DbContextOptionsBuilder<InsightActivityDbContext>()
-            .UseMySql(mysql.GetConnectionString(), new MySqlServerVersion(new Version(8, 0, 36)))
+            .UseMySql(mysql.GetConnectionString(), new MySqlServerVersion(new Version(8, 4, 0)))
             .Options;
         await using (var setup = new InsightActivityDbContext(options))
             await setup.Database.EnsureCreatedAsync();
