@@ -66,9 +66,7 @@ public sealed class ChallengeActivitiesController(
         if (!TryGetEmployeeId(out var employeeId)) return Unauthorized();
         if (challengeId == Guid.Empty) return BadRequest(new { message = "Choose a valid challenge." });
         var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
-        if (employeeStatus is null)
-            return StatusCode(503, new { message = "Employee status is not available yet. Please retry." });
-        if (!employeeStatus.IsActive) return Forbid();
+        if (employeeStatus is { IsActive: false }) return Forbid();
 
         ChallengeActivityGoalResponse? goal;
         try { goal = await GetChallengeGoalAsync(challengeId, cancellationToken); }
