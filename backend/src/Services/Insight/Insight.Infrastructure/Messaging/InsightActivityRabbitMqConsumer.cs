@@ -12,6 +12,7 @@ namespace Insight.Infrastructure.Messaging;
 public sealed class InsightActivityRabbitMqConsumer(
     IServiceScopeFactory scopeFactory,
     InsightActivityConsumerOptions options,
+    InsightActivityConsumerStatus status,
     ILogger<InsightActivityRabbitMqConsumer> logger) : BackgroundService
 {
     private const string DeadLetterExchange = "teampulse.domain.events.dlx";
@@ -38,6 +39,7 @@ public sealed class InsightActivityRabbitMqConsumer(
             }
             catch (Exception exception)
             {
+                status.MarkDisconnected();
                 logger.LogWarning("Insight activity consumer session ended ({ErrorType}); reconnecting.",
                     exception.GetType().Name);
             }
@@ -62,6 +64,7 @@ public sealed class InsightActivityRabbitMqConsumer(
         await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
         await using var deadLetterChannel = await connection.CreateChannelAsync(
             new CreateChannelOptions(true, true), stoppingToken);
+        status.MarkConnected();
         await channel.BasicQosAsync(0, options.PrefetchCount, false, stoppingToken);
 
         var sessionFailed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -136,10 +139,17 @@ public sealed class InsightActivityRabbitMqConsumer(
         };
 
         await channel.BasicConsumeAsync(options.QueueName, autoAck: false, consumer: consumer, cancellationToken: stoppingToken);
-        while (!stoppingToken.IsCancellationRequested && connection.IsOpen && channel.IsOpen &&
-               deadLetterChannel.IsOpen && !sessionFailed.Task.IsCompleted)
+        try
         {
-            await Task.Delay(250, stoppingToken);
+            while (!stoppingToken.IsCancellationRequested && connection.IsOpen && channel.IsOpen &&
+                   deadLetterChannel.IsOpen && !sessionFailed.Task.IsCompleted)
+            {
+                await Task.Delay(250, stoppingToken);
+            }
+        }
+        finally
+        {
+            status.MarkDisconnected();
         }
     }
 
