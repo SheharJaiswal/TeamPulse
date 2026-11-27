@@ -96,10 +96,10 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
     } catch {
       return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
     }
-    if (progressResponse.status === 401) {
-      expireSession(cookies);
-      redirect(303, '/login');
-    }
+    // Progress is an optional downstream read. A 401 from Event Tracking can
+    // reflect its service-local authorization/projection state, not an expired
+    // Identity session (which was verified above). Keep the user signed in and
+    // render progress as temporarily unavailable instead.
     if (!progressResponse.ok) return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
     return { ...challenge, progress: (await progressResponse.json()) as ActivityProgress, progressAvailable: true, activityKey } as MyChallengeWithProgress;
   }));
