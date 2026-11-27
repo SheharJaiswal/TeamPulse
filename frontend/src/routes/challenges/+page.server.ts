@@ -27,7 +27,7 @@ interface Challenge {
   goalTarget: number;
   goalUnit: string;
 }
-interface ActivityEntry { id: string; challengeId: string; activityDate: string; quantity: number; submittedAtUtc: string; }
+interface ActivityEntry { id: string; challengeId: string; employeeId: string; activityDate: string; quantity: number; submittedAtUtc: string; }
 interface ActivityProgress { challengeId: string; totalQuantity: number; entries: ActivityEntry[]; }
 interface MyChallengeWithProgress extends Challenge {
   progress: ActivityProgress | null;
