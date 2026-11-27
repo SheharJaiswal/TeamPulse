@@ -110,7 +110,7 @@
             {#each data.myChallenges as challenge (challenge.id)}
               <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Challenge response</span><span class="active-indicator"><i></i> {challenge.responseStatus}</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="challenge-goal"><strong>Action:</strong> {challenge.goalInstructions}<span>Goal: {challenge.goalTarget} {challenge.goalUnit}</span></div><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div>{#if challenge.responseStatus === 'Joined'}
                 <section class="challenge-progress" aria-label="Challenge progress">
-                  <div class="progress-heading"><strong>Your progress</strong><span>{challenge.progressAvailable && challenge.progress ? `${challenge.progress.totalQuantity} / ${challenge.goalTarget} ${challenge.goalUnit}` : 'Progress unavailable'}</span></div>
+                  <div class="progress-heading"><strong>Team progress</strong><span>{challenge.progressAvailable && challenge.progress ? `${challenge.progress.totalQuantity} / ${challenge.goalTarget} ${challenge.goalUnit}` : 'Progress unavailable'}</span></div>
                   {#if challenge.progressAvailable && challenge.progress}
                     <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax={challenge.goalTarget} aria-valuenow={Math.min(challenge.goalTarget, challenge.progress.totalQuantity)}><div class="progress-fill" style={`width: ${Math.min(100, challenge.progress.totalQuantity / challenge.goalTarget * 100)}%`}></div></div>
                     {#if challenge.progress.totalQuantity >= challenge.goalTarget}
@@ -119,7 +119,7 @@
                       <p class="progress-status">{Math.max(0, challenge.goalTarget - challenge.progress.totalQuantity)} {challenge.goalUnit} left to complete.</p>
                     {/if}
                     {#if challenge.progress.entries.length}
-                      <details class="activity-history"><summary>Recent activity ({challenge.progress.entries.length})</summary><ul>{#each challenge.progress.entries.slice(0, 4) as entry (entry.id)}<li>{entry.activityDate}: +{entry.quantity} {challenge.goalUnit}</li>{/each}</ul></details>
+                      <details class="activity-history"><summary>Recent activity ({challenge.progress.entries.length})</summary><ul>{#each challenge.progress.entries.slice(0, 4) as entry (entry.id)}<li>{entry.employeeId === data.employee.employeeId ? 'You' : 'Teammate'} · {entry.activityDate}: +{entry.quantity} {challenge.goalUnit}</li>{/each}</ul></details>
                     {/if}
                     {#if challenge.progress.totalQuantity < challenge.goalTarget && localTodayDate >= challenge.startDate && localTodayDate <= challenge.endDate}
                       <form class="log-activity-form" method="POST" action="?/logActivity" use:enhance={handleEnhance} aria-busy={isJoining}>

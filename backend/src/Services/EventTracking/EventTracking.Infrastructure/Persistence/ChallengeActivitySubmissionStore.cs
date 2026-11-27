@@ -55,11 +55,15 @@ public sealed class ChallengeActivitySubmissionStore(
         }
     }
 
-    public async Task<IReadOnlyList<ChallengeActivitySubmission>> GetMineAsync(Guid employeeId, Guid challengeId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ChallengeActivitySubmission>> GetMineAsync(Guid employeeId, Guid challengeId, CancellationToken cancellationToken) =>
+        await GetForEmployeesAsync(new[] { employeeId }, challengeId, cancellationToken);
+
+    public async Task<IReadOnlyList<ChallengeActivitySubmission>> GetForEmployeesAsync(IReadOnlyCollection<Guid> employeeIds, Guid challengeId, CancellationToken cancellationToken)
     {
+        if (employeeIds is null || employeeIds.Count == 0) return Array.Empty<ChallengeActivitySubmission>();
         await using var database = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await database.ChallengeActivitySubmissions.AsNoTracking()
-            .Where(x => x.EmployeeId == employeeId && x.ChallengeId == challengeId)
+            .Where(x => employeeIds.Contains(x.EmployeeId) && x.ChallengeId == challengeId)
             .OrderByDescending(x => x.ActivityDate).ThenByDescending(x => x.SubmittedAtUtc).ThenByDescending(x => x.Id)
             .ToListAsync(cancellationToken);
     }
