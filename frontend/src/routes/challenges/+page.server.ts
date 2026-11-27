@@ -119,7 +119,9 @@ export const actions: Actions = {
     const idempotencyKey = String(form.get('idempotencyKey') ?? '');
     const activityDate = String(form.get('activityDate') ?? '');
     const quantity = Number(form.get('quantity'));
+    const timeZoneOffsetMinutes = Number(form.get('timeZoneOffsetMinutes') ?? 0);
     if (!isGuid(challengeId) || !isGuid(idempotencyKey) || !isCalendarDate(activityDate) ||
+      !Number.isInteger(timeZoneOffsetMinutes) || timeZoneOffsetMinutes < -840 || timeZoneOffsetMinutes > 840 ||
       !Number.isFinite(quantity) || quantity <= 0 || quantity > 1000000 || Math.abs(quantity * 100 - Math.round(quantity * 100)) > 0.000001) {
       return fail(400, { message: 'Enter a valid activity date and quantity (greater than zero, up to 1,000,000, max two decimals).' });
     }
@@ -128,7 +130,7 @@ export const actions: Actions = {
       response = await fetch(`${eventTrackingApiUrl()}/api/challenge-activities`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ challengeId, activityDate, quantity, idempotencyKey })
+        body: JSON.stringify({ challengeId, activityDate, quantity, idempotencyKey, timeZoneOffsetMinutes })
       });
     } catch {
       return fail(503, { message: 'Activity Tracking service is unavailable. Please try again.' });
