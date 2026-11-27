@@ -18,7 +18,7 @@ public sealed class ChallengeTeam
         CreatedAtUtc = createdAtUtc;
     }
 
-    public Guid Id { get; private set; }
+    public void Rename(string name)\n    {\n        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100) throw new ArgumentException("Team name must contain 1 to 100 characters.", nameof(name));\n        Name = name.Trim();\n    }\n\n    public Guid Id { get; private set; }
     public Guid ChallengeId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public DateTime CreatedAtUtc { get; private set; }
