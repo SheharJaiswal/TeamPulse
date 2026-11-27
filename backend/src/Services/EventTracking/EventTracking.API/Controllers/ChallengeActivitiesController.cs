@@ -47,6 +47,8 @@ public sealed class ChallengeActivitiesController(
 
         if (goal is null) return NotFound(new { message = "Challenge was not found or is not available to you." });
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        if (today < goal.StartDate || today > goal.EndDate)
+            return Conflict(new { message = "Challenge activity can only be submitted during the challenge dates." });
         if (request.ActivityDate < goal.StartDate || request.ActivityDate > goal.EndDate || request.ActivityDate > today)
             return BadRequest(new { message = "Activity date must be within the challenge dates and cannot be in the future." });
 
