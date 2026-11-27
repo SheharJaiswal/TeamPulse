@@ -204,10 +204,12 @@ public sealed class EmployeeInvitationService(
         Guid invitationId,
         CancellationToken cancellationToken)
     {
-        var existing = await database.InvitationDeliverySecrets.SingleOrDefaultAsync(
-            secret => secret.InvitationId == invitationId, cancellationToken);
-        if (existing is not null)
-            database.InvitationDeliverySecrets.Remove(existing);
+        // Cancellation/expiry must revoke the delivery secret even if a delivery worker
+        // concurrently changed its lease token. ExecuteDelete avoids stale EF concurrency
+        // tokens and performs the deletion atomically by invitation ID.
+        await database.InvitationDeliverySecrets
+            .Where(secret => secret.InvitationId == invitationId)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private void AddDeliveryOutboxMessage(EmployeeInvitation invitation, DateTime occurredAtUtc)
