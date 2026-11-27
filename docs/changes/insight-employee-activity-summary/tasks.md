@@ -11,6 +11,7 @@
 - [x] Add daily activity summary contracts and event processor.
 - [x] Add MySQL schema/migration and transactional inbox + aggregate store.
 - [x] Add dedicated Insight activity RabbitMQ consumer and DLQ handling.
+- [x] Add separate activity-consumer connection status and health endpoint.
 - [x] Add employee-self-only API and JWT subject validation.
 - [x] Add queue/DLQ bindings and topology contract tests.
 - [x] Add event processor unit tests.
