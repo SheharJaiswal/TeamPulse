@@ -187,17 +187,28 @@ public sealed class EmployeeInvitationService(
         DateTime createdAtUtc,
         CancellationToken cancellationToken)
     {
-        var existing = await database.InvitationDeliverySecrets.SingleOrDefaultAsync(
-            secret => secret.InvitationId == invitation.Id, cancellationToken);
-        if (existing is null)
+        // Reset the delivery lease atomically. The worker may have acquired or changed
+        // the lease since this request began; updating by invitation ID avoids a stale
+        // tracked LeaseToken causing an optimistic-concurrency failure.
+        var updated = await database.InvitationDeliverySecrets
+            .Where(secret => secret.InvitationId == invitation.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(secret => secret.Generation, invitation.DeliveryGeneration)
+                .SetProperty(secret => secret.ProtectedToken, protectedToken)
+                .SetProperty(secret => secret.CreatedAtUtc, createdAtUtc)
+                .SetProperty(secret => secret.AttemptCount, 0)
+                .SetProperty(secret => secret.NextAttemptAtUtc, (DateTime?)null)
+                .SetProperty(secret => secret.LeaseToken, (Guid?)null)
+                .SetProperty(secret => secret.LeaseExpiresAtUtc, (DateTime?)null)
+                .SetProperty(secret => secret.LastErrorCode, (string?)null),
+                cancellationToken);
+
+        if (updated == 0)
         {
             database.InvitationDeliverySecrets.Add(new InvitationDeliverySecret(
                 Guid.NewGuid(), invitation.Id, invitation.DeliveryGeneration,
                 protectedToken, createdAtUtc));
-            return;
         }
-
-        existing.Replace(invitation.DeliveryGeneration, protectedToken, createdAtUtc);
     }
 
     private async Task RemoveDeliverySecretAsync(
