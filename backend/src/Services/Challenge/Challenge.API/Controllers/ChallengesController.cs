@@ -104,8 +104,17 @@ public sealed class ChallengesController(
         var participation = await db.ChallengeParticipations.AsNoTracking().SingleOrDefaultAsync(
             x => x.ChallengeId == challengeId && x.EmployeeId == employeeId, cancellationToken);
         if (participation is null || participation.ResponseStatus != "Joined") return Forbid();
+        var teamMemberEmployeeIds = await db.ChallengeTeamMembers.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId && x.EmployeeId == employeeId)
+            .Select(x => x.TeamId).Join(db.ChallengeTeamMembers.AsNoTracking()
+                .Where(x => x.ChallengeId == challengeId), teamId => teamId, member => member.TeamId,
+                (teamId, member) => member.EmployeeId)
+            .Where(memberId => db.ChallengeParticipations.Any(p => p.ChallengeId == challengeId &&
+                p.EmployeeId == memberId && p.ResponseStatus == "Joined"))
+            .Distinct().ToListAsync(cancellationToken);
+        if (teamMemberEmployeeIds.Count == 0) teamMemberEmployeeIds.Add(employeeId);
         return Ok(new ChallengeActivityGoalResponse(challenge.Id, challenge.GoalInstructions,
-            challenge.GoalTarget, challenge.GoalUnit, challenge.StartDate, challenge.EndDate));
+            challenge.GoalTarget, challenge.GoalUnit, challenge.StartDate, challenge.EndDate, teamMemberEmployeeIds));
     }
 
     [HttpPost("{challengeId:guid}/join")]
@@ -458,7 +467,7 @@ public sealed class ChallengesController(
         DateOnly RegistrationDeadline, string ResponseStatus, DateTime? JoinedAtUtc, string? TeamName,
         string GoalInstructions, decimal GoalTarget, string GoalUnit);
     public sealed record SetChallengeResponseRequest(string Status);
-    public sealed record ChallengeActivityGoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate);
+    public sealed record ChallengeActivityGoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate, System.Collections.Generic.List<Guid>? TeamMemberEmployeeIds = null);
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
     public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);
     public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);
