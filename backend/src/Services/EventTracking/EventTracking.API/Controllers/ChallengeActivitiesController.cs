@@ -29,7 +29,8 @@ public sealed class ChallengeActivitiesController(
     {
         if (!TryGetEmployeeId(out var employeeId)) return Unauthorized();
         if (request is null || request.ChallengeId == Guid.Empty || request.IdempotencyKey == Guid.Empty ||
-            request.Quantity <= 0 || request.Quantity > 1000000m || decimal.Round(request.Quantity, 2) != request.Quantity)
+            request.Quantity <= 0 || request.Quantity > 1000000m || decimal.Round(request.Quantity, 2) != request.Quantity ||
+            request.TimeZoneOffsetMinutes is < -840 or > 840)
             return BadRequest(new { message = "Choose a challenge, idempotency key and quantity greater than zero up to 1,000,000 (max two decimal places)." });
 
         var employeeStatus = await employeeStatuses.GetByEmployeeIdAsync(employeeId, cancellationToken);
@@ -46,7 +47,10 @@ public sealed class ChallengeActivitiesController(
         { return StatusCode(503, new { message = "Challenge service timed out. Please retry." }); }
 
         if (goal is null) return NotFound(new { message = "Challenge was not found or is not available to you." });
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        // Date-only challenge windows follow the submitting employee's local calendar.
+        // Date.getTimezoneOffset() is UTC minus local time, so subtract it from UTC.
+        var employeeLocalNow = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(-request.TimeZoneOffsetMinutes);
+        var today = DateOnly.FromDateTime(employeeLocalNow);
         if (today < goal.StartDate || today > goal.EndDate)
             return Conflict(new { message = "Challenge activity can only be submitted during the challenge dates." });
         if (request.ActivityDate < goal.StartDate || request.ActivityDate > goal.EndDate || request.ActivityDate > today)
