@@ -141,5 +141,6 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
     }
 
-    private sealed record GoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate);\n    private sealed record TeamCreatedResponse(Guid Id, string Name);
+    private sealed record GoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate);
+    private sealed record TeamCreatedResponse(Guid Id, string Name);
 }
