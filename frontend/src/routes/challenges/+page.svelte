@@ -77,7 +77,7 @@
             <article class="habit-card challenge-card">
               <div class="habit-card-top"><span class="category-pill">Organization challenge</span><span class="active-indicator"><i></i> Open to join</span></div>
               <h3>{challenge.name}</h3>
-              <p class="habit-description">{challenge.description || 'Take part in this organization challenge.'}</p>
+              <p class="habit-description">{challenge.description || 'Take part in this organization challenge.'}</p><div class="challenge-goal"><strong>Action:</strong> {challenge.goalInstructions}<span>Goal: {challenge.goalTarget} {challenge.goalUnit}</span></div>
               <div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div>
               <div class="habit-footer"><span>Respond by {dateLabel(challenge.registrationDeadline)}.</span><div class="response-actions"><form method="POST" action="?/join" use:enhance={handleEnhance} aria-busy={isJoining}><input type="hidden" name="challengeId" value={challenge.id} /><button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Join challenge'}</button></form><form method="POST" action="?/decline" use:enhance={handleEnhance} aria-busy={isJoining}><input type="hidden" name="challengeId" value={challenge.id} /><button class="secondary-button" type="submit" disabled={isJoining}>Decline</button></form></div></div>
             </article>
@@ -92,7 +92,36 @@
         {:else}
           <div class="habit-grid">
             {#each data.myChallenges as challenge (challenge.id)}
-              <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Challenge response</span><span class="active-indicator"><i></i> {challenge.responseStatus}</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div><div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined'}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
+              <article class="habit-card"><div class="habit-card-top"><span class="category-pill">Challenge response</span><span class="active-indicator"><i></i> {challenge.responseStatus}</span></div><h3>{challenge.name}</h3><p class="habit-description">{challenge.description || 'You are taking part in this organization challenge.'}</p><div class="challenge-goal"><strong>Action:</strong> {challenge.goalInstructions}<span>Goal: {challenge.goalTarget} {challenge.goalUnit}</span></div><div class="habit-details"><div><span class="detail-label">STARTS</span><strong>{dateLabel(challenge.startDate)}</strong></div><div><span class="detail-label">ENDS</span><strong>{dateLabel(challenge.endDate)}</strong></div></div>{#if challenge.responseStatus === 'Joined'}
+                <section class="challenge-progress" aria-label="Challenge progress">
+                  <div class="progress-heading"><strong>Your progress</strong><span>{challenge.progressAvailable && challenge.progress ? `${challenge.progress.totalQuantity} / ${challenge.goalTarget} ${challenge.goalUnit}` : 'Progress unavailable'}</span></div>
+                  {#if challenge.progressAvailable && challenge.progress}
+                    <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax={challenge.goalTarget} aria-valuenow={Math.min(challenge.goalTarget, challenge.progress.totalQuantity)}><div class="progress-fill" style={`width: ${Math.min(100, challenge.progress.totalQuantity / challenge.goalTarget * 100)}%`}></div></div>
+                    {#if challenge.progress.totalQuantity >= challenge.goalTarget}
+                      <p class="progress-status complete">✓ Challenge complete — goal reached!</p>
+                    {:else}
+                      <p class="progress-status">{Math.max(0, challenge.goalTarget - challenge.progress.totalQuantity)} {challenge.goalUnit} left to complete.</p>
+                    {/if}
+                    {#if challenge.progress.entries.length}
+                      <details class="activity-history"><summary>Recent activity ({challenge.progress.entries.length})</summary><ul>{#each challenge.progress.entries.slice(0, 4) as entry (entry.id)}<li>{entry.activityDate}: +{entry.quantity} {challenge.goalUnit}</li>{/each}</ul></details>
+                    {/if}
+                    {#if challenge.progress.totalQuantity < challenge.goalTarget && data.todayDate >= challenge.startDate && data.todayDate <= challenge.endDate}
+                      <form class="log-activity-form" method="POST" action="?/logActivity" use:enhance={handleEnhance} aria-busy={isJoining}>
+                        <input type="hidden" name="challengeId" value={challenge.id} />
+                        <input type="hidden" name="idempotencyKey" value={challenge.activityKey} />
+                        <label>Activity date<input type="date" name="activityDate" value={data.todayDate} min={challenge.startDate} max={data.todayDate < challenge.endDate ? data.todayDate : challenge.endDate} required /></label>
+                        <label>Amount ({challenge.goalUnit})<input type="number" name="quantity" min="0.01" max="1000" step="0.01" placeholder="e.g. 5000" required /></label>
+                        <button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Log activity'}</button>
+                      </form>
+                    {:else if challenge.progress.totalQuantity < challenge.goalTarget}
+                      <p class="progress-status">Activity logging opens {challenge.startDate} and closes {challenge.endDate}.</p>
+                    {/if}
+                  {:else}
+                    <p class="progress-status">Activity tracking is temporarily unavailable. Please refresh later.</p>
+                  {/if}
+                </section>
+              {/if}
+              <div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined'}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
             {/each}
           </div>
         {/if}
@@ -101,6 +130,6 @@
   </main>
 </div>
 <style>
-  .challenge-page{max-width:1240px}.challenge-card h3{margin-top:17px}.challenge-card .habit-footer{gap:12px;align-items:center}.challenge-card .primary-button{min-height:37px;padding:0 13px;font-size:10px;white-space:nowrap}.challenge-card .habit-footer form{margin:0}.response-actions{display:flex;gap:8px;flex-wrap:wrap}.response-actions form{margin:0}.secondary-button{min-height:37px;padding:0 13px;border:1px solid #dce5e0;border-radius:10px;background:#fff;color:#41524b;font-size:10px;font-weight:700;cursor:pointer}.my-challenges-section{margin-top:42px}
+  .challenge-page{max-width:1240px}.challenge-card h3{margin-top:17px}.challenge-card .habit-footer{gap:12px;align-items:center}.challenge-card .primary-button{min-height:37px;padding:0 13px;font-size:10px;white-space:nowrap}.challenge-card .habit-footer form{margin:0}.response-actions{display:flex;gap:8px;flex-wrap:wrap}.response-actions form{margin:0}.secondary-button{min-height:37px;padding:0 13px;border:1px solid #dce5e0;border-radius:10px;background:#fff;color:#41524b;font-size:10px;font-weight:700;cursor:pointer}.my-challenges-section{margin-top:42px}.challenge-goal{display:grid;gap:5px;margin:12px 0 16px;padding:12px;border-radius:10px;background:#f4f8f5;color:#52645a;font-size:12px;line-height:1.5}.challenge-goal strong{color:#2f4b3d}.challenge-goal span{font-weight:700;color:#2f7958}.challenge-progress{margin:12px 0 16px;padding:14px;border:1px solid #e5ece7;border-radius:12px;background:#fbfdfb}.progress-heading{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#334b3e}.progress-heading span{font-variant-numeric:tabular-nums;color:#5c6d64}.progress-track{height:9px;margin:10px 0;border-radius:999px;background:#e5ece7;overflow:hidden}.progress-fill{height:100%;border-radius:999px;background:#38936b;transition:width .2s}.progress-status{margin:6px 0 0;color:#65756c;font-size:11px}.progress-status.complete{color:#23764f;font-weight:800}.log-activity-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid #e6ede8}.log-activity-form label{display:grid;gap:6px;color:#52645a;font-size:11px;font-weight:700}.log-activity-form input{width:100%;min-width:0;border:1px solid #dce5e0;border-radius:8px;padding:9px;background:white;color:#263b32;font:inherit;font-size:12px}.log-activity-form button{grid-column:1/-1}.activity-history{margin-top:10px;color:#66766d;font-size:11px}.activity-history summary{cursor:pointer;font-weight:700}.activity-history ul{padding-left:18px;line-height:1.8}@media(max-width:650px){.log-activity-form{grid-template-columns:1fr}}
   @media(max-width:650px){.challenge-card .habit-footer{align-items:flex-start;flex-direction:column}.challenge-card .habit-footer form,.challenge-card .primary-button,.response-actions{width:100%}.response-actions form{flex:1}.response-actions button{width:100%}}
 </style>
