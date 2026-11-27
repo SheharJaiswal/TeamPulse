@@ -117,7 +117,18 @@
                       <p class="progress-status">Activity can be logged from {challenge.startDate} through {challenge.endDate}.</p>
                     {/if}
                   {:else}
-                    <p class="progress-status">Activity tracking is temporarily unavailable. Please refresh later.</p>
+                    <p class="progress-status">Progress could not be loaded. You can still submit activity; the total will refresh when tracking is available.</p>
+                    {#if data.todayDate >= challenge.startDate && data.todayDate <= challenge.endDate}
+                      <form class="log-activity-form" method="POST" action="?/logActivity" use:enhance={handleEnhance} aria-busy={isJoining}>
+                        <input type="hidden" name="challengeId" value={challenge.id} />
+                        <input type="hidden" name="idempotencyKey" value={challenge.activityKey} />
+                        <label>Activity date<input type="date" name="activityDate" value={data.todayDate} min={challenge.startDate} max={data.todayDate < challenge.endDate ? data.todayDate : challenge.endDate} required /></label>
+                        <label>Amount ({challenge.goalUnit})<input type="number" name="quantity" min="0.01" max="1000000" step="0.01" placeholder="e.g. 5000" required /></label>
+                        <button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Log activity'}</button>
+                      </form>
+                    {:else}
+                      <p class="progress-status">Activity can be logged from {challenge.startDate} through {challenge.endDate}.</p>
+                    {/if}
                   {/if}
                 </section>
               {/if}

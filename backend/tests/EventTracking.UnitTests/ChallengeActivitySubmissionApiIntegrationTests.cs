@@ -112,17 +112,30 @@ public sealed class ChallengeActivitySubmissionApiIntegrationTests : IAsyncLifet
     }
 
     [Fact]
-    public async Task ProgressRead_WhenEmployeeStatusProjectionIsMissing_ReturnsServiceUnavailable()
+    public async Task ProgressRead_WhenEmployeeStatusProjectionIsMissing_ReturnsZeroForJoinedParticipant()
     {
         var challengeId = Guid.NewGuid();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var goal = JsonSerializer.Serialize(new
+        {
+            challengeId,
+            goalInstructions = "Walk",
+            goalTarget = 5000m,
+            goalUnit = "steps",
+            startDate = today.ToString("yyyy-MM-dd"),
+            endDate = today.AddDays(7).ToString("yyyy-MM-dd")
+        });
         using var factory = new EventTrackingApiFactory(database.GetConnectionString(),
-            challengeApiHandlerFactory: () => new StubChallengeApiHandler("{}"));
+            challengeApiHandlerFactory: () => new StubChallengeApiHandler(goal));
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid()));
 
         using var response = await client.GetAsync($"/api/challenge-activities/mine?challengeId={challengeId}");
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var progress = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(0m, progress.RootElement.GetProperty("totalQuantity").GetDecimal());
+        Assert.Empty(progress.RootElement.GetProperty("entries").EnumerateArray());
     }
 
     [Fact]
