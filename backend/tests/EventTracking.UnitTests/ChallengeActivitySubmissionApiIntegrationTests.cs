@@ -112,6 +112,48 @@ public sealed class ChallengeActivitySubmissionApiIntegrationTests : IAsyncLifet
     }
 
     [Fact]
+    public async Task EmployeeCanSubmitActivityOnLocalChallengeStartDateWhileUtcDateIsPreviousDay()
+    {
+        var utcNow = new DateTimeOffset(2026, 11, 27, 20, 14, 0, TimeSpan.Zero);
+        var localToday = new DateOnly(2026, 11, 28);
+        var challengeId = Guid.NewGuid();
+        var goalHandler = new StubChallengeApiHandler(JsonSerializer.Serialize(new
+        {
+            challengeId,
+            goalInstructions = "Walk and record your steps.",
+            goalTarget = 10000m,
+            goalUnit = "steps",
+            startDate = localToday.ToString("yyyy-MM-dd"),
+            endDate = localToday.AddDays(14).ToString("yyyy-MM-dd")
+        }));
+        using var factory = new EventTrackingApiFactory(database.GetConnectionString(),
+            challengeApiHandlerFactory: () => goalHandler,
+            timeProvider: new FixedTimeProvider(utcNow));
+        using var client = factory.CreateClient();
+        var employeeId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(employeeId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+            await using var db = await dbFactory.CreateDbContextAsync();
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(employeeId, true, 1, utcNow.UtcDateTime));
+            await db.SaveChangesAsync();
+        }
+
+        using var response = await client.PostAsJsonAsync("/api/challenge-activities", new
+        {
+            challengeId,
+            activityDate = localToday.ToString("yyyy-MM-dd"),
+            quantity = 1200m,
+            idempotencyKey = Guid.NewGuid(),
+            timeZoneOffsetMinutes = -330 // India Standard Time: UTC+05:30
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
     public async Task ProgressRead_WhenEmployeeStatusProjectionIsMissing_ReturnsZeroForJoinedParticipant()
     {
         var challengeId = Guid.NewGuid();
@@ -159,6 +201,11 @@ public sealed class ChallengeActivitySubmissionApiIntegrationTests : IAsyncLifet
         using var response = await client.GetAsync($"/api/challenge-activities/mine?challengeId={challengeId}");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
     private static string CreateToken(Guid employeeId)
