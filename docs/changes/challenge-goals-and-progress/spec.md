@@ -9,7 +9,7 @@
 ## Activity submission
 - Event Tracking owns append-only challenge activity submissions, distinct from habit activity submissions.
 - Employee identity comes from validated JWT sub. Organization scope and participation are checked by Challenge API; request body cannot supply employee or organization IDs.
-- Submission quantity is greater than zero and at most 1,000 per entry; activity date must be within the challenge start/end dates and not in the future.
+- Submission quantity is greater than zero and at most 1,000,000 per entry; activity date must be within the challenge start/end dates and not in the future.
 - A joined, active employee may submit activity only for the challenge's configured activity window. Declined, pending, inactive, nonparticipant, and cross-organization requests are rejected.
 - Each submission has an employee-scoped idempotency key. Replaying the same key and same challenge/date/quantity returns the existing submission; conflicting reuse returns 409.
 - Submissions are self-reported and append-only. No editing/deleting or verification workflow is included.
