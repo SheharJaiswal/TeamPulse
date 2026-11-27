@@ -34,6 +34,7 @@ public sealed class EventTrackingApiStartupIntegrationTests(EventTrackingMySqlFi
         await using var database = await databaseFactory.CreateDbContextAsync();
         var appliedMigrations = await database.Database.GetAppliedMigrationsAsync();
         Assert.Contains("20261121130000_InitialEventTrackingProjection", appliedMigrations);
+        Assert.Contains("20261127020000_AddChallengeActivitySubmissions", appliedMigrations);
 
         var store = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionStore>();
         var reader = scope.ServiceProvider.GetRequiredService<IEmployeeStatusProjectionReader>();
