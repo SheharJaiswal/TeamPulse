@@ -97,7 +97,6 @@ public sealed class ChallengesController(
     {
         if (!TryGetScope(out var organizationId, out var employeeId)) return Unauthorized();
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
         var challenge = await db.Challenges.AsNoTracking().SingleOrDefaultAsync(
             x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
         if (challenge is null) return NotFound();
