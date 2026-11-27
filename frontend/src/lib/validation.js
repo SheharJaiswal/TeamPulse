@@ -23,3 +23,14 @@ export function toLocalDateInputValue(date = new Date()) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * API DateTime values represent UTC. Treat an ISO timestamp without an explicit
+ * zone as UTC too, since MySQL DateTime columns can serialize without a suffix.
+ * The returned Date can then be formatted in the browser's own time zone.
+ * @param {string} value
+ */
+export function parseUtcTimestamp(value) {
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+  return new Date(hasZone ? value : `${value}Z`);
+}
