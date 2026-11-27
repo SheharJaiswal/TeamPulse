@@ -148,6 +148,30 @@
       "arguments": {
         "x-queue-type": "quorum"
       }
+    },
+    {
+      "name": "teampulse.insight.activity.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-delivery-limit": 5,
+        "x-dead-letter-exchange": "teampulse.domain.events.dlx",
+        "x-dead-letter-routing-key": "insight.activity.recorded.dead",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish",
+        "x-max-length": 100000
+      }
+    },
+    {
+      "name": "teampulse.insight.activity.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
     }
   ],
   "bindings": [
@@ -245,6 +269,30 @@
       "destination": "teampulse.activity.events",
       "destination_type": "queue",
       "routing_key": "challenge.activity.recorded",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.insight.activity.events",
+      "destination_type": "queue",
+      "routing_key": "habit.activity.recorded",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events",
+      "vhost": "/",
+      "destination": "teampulse.insight.activity.events",
+      "destination_type": "queue",
+      "routing_key": "challenge.activity.recorded",
+      "arguments": []
+    },
+    {
+      "source": "teampulse.domain.events.dlx",
+      "vhost": "/",
+      "destination": "teampulse.insight.activity.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "insight.activity.recorded.dead",
       "arguments": []
     }
   ]

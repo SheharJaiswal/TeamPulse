@@ -258,3 +258,16 @@ npm run dev
 ```
 
 Open http://localhost:5173. See [frontend/README.md](frontend/README.md) for shared JWT signing-key configuration and backend port details.
+
+
+## Insight activity summary (development)
+
+Insight keeps the existing employee-lifecycle projection in DynamoDB. The new employee-private activity summary is stored separately in MySQL database `teampulse_insight`.
+
+- On a fresh MySQL volume, `infra/mysql/init/05-insight-database.sql` creates the Insight database and grants the app user access. For an existing volume, create the database/grant manually or rerun that SQL as a privileged MySQL user.
+- Insight API applies its EF Core migration on startup.
+- Configure `Jwt__SigningKey` as an environment variable or user secret. Use the same signing key as Identity and at least 32 UTF-8 bytes; do not commit the key.
+- In Development, the activity RabbitMQ consumer is enabled and reads `teampulse.insight.activity.events`. Ensure the RabbitMQ definitions are loaded so the dedicated queue and DLQ bindings exist.
+- The self-only endpoint is `GET /api/insights/activity/daily`. The activity consumer has its own `/health/activity-consumer` health endpoint, separate from the existing lifecycle consumer health. It defaults to the latest 7 UTC calendar days; optional `fromDate` and `toDate` must be supplied together and may cover at most 30 inclusive days.
+
+The summary counts activity submissions by category; it does not sum activity quantity or replace Challenge Service goal/progress.

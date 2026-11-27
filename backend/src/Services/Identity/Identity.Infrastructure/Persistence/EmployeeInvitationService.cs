@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Data;
 using System.Text.Json;
 using System.Threading;
@@ -187,9 +188,23 @@ public sealed class EmployeeInvitationService(
         DateTime createdAtUtc,
         CancellationToken cancellationToken)
     {
-        var existing = await database.InvitationDeliverySecrets.SingleOrDefaultAsync(
-            secret => secret.InvitationId == invitation.Id, cancellationToken);
-        if (existing is null)
+        // Reset the delivery lease atomically. The worker may have acquired or changed
+        // the lease since this request began; updating by invitation ID avoids a stale
+        // tracked LeaseToken causing an optimistic-concurrency failure.
+        var updated = await database.InvitationDeliverySecrets
+            .Where(secret => secret.InvitationId == invitation.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(secret => secret.Generation, invitation.DeliveryGeneration)
+                .SetProperty(secret => secret.ProtectedToken, protectedToken)
+                .SetProperty(secret => secret.CreatedAtUtc, createdAtUtc)
+                .SetProperty(secret => secret.AttemptCount, 0)
+                .SetProperty(secret => secret.NextAttemptAtUtc, (DateTime?)null)
+                .SetProperty(secret => secret.LeaseToken, (Guid?)null)
+                .SetProperty(secret => secret.LeaseExpiresAtUtc, (DateTime?)null)
+                .SetProperty(secret => secret.LastErrorCode, (string?)null),
+                cancellationToken);
+
+        if (updated == 0)
         {
             database.InvitationDeliverySecrets.Add(new InvitationDeliverySecret(
                 Guid.NewGuid(), invitation.Id, invitation.DeliveryGeneration,
@@ -197,17 +212,24 @@ public sealed class EmployeeInvitationService(
             return;
         }
 
-        existing.Replace(invitation.DeliveryGeneration, protectedToken, createdAtUtc);
+        // ExecuteUpdate bypasses EF's change tracker. Refresh any existing tracked
+        // delivery-secret instance so subsequent reads in this scope see the new token.
+        var tracked = database.ChangeTracker.Entries<InvitationDeliverySecret>()
+            .SingleOrDefault(entry => entry.Entity.InvitationId == invitation.Id);
+        if (tracked is not null)
+            await tracked.ReloadAsync(cancellationToken);
     }
 
     private async Task RemoveDeliverySecretAsync(
         Guid invitationId,
         CancellationToken cancellationToken)
     {
-        var existing = await database.InvitationDeliverySecrets.SingleOrDefaultAsync(
-            secret => secret.InvitationId == invitationId, cancellationToken);
-        if (existing is not null)
-            database.InvitationDeliverySecrets.Remove(existing);
+        // Cancellation/expiry must revoke the delivery secret even if a delivery worker
+        // concurrently changed its lease token. ExecuteDelete avoids stale EF concurrency
+        // tokens and performs the deletion atomically by invitation ID.
+        await database.InvitationDeliverySecrets
+            .Where(secret => secret.InvitationId == invitationId)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private void AddDeliveryOutboxMessage(EmployeeInvitation invitation, DateTime occurredAtUtc)

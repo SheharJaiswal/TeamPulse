@@ -18,6 +18,9 @@ INSIGHT_QUEUE = "teampulse.insight.events"
 ACTIVITY_QUEUE = "teampulse.activity.events"
 ACTIVITY_DLQ = "teampulse.activity.events.dlq"
 ACTIVITY_DEAD_ROUTING_KEY = "habit.activity.recorded.dead"
+INSIGHT_ACTIVITY_QUEUE = "teampulse.insight.activity.events"
+INSIGHT_ACTIVITY_DLQ = "teampulse.insight.activity.events.dlq"
+INSIGHT_ACTIVITY_DEAD_ROUTING_KEY = "insight.activity.recorded.dead"
 DLX = "teampulse.domain.events.dlx"
 DEAD_ROUTING_KEY = "habit.employee.lifecycle.dead"
 SERVICE_QUEUES = {
@@ -44,7 +47,8 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
     def test_service_queues_and_dlqs_are_defined(self):
         queues = {item["name"]: item for item in self.definitions["queues"]}
         expected = SERVICE_QUEUES | {HABIT_DLQ, "teampulse.challenge.events.dlq",
-            EVENT_TRACKING_DLQ, NOTIFICATION_DLQ, ACTIVITY_QUEUE, ACTIVITY_DLQ}
+            EVENT_TRACKING_DLQ, NOTIFICATION_DLQ, ACTIVITY_QUEUE, ACTIVITY_DLQ,
+            INSIGHT_ACTIVITY_QUEUE, INSIGHT_ACTIVITY_DLQ}
         self.assertEqual(expected, set(queues))
         self.assertTrue(all(queues[name]["durable"] for name in queues))
 
@@ -124,6 +128,23 @@ class RabbitMqDefinitionsContractTests(unittest.TestCase):
     def test_habit_dead_letter_queue_has_its_own_binding(self):
         bindings = {(item["source"], item["destination"], item["routing_key"]) for item in self.definitions["bindings"]}
         self.assertIn((DLX, HABIT_DLQ, DEAD_ROUTING_KEY), bindings)
+
+    def test_insight_activity_queue_has_isolated_durable_quorum_dlq(self):
+        queues = {item["name"]: item for item in self.definitions["queues"]}
+        source_args = queues[INSIGHT_ACTIVITY_QUEUE]["arguments"]
+        self.assertEqual("quorum", source_args["x-queue-type"])
+        self.assertEqual(5, source_args["x-delivery-limit"])
+        self.assertEqual(DLX, source_args["x-dead-letter-exchange"])
+        self.assertEqual(INSIGHT_ACTIVITY_DEAD_ROUTING_KEY, source_args["x-dead-letter-routing-key"])
+        self.assertEqual("at-least-once", source_args["x-dead-letter-strategy"])
+        self.assertEqual("reject-publish", source_args["x-overflow"])
+        self.assertEqual("quorum", queues[INSIGHT_ACTIVITY_DLQ]["arguments"]["x-queue-type"])
+
+    def test_insight_activity_queue_has_only_activity_routes_and_own_dlq_binding(self):
+        bindings = {(item["source"], item["destination"], item["routing_key"]) for item in self.definitions["bindings"]}
+        self.assertIn((EXCHANGE, INSIGHT_ACTIVITY_QUEUE, "habit.activity.recorded"), bindings)
+        self.assertIn((EXCHANGE, INSIGHT_ACTIVITY_QUEUE, "challenge.activity.recorded"), bindings)
+        self.assertIn((DLX, INSIGHT_ACTIVITY_DLQ, INSIGHT_ACTIVITY_DEAD_ROUTING_KEY), bindings)
 
     def test_definitions_do_not_contain_users_or_credentials(self):
         self.assertNotIn("users", self.definitions)
