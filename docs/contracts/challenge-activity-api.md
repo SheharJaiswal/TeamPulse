@@ -32,7 +32,7 @@ Request:
 }
 ```
 
-Quantity must be greater than zero, at most 1,000 per entry, and have at most two decimal places. Activity date must fall within the challenge dates, cannot be in the future, and submissions are accepted only during the challenge window. The employee must be active and joined. Employee ID is derived from JWT `sub`.
+Quantity must be greater than zero, at most 1,000,000 per entry, and have at most two decimal places. Activity date must fall within the challenge dates, cannot be in the future, and submissions are accepted only during the challenge window. The employee must be active and joined. Employee ID is derived from JWT `sub`.
 
 A repeated employee-scoped idempotency key with identical challenge/date/quantity returns the existing submission; conflicting reuse returns 409. Activity is append-only and self-reported. Accepted submissions and the `ChallengeActivityRecorded` outbox event are committed atomically.
 
