@@ -44,4 +44,8 @@ public sealed class InitialInsightActivitySummary : Migration
         migrationBuilder.DropTable(name: "InsightProcessedEvent");
         migrationBuilder.DropTable(name: "InsightDailyActivity");
     }
+
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
+    {
+    }
 }
