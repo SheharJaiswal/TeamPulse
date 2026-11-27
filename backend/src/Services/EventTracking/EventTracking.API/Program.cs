@@ -39,6 +39,12 @@ jwtOptions.Validate();
 
 builder.Services.AddDbContextFactory<EventTrackingDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
+builder.Services.AddHttpClient("ChallengeApi", client =>
+{
+    var baseUrl = builder.Configuration["ChallengeApi:BaseUrl"] ?? "http://localhost:5104/";
+    client.BaseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/", UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 builder.Services.AddHttpClient("HabitApi", client =>
 {
     var baseUrl = builder.Configuration["HabitApi:BaseUrl"] ?? "http://localhost:5102/";
