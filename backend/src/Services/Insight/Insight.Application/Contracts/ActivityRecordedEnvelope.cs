@@ -16,7 +16,7 @@ public sealed record ActivityRecordedPayload(
     Guid? HabitId,
     Guid? ChallengeId,
     DateOnly ActivityDate,
-    int Quantity);
+    decimal Quantity);
 
 public enum ActivityCategory
 {
@@ -28,6 +28,3 @@ public sealed record ActivitySummaryDay(
     DateOnly ActivityDate,
     int HabitActivityCount,
     int ChallengeActivityCount);
-
-public sealed record ActivitySummaryQueryResult(
-    IReadOnlyList<ActivitySummaryDay> Days);
