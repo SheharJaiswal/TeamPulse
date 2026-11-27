@@ -321,6 +321,50 @@ public sealed class ChallengesController(
         return Ok(new { teamId, assignedCount = request.EmployeeIds.Count });
     }
 
+    [HttpPut("{challengeId:guid}/teams/{teamId:guid}")]
+    [Authorize(Roles = "HrAdmin")]
+    public async Task<IActionResult> RenameTeam(Guid challengeId, Guid teamId, RenameChallengeTeamRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
+        if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100)
+            return BadRequest(new { message = "Team name must contain 1 to 100 characters." });
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var challenge = await db.Challenges.SingleOrDefaultAsync(
+            x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
+        if (challenge is null) return NotFound();
+        if (!challenge.RegistrationClosedAtUtc.HasValue) return Conflict(new { message = "Close registration before editing challenge teams." });
+        if (challenge.TeamsFinalizedAtUtc.HasValue) return Conflict(new { message = "Finalized teams cannot be edited." });
+        var team = await db.ChallengeTeams.SingleOrDefaultAsync(x => x.Id == teamId && x.ChallengeId == challengeId, cancellationToken);
+        if (team is null) return NotFound();
+        var name = request.Name.Trim();
+        if (await db.ChallengeTeams.AnyAsync(x => x.ChallengeId == challengeId && x.Id != teamId && x.Name == name, cancellationToken))
+            return Conflict(new { message = "A team with this name already exists in the challenge." });
+        team.Rename(name);
+        try { await db.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateException) { return Conflict(new { message = "A team with this name already exists in the challenge." }); }
+        return Ok(new { team.Id, team.Name });
+    }
+
+    [HttpDelete("{challengeId:guid}/teams/{teamId:guid}")]
+    [Authorize(Roles = "HrAdmin")]
+    public async Task<IActionResult> DeleteTeam(Guid challengeId, Guid teamId, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(out var organizationId, out _)) return Unauthorized();
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var challenge = await db.Challenges.SingleOrDefaultAsync(
+            x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
+        if (challenge is null) return NotFound();
+        if (!challenge.RegistrationClosedAtUtc.HasValue) return Conflict(new { message = "Close registration before deleting challenge teams." });
+        if (challenge.TeamsFinalizedAtUtc.HasValue) return Conflict(new { message = "Finalized teams cannot be deleted." });
+        var team = await db.ChallengeTeams.SingleOrDefaultAsync(x => x.Id == teamId && x.ChallengeId == challengeId, cancellationToken);
+        if (team is null) return NotFound();
+        var memberships = await db.ChallengeTeamMembers.Where(x => x.ChallengeId == challengeId && x.TeamId == teamId).ToListAsync(cancellationToken);
+        db.ChallengeTeamMembers.RemoveRange(memberships);
+        db.ChallengeTeams.Remove(team);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("{challengeId:guid}/teams/finalize")]
     [Authorize(Roles = "HrAdmin")]
     public async Task<IActionResult> FinalizeTeams(Guid challengeId, CancellationToken cancellationToken)
@@ -388,7 +432,7 @@ public sealed class ChallengesController(
     public sealed record SetChallengeResponseRequest(string Status);
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
     public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);
-    public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);
+    public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);\n    public sealed record RenameChallengeTeamRequest(string Name);
     public sealed record TeamMemberResponse(Guid EmployeeId, string DisplayName, string Email);
     public sealed record ChallengeTeamResponse(Guid Id, string Name, int MemberCount, System.Collections.Generic.List<TeamMemberResponse> Members);
     public sealed record RegistrationParticipantResponse(Guid EmployeeId, string DisplayName, string Email, DateTime RespondedAtUtc, Guid? TeamId, string? TeamName);
