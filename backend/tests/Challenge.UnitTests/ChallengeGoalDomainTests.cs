@@ -1,5 +1,5 @@
 using System;
-using Challenge.Domain.Entities;
+using ChallengeEntity = global::Challenge.Domain.Entities.Challenge;
 using Xunit;
 
 namespace Challenge.UnitTests;
@@ -9,7 +9,7 @@ public sealed class ChallengeGoalDomainTests
     [Fact]
     public void Constructor_PersistsGoalInstructionsTargetAndUnit()
     {
-        var challenge = new Challenge.Domain.Entities.Challenge(Guid.NewGuid(), "org", Guid.NewGuid(), "Walking", null,
+        var challenge = new ChallengeEntity(Guid.NewGuid(), "org", Guid.NewGuid(), "Walking", null,
             new DateOnly(2026, 11, 28), new DateOnly(2026, 12, 4), DateTime.UtcNow,
             new DateOnly(2026, 11, 27), "Walk every day and record your steps.", 35000m, "steps");
         Assert.Equal("Walk every day and record your steps.", challenge.GoalInstructions);
