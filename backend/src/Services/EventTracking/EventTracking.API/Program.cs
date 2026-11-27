@@ -39,6 +39,12 @@ jwtOptions.Validate();
 
 builder.Services.AddDbContextFactory<EventTrackingDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
+builder.Services.AddHttpClient("ChallengeApi", client =>
+{
+    var baseUrl = builder.Configuration["ChallengeApi:BaseUrl"] ?? "http://localhost:5104/";
+    client.BaseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/", UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 builder.Services.AddHttpClient("HabitApi", client =>
 {
     var baseUrl = builder.Configuration["HabitApi:BaseUrl"] ?? "http://localhost:5102/";
@@ -100,6 +106,7 @@ builder.Services.AddScoped<IEmployeeStatusProjectionStore>(sp => sp.GetRequiredS
 builder.Services.AddScoped<IEmployeeStatusProjectionReader>(sp => sp.GetRequiredService<EmployeeStatusProjectionStore>());
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddScoped<IHabitActivitySubmissionStore, HabitActivitySubmissionStore>();
+builder.Services.AddScoped<IChallengeActivitySubmissionStore, ChallengeActivitySubmissionStore>();
 builder.Services.AddScoped<IEventTrackingOutboxStore, EventTrackingOutboxStore>();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })

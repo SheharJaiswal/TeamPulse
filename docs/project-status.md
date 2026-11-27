@@ -1,3 +1,14 @@
+## Challenge goals and employee progress — implementation branch, CI pending
+
+- Added a measurable individual cumulative goal to challenge creation: action instructions, numeric target and unit. Challenge owns the goal metadata and employee eligibility.
+- Event Tracking now owns separate append-only challenge activity submissions, employee-scoped idempotency, progress totals and a transactional outbox event (`ChallengeActivityRecorded`) on the challenge activity routing key.
+- Employee challenge workspace shows the required action, target, cumulative progress, remaining amount, recent submissions, activity logging and completion when the total reaches the target. HR create and registration views show the goal.
+- Activity is self-reported; this increment does not add device verification, rewards, team scoring or manager access to individual activity.
+- SDD: `docs/changes/challenge-goals-and-progress/`; API contract: `docs/contracts/challenge-activity-api.md`.
+- Implementation branch: `feature/challenge-goals-and-progress`. CI and review are pending; do not treat this slice as verified until workflows pass.
+
+Updated: 2026-11-27
+
 ## Optional employee team membership — implementation complete, CI pending
 
 - Owner approved the rule on 2026-11-24: an employee must belong to an organization, but team membership is optional and can be assigned later. Personal employee capabilities do not require a team.

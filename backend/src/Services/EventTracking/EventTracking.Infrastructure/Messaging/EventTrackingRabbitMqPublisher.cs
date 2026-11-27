@@ -41,7 +41,8 @@ public sealed class EventTrackingRabbitMqPublisher : IEventTrackingPublisher, IA
                         CorrelationId = message.CorrelationId.ToString("D"), ContentType = "application/json",
                         DeliveryMode = DeliveryModes.Persistent,
                         Headers = new Dictionary<string, object?> { ["schemaVersion"] = message.SchemaVersion } };
-                    await channel.BasicPublishAsync(_options.ExchangeName, _options.RoutingKey, mandatory: true,
+                    var routingKey = message.EventType == "ChallengeActivityRecorded" ? "challenge.activity.recorded" : _options.RoutingKey;
+                    await channel.BasicPublishAsync(_options.ExchangeName, routingKey, mandatory: true,
                         basicProperties: properties, body: Encoding.UTF8.GetBytes(message.Payload), cancellationToken: cancellationToken);
                     results.Add(new EventTrackingPublishResult(message.EventId, EventTrackingPublishOutcome.Accepted, string.Empty));
                 }

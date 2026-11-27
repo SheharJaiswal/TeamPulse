@@ -43,6 +43,20 @@ partial class EventTrackingDbContextModelSnapshot : ModelSnapshot
             b.HasIndex("EmployeeId", "IdempotencyKey").IsUnique().HasDatabaseName("ux_habit_activity_employee_idempotency");
             b.ToTable("habit_activity_submissions");
         });
+        modelBuilder.Entity("EventTracking.Domain.Entities.ChallengeActivitySubmission", b =>
+        {
+            b.Property<Guid>("Id").HasColumnType("char(36)").HasColumnName("id");
+            b.Property<Guid>("EmployeeId").IsRequired().HasColumnType("char(36)").HasColumnName("employee_id");
+            b.Property<Guid>("ChallengeId").IsRequired().HasColumnType("char(36)").HasColumnName("challenge_id");
+            b.Property<DateOnly>("ActivityDate").HasColumnType("date").HasColumnName("activity_date");
+            b.Property<decimal>("Quantity").HasColumnType("decimal(12,2)").HasColumnName("quantity");
+            b.Property<Guid>("IdempotencyKey").IsRequired().HasColumnType("char(36)").HasColumnName("idempotency_key");
+            b.Property<DateTime>("SubmittedAtUtc").HasColumnType("datetime(6)").HasColumnName("submitted_at_utc");
+            b.HasKey("Id");
+            b.HasIndex("EmployeeId", "ChallengeId", "ActivityDate").HasDatabaseName("ix_challenge_activity_employee_challenge_date");
+            b.HasIndex("EmployeeId", "IdempotencyKey").IsUnique().HasDatabaseName("ux_challenge_activity_employee_idempotency");
+            b.ToTable("challenge_activity_submissions");
+        });
         modelBuilder.Entity("EventTracking.Domain.Entities.EventTrackingOutboxMessage", b =>
         {
             b.Property<Guid>("EventId").HasColumnType("char(36)").HasColumnName("EventId");

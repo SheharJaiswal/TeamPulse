@@ -104,5 +104,43 @@ public sealed class ChallengeRegistrationApiTests(ChallengeMySqlFixture fixture)
         Assert.Equal(2, await verify.ChallengeTeamMembers.CountAsync(x => x.ChallengeId == challengeId));
     }
 
+    [Fact]
+    public async Task JoinedEmployeeCanReadChallengeGoal_ButNonParticipantCannot()
+    {
+        using var factory = fixture.CreateFactory();
+        using var client = factory.CreateClient();
+        var organizationId = "goal-" + Guid.NewGuid().ToString("N");
+        var challengeId = Guid.NewGuid();
+        var joinedEmployeeId = Guid.NewGuid();
+        var otherEmployeeId = Guid.NewGuid();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        await using (var db = await factory.Services.GetRequiredService<IDbContextFactory<ChallengeDbContext>>().CreateDbContextAsync())
+        {
+            db.Challenges.Add(new Challenge.Domain.Entities.Challenge(challengeId, organizationId, Guid.NewGuid(),
+                "Goal access test", null, today, today.AddDays(5), now, today,
+                "Walk and log your daily steps.", 35000m, "steps"));
+            db.ChallengeParticipations.Add(new ChallengeParticipation(Guid.NewGuid(), challengeId, joinedEmployeeId, now, "Joined"));
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(joinedEmployeeId, true, 1, now));
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(otherEmployeeId, true, 1, now));
+            await db.SaveChangesAsync();
+        }
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", ChallengeApiFactory.CreateToken(joinedEmployeeId, organizationId, "Employee"));
+        using var allowed = await client.GetAsync($"/api/challenges/{challengeId}/activity-goal");
+        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+        var goal = await allowed.Content.ReadFromJsonAsync<GoalResponse>();
+        Assert.NotNull(goal);
+        Assert.Equal(35000m, goal.GoalTarget);
+        Assert.Equal("steps", goal.GoalUnit);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", ChallengeApiFactory.CreateToken(otherEmployeeId, organizationId, "Employee"));
+        using var denied = await client.GetAsync($"/api/challenges/{challengeId}/activity-goal");
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+    }
+
+    private sealed record GoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate);
     private sealed record TeamCreatedResponse(Guid Id, string Name);
 }

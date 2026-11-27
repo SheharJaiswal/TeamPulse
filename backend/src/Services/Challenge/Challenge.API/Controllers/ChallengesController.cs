@@ -36,7 +36,8 @@ public sealed class ChallengesController(
             .Where(x => x.OrganizationId == organizationId)
             .OrderByDescending(x => x.CreatedAtUtc)
             .Select(x => new ChallengeResponse(x.Id, x.Name, x.Description, x.StartDate, x.EndDate,
-                x.RegistrationDeadline, x.RegistrationClosedAtUtc, x.TeamsFinalizedAtUtc, x.CreatedAtUtc))
+                x.RegistrationDeadline, x.RegistrationClosedAtUtc, x.TeamsFinalizedAtUtc, x.CreatedAtUtc,
+                x.GoalInstructions, x.GoalTarget, x.GoalUnit))
             .ToListAsync(cancellationToken);
         return Ok(challenges);
     }
@@ -58,7 +59,8 @@ public sealed class ChallengesController(
                 !db.ChallengeParticipations.Any(p => p.ChallengeId == x.Id && p.EmployeeId == employeeId))
             .OrderBy(x => x.StartDate).ThenBy(x => x.Name)
             .Select(x => new ChallengeResponse(x.Id, x.Name, x.Description, x.StartDate, x.EndDate,
-                x.RegistrationDeadline, x.RegistrationClosedAtUtc, x.TeamsFinalizedAtUtc, x.CreatedAtUtc))
+                x.RegistrationDeadline, x.RegistrationClosedAtUtc, x.TeamsFinalizedAtUtc, x.CreatedAtUtc,
+                x.GoalInstructions, x.GoalTarget, x.GoalUnit))
             .ToListAsync(cancellationToken);
         return Ok(challenges);
     }
@@ -84,9 +86,26 @@ public sealed class ChallengesController(
                        join team in db.ChallengeTeams.AsNoTracking() on member.TeamId equals team.Id
                        where member.ChallengeId == challenge.Id && member.EmployeeId == employeeId
                        select team.Name).FirstOrDefault()
-                    : null)
+                    : null, challenge.GoalInstructions, challenge.GoalTarget, challenge.GoalUnit)
         ).ToListAsync(cancellationToken);
         return Ok(participations);
+    }
+
+    [HttpGet("{challengeId:guid}/activity-goal")]
+    [Authorize(Roles = "Employee,HrAdmin")]
+    public async Task<IActionResult> GetActivityGoal(Guid challengeId, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(out var organizationId, out var employeeId)) return Unauthorized();
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
+        var challenge = await db.Challenges.AsNoTracking().SingleOrDefaultAsync(
+            x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
+        if (challenge is null) return NotFound();
+        var participation = await db.ChallengeParticipations.AsNoTracking().SingleOrDefaultAsync(
+            x => x.ChallengeId == challengeId && x.EmployeeId == employeeId, cancellationToken);
+        if (participation is null || participation.ResponseStatus != "Joined") return Forbid();
+        return Ok(new ChallengeActivityGoalResponse(challenge.Id, challenge.GoalInstructions,
+            challenge.GoalTarget, challenge.GoalUnit, challenge.StartDate, challenge.EndDate));
     }
 
     [HttpPost("{challengeId:guid}/join")]
@@ -161,6 +180,10 @@ public sealed class ChallengesController(
             return BadRequest(new { message = "Challenge name must contain 1 to 120 characters." });
         if (request.Description?.Length > 1000)
             return BadRequest(new { message = "Description cannot exceed 1,000 characters." });
+        if (string.IsNullOrWhiteSpace(request.GoalInstructions) || request.GoalInstructions.Trim().Length > 500 ||
+            !request.GoalTarget.HasValue || request.GoalTarget.Value <= 0 || request.GoalTarget.Value > 1000000m || decimal.Round(request.GoalTarget.Value, 2) != request.GoalTarget.Value ||
+            string.IsNullOrWhiteSpace(request.GoalUnit) || request.GoalUnit.Trim().Length > 30)
+            return BadRequest(new { message = "Provide goal instructions (1–500 characters), a target greater than zero and no more than 1,000,000, and a unit (1–30 characters)." });
         if (!DateOnly.TryParseExact(request.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startDate) ||
             !DateOnly.TryParseExact(request.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endDate) ||
             !DateOnly.TryParseExact(request.RegistrationDeadline, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var registrationDeadline))
@@ -174,7 +197,8 @@ public sealed class ChallengesController(
 
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var challenge = new Challenge.Domain.Entities.Challenge(Guid.NewGuid(), organizationId, employeeId,
-            request.Name, request.Description, startDate, endDate, now, registrationDeadline);
+            request.Name, request.Description, startDate, endDate, now, registrationDeadline,
+            request.GoalInstructions, request.GoalTarget.Value, request.GoalUnit);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         db.Challenges.Add(challenge);
         foreach (var employee in activeEmployees)
@@ -184,7 +208,7 @@ public sealed class ChallengesController(
 
         return Created("/api/challenges", new ChallengeResponse(challenge.Id, challenge.Name, challenge.Description,
             challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline, challenge.RegistrationClosedAtUtc,
-            challenge.TeamsFinalizedAtUtc, challenge.CreatedAtUtc));
+            challenge.TeamsFinalizedAtUtc, challenge.CreatedAtUtc, challenge.GoalInstructions, challenge.GoalTarget, challenge.GoalUnit));
     }
 
     [HttpGet("{challengeId:guid}/registration")]
@@ -233,6 +257,7 @@ public sealed class ChallengesController(
         return Ok(new RegistrationSummaryResponse(challenge.Id, challenge.Name, challenge.Description,
             challenge.StartDate, challenge.EndDate, challenge.RegistrationDeadline,
             challenge.RegistrationClosedAtUtc, challenge.TeamsFinalizedAtUtc,
+            challenge.GoalInstructions, challenge.GoalTarget, challenge.GoalUnit,
             invitations.Count, joined.Count, responses.Count(x => x.ResponseStatus == "Declined"),
             Math.Max(0, invitations.Count - responses.Count), participants, teamResponses));
     }
@@ -424,12 +449,16 @@ public sealed class ChallengesController(
     }
 
     public sealed record ActiveEmployee(Guid EmployeeId, string Email, string DisplayName, string OrganizationId);
-    public sealed record CreateChallengeRequest(string Name, string? Description, string StartDate, string EndDate, string RegistrationDeadline);
+    public sealed record CreateChallengeRequest(string Name, string? Description, string StartDate, string EndDate, string RegistrationDeadline,
+        string? GoalInstructions = null, decimal? GoalTarget = null, string? GoalUnit = null);
     public sealed record ChallengeResponse(Guid Id, string Name, string? Description, DateOnly StartDate, DateOnly EndDate,
-        DateOnly RegistrationDeadline, DateTime? RegistrationClosedAtUtc, DateTime? TeamsFinalizedAtUtc, DateTime CreatedAtUtc);
+        DateOnly RegistrationDeadline, DateTime? RegistrationClosedAtUtc, DateTime? TeamsFinalizedAtUtc, DateTime CreatedAtUtc,
+        string GoalInstructions, decimal GoalTarget, string GoalUnit);
     public sealed record MyChallengeResponse(Guid Id, string Name, string? Description, DateOnly StartDate, DateOnly EndDate,
-        DateOnly RegistrationDeadline, string ResponseStatus, DateTime? JoinedAtUtc, string? TeamName);
+        DateOnly RegistrationDeadline, string ResponseStatus, DateTime? JoinedAtUtc, string? TeamName,
+        string GoalInstructions, decimal GoalTarget, string GoalUnit);
     public sealed record SetChallengeResponseRequest(string Status);
+    public sealed record ChallengeActivityGoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate);
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
     public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);
     public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);
@@ -439,7 +468,7 @@ public sealed class ChallengesController(
     public sealed record RegistrationParticipantResponse(Guid EmployeeId, string DisplayName, string Email, DateTime RespondedAtUtc, Guid? TeamId, string? TeamName);
     public sealed record RegistrationSummaryResponse(Guid ChallengeId, string ChallengeName, string? Description,
         DateOnly StartDate, DateOnly EndDate, DateOnly RegistrationDeadline, DateTime? RegistrationClosedAtUtc,
-        DateTime? TeamsFinalizedAtUtc, int InvitedCount, int JoinedCount, int DeclinedCount, int PendingCount,
+        DateTime? TeamsFinalizedAtUtc, string GoalInstructions, decimal GoalTarget, string GoalUnit, int InvitedCount, int JoinedCount, int DeclinedCount, int PendingCount,
         System.Collections.Generic.List<RegistrationParticipantResponse> Participants,
         System.Collections.Generic.List<ChallengeTeamResponse> Teams);
 }

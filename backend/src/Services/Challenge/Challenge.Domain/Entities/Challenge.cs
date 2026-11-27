@@ -8,7 +8,8 @@ public sealed class Challenge
 
     public Challenge(Guid id, string organizationId, Guid createdByEmployeeId, string name,
         string? description, DateOnly startDate, DateOnly endDate, DateTime createdAtUtc,
-        DateOnly? registrationDeadline = null)
+        DateOnly? registrationDeadline = null, string? goalInstructions = null,
+        decimal goalTarget = 1m, string? goalUnit = null)
     {
         if (id == Guid.Empty) throw new ArgumentException("Challenge ID is required.", nameof(id));
         if (string.IsNullOrWhiteSpace(organizationId)) throw new ArgumentException("Organization is required.", nameof(organizationId));
@@ -17,6 +18,11 @@ public sealed class Challenge
         if (description?.Length > 1000) throw new ArgumentException("Description cannot exceed 1,000 characters.", nameof(description));
         if (endDate < startDate) throw new ArgumentException("End date cannot be before start date.");
         if (createdAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("Creation time must be UTC.", nameof(createdAtUtc));
+        var instructions = string.IsNullOrWhiteSpace(goalInstructions) ? "Complete the challenge activity and record your progress." : goalInstructions.Trim();
+        var unit = string.IsNullOrWhiteSpace(goalUnit) ? "completion" : goalUnit.Trim();
+        if (instructions.Length > 500) throw new ArgumentException("Goal instructions cannot exceed 500 characters.", nameof(goalInstructions));
+        if (goalTarget <= 0 || goalTarget > 1000000m || decimal.Round(goalTarget, 2) != goalTarget) throw new ArgumentOutOfRangeException(nameof(goalTarget), "Goal target must be greater than zero, no more than 1,000,000, and have at most two decimal places.");
+        if (unit.Length > 30) throw new ArgumentException("Goal unit cannot exceed 30 characters.", nameof(goalUnit));
         var deadline = registrationDeadline ?? startDate;
         if (deadline > startDate) throw new ArgumentException("Registration deadline cannot be after challenge start date.", nameof(registrationDeadline));
 
@@ -28,6 +34,9 @@ public sealed class Challenge
         StartDate = startDate;
         EndDate = endDate;
         RegistrationDeadline = deadline;
+        GoalInstructions = instructions;
+        GoalTarget = goalTarget;
+        GoalUnit = unit;
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -39,6 +48,9 @@ public sealed class Challenge
     public DateOnly StartDate { get; private set; }
     public DateOnly EndDate { get; private set; }
     public DateOnly RegistrationDeadline { get; private set; }
+    public string GoalInstructions { get; private set; } = "Complete the challenge activity and record your progress.";
+    public decimal GoalTarget { get; private set; } = 1m;
+    public string GoalUnit { get; private set; } = "completion";
     public DateTime? RegistrationClosedAtUtc { get; private set; }
     public DateTime? TeamsFinalizedAtUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }

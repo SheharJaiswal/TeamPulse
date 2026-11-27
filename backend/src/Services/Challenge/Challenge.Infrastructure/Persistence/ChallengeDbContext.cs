@@ -26,6 +26,9 @@ public sealed class ChallengeDbContext(DbContextOptions<ChallengeDbContext> opti
         challenge.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("date").IsRequired();
         challenge.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("date").IsRequired();
         challenge.Property(x => x.RegistrationDeadline).HasColumnName("registration_deadline").HasColumnType("date").IsRequired();
+        challenge.Property(x => x.GoalInstructions).HasColumnName("goal_instructions").HasMaxLength(500).IsRequired();
+        challenge.Property(x => x.GoalTarget).HasColumnName("goal_target").HasColumnType("decimal(12,2)").IsRequired();
+        challenge.Property(x => x.GoalUnit).HasColumnName("goal_unit").HasMaxLength(30).IsRequired();
         challenge.Property(x => x.RegistrationClosedAtUtc).HasColumnName("registration_closed_at_utc").HasColumnType("datetime(6)");
         challenge.Property(x => x.TeamsFinalizedAtUtc).HasColumnName("teams_finalized_at_utc").HasColumnType("datetime(6)");
         challenge.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("datetime(6)").IsRequired();

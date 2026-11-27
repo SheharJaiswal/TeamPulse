@@ -112,6 +112,8 @@ public sealed class ChallengeInvitationEmailWorker(
         $"<html><body><p>Hello {WebUtility.HtmlEncode(displayName)},</p>" +
         $"<p>HR has invited you to <strong>{WebUtility.HtmlEncode(challenge.Name)}</strong>.</p>" +
         $"<p>{WebUtility.HtmlEncode(challenge.Description ?? string.Empty)}</p>" +
+        $"<p><strong>Action:</strong> {WebUtility.HtmlEncode(challenge.GoalInstructions)}</p>" +
+        $"<p><strong>Goal:</strong> {challenge.GoalTarget.ToString(System.Globalization.CultureInfo.InvariantCulture)} {WebUtility.HtmlEncode(challenge.GoalUnit)}</p>" +
         $"<p>Challenge dates: {challenge.StartDate:yyyy-MM-dd} to {challenge.EndDate:yyyy-MM-dd}</p>" +
         $"<p>Respond by: {challenge.RegistrationDeadline:yyyy-MM-dd}</p>" +
         $"<p><a href=\"{WebUtility.HtmlEncode(appUrl + (appUrl.Contains('?') ? "&" : "?") + "challengeId=" + challenge.Id)}\">Open TeamPulse to Join or Decline</a></p></body></html>";
