@@ -23,7 +23,7 @@ public sealed class MySqlActivitySummaryStoreIntegrationTests
             .UseMySql(mysql.GetConnectionString(), new MySqlServerVersion(new Version(8, 4, 0)))
             .Options;
         await using (var setup = new InsightActivityDbContext(options))
-            await setup.Database.EnsureCreatedAsync();
+            await setup.Database.MigrateAsync();
 
         var factory = new TestDbContextFactory(options);
         var store = new MySqlActivitySummaryStore(factory);
