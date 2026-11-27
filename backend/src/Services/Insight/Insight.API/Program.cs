@@ -137,26 +137,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/insights/activity/daily",
-    async (DateOnly? fromDate, DateOnly? toDate, System.Security.Claims.ClaimsPrincipal user,
-        IActivitySummaryStore store, TimeProvider clock, CancellationToken cancellationToken) =>
-    {
-        var subject = user.FindFirst("sub")?.Value;
-        if (!Guid.TryParse(subject, out var employeeId) || employeeId == Guid.Empty)
-            return Results.Unauthorized();
-
-        if (fromDate.HasValue != toDate.HasValue)
-            return Results.BadRequest(new { error = "fromDate and toDate must be provided together." });
-
-        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
-        var from = fromDate ?? today.AddDays(-6);
-        var to = toDate ?? today;
-        if (from > to || to.DayNumber - from.DayNumber >= 30)
-            return Results.BadRequest(new { error = "Date range must be inclusive, ordered, and no longer than 30 days." });
-
-        var days = await store.GetDailySummaryAsync(employeeId, from, to, cancellationToken);
-        return Results.Ok(days);
-    })
+app.MapGet("/api/insights/activity/daily", GetMyDailyActivitySummary)
     .RequireAuthorization()
     .WithName("GetMyDailyActivitySummary");
 
@@ -176,6 +157,32 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
 });
+
+static async Task<IResult> GetMyDailyActivitySummary(
+    DateOnly? fromDate,
+    DateOnly? toDate,
+    System.Security.Claims.ClaimsPrincipal user,
+    IActivitySummaryStore store,
+    TimeProvider clock,
+    CancellationToken cancellationToken)
+{
+    var subject = user.FindFirst("sub")?.Value;
+    if (!Guid.TryParse(subject, out var employeeId) || employeeId == Guid.Empty)
+        return Results.Unauthorized();
+
+    if (fromDate.HasValue != toDate.HasValue)
+        return Results.BadRequest(new { error = "fromDate and toDate must be provided together." });
+
+    var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+    var from = fromDate ?? today.AddDays(-6);
+    var to = toDate ?? today;
+    if (from > to || to.DayNumber - from.DayNumber >= 30)
+        return Results.BadRequest(new { error = "Date range must be inclusive, ordered, and no longer than 30 days." });
+
+    var days = await store.GetDailySummaryAsync(employeeId, from, to, cancellationToken);
+    return Results.Ok(days);
+}
+
 app.Run();
 
 public partial class Program { }
