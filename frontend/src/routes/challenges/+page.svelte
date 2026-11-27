@@ -1,10 +1,19 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import { onMount } from 'svelte';
+  import { parseUtcTimestamp, toLocalDateInputValue } from '$lib/validation.js';
   import type { ActionData, PageData } from './$types';
 
   export let data: PageData;
   export let form: ActionData;
   let isJoining = false;
+  let localTodayDate = localTodayDate;
+
+  onMount(() => {
+    // Date-only challenge values stay calendar dates; activity input defaults
+    // follow the employee's browser time zone rather than the server's UTC day.
+    localTodayDate = toLocalDateInputValue();
+  });
 
   function handleEnhance() {
     isJoining = true;
@@ -21,6 +30,11 @@
   $: successMessage = form && 'success' in form && form.success
     ? ('message' in form ? form.message : 'You have joined the challenge.')
     : undefined;
+
+  function joinedDateLabel(value: string): string {
+    const date = parseUtcTimestamp(value);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+  }
 
   function dateLabel(value: string): string {
     const [year, month, day] = value.split('-').map(Number);
@@ -105,11 +119,11 @@
                     {#if challenge.progress.entries.length}
                       <details class="activity-history"><summary>Recent activity ({challenge.progress.entries.length})</summary><ul>{#each challenge.progress.entries.slice(0, 4) as entry (entry.id)}<li>{entry.activityDate}: +{entry.quantity} {challenge.goalUnit}</li>{/each}</ul></details>
                     {/if}
-                    {#if challenge.progress.totalQuantity < challenge.goalTarget && data.todayDate >= challenge.startDate && data.todayDate <= challenge.endDate}
+                    {#if challenge.progress.totalQuantity < challenge.goalTarget && localTodayDate >= challenge.startDate && localTodayDate <= challenge.endDate}
                       <form class="log-activity-form" method="POST" action="?/logActivity" use:enhance={handleEnhance} aria-busy={isJoining}>
                         <input type="hidden" name="challengeId" value={challenge.id} />
                         <input type="hidden" name="idempotencyKey" value={challenge.activityKey} />
-                        <label>Activity date<input type="date" name="activityDate" value={data.todayDate} min={challenge.startDate} max={data.todayDate < challenge.endDate ? data.todayDate : challenge.endDate} required /></label>
+                        <label>Activity date<input type="date" name="activityDate" value={localTodayDate} min={challenge.startDate} max={localTodayDate < challenge.endDate ? localTodayDate : challenge.endDate} required /></label>
                         <label>Amount ({challenge.goalUnit})<input type="number" name="quantity" min="0.01" max="1000000" step="0.01" placeholder="e.g. 5000" required /></label>
                         <button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Log activity'}</button>
                       </form>
@@ -118,11 +132,11 @@
                     {/if}
                   {:else}
                     <p class="progress-status">Progress could not be loaded. You can still submit activity; the total will refresh when tracking is available.</p>
-                    {#if data.todayDate >= challenge.startDate && data.todayDate <= challenge.endDate}
+                    {#if localTodayDate >= challenge.startDate && localTodayDate <= challenge.endDate}
                       <form class="log-activity-form" method="POST" action="?/logActivity" use:enhance={handleEnhance} aria-busy={isJoining}>
                         <input type="hidden" name="challengeId" value={challenge.id} />
                         <input type="hidden" name="idempotencyKey" value={challenge.activityKey} />
-                        <label>Activity date<input type="date" name="activityDate" value={data.todayDate} min={challenge.startDate} max={data.todayDate < challenge.endDate ? data.todayDate : challenge.endDate} required /></label>
+                        <label>Activity date<input type="date" name="activityDate" value={localTodayDate} min={challenge.startDate} max={localTodayDate < challenge.endDate ? localTodayDate : challenge.endDate} required /></label>
                         <label>Amount ({challenge.goalUnit})<input type="number" name="quantity" min="0.01" max="1000000" step="0.01" placeholder="e.g. 5000" required /></label>
                         <button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Log activity'}</button>
                       </form>
@@ -132,7 +146,7 @@
                   {/if}
                 </section>
               {/if}
-              <div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? new Date(challenge.joinedAtUtc).toLocaleDateString() : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined'}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
+              <div class="habit-footer"><span>{challenge.responseStatus === 'Joined' ? `Joined ${challenge.joinedAtUtc ? joinedDateLabel(challenge.joinedAtUtc) : ''}` : 'You declined this challenge.'}</span>{#if challenge.teamName}<span class="category-pill">Team: {challenge.teamName}</span>{:else if challenge.responseStatus === 'Joined'}<span class="muted">Team assignment pending HR finalization.</span>{/if}</div></article>
             {/each}
           </div>
         {/if}
