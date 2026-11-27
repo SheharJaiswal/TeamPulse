@@ -56,7 +56,8 @@ public sealed class ChallengeActivitiesController(
         if (request.ActivityDate < goal.StartDate || request.ActivityDate > goal.EndDate || request.ActivityDate > today)
             return BadRequest(new { message = "Activity date must be within the challenge dates and cannot be in the future." });
 
-        var current = await submissions.GetMineAsync(employeeId, request.ChallengeId, cancellationToken);
+        var teamEmployeeIds = goal.TeamMemberEmployeeIds is { Count: > 0 } ? goal.TeamMemberEmployeeIds : new[] { employeeId };
+        var current = await submissions.GetForEmployeesAsync(teamEmployeeIds, request.ChallengeId, cancellationToken);
         var total = current.Sum(x => x.Quantity);
         if (total >= goal.GoalTarget)
             return Conflict(new { message = "You have already completed this challenge goal." });
@@ -84,7 +85,8 @@ public sealed class ChallengeActivitiesController(
         { return StatusCode(503, new { message = "Challenge service timed out. Please retry." }); }
         if (goal is null) return NotFound();
 
-        var entries = await submissions.GetMineAsync(employeeId, challengeId, cancellationToken);
+        var teamEmployeeIds = goal.TeamMemberEmployeeIds is { Count: > 0 } ? goal.TeamMemberEmployeeIds : new[] { employeeId };
+        var entries = await submissions.GetForEmployeesAsync(teamEmployeeIds, challengeId, cancellationToken);
         var responses = entries.Select(ToResponse).ToList();
         return Ok(new ChallengeActivityProgressResponse(challengeId, entries.Sum(x => x.Quantity), responses));
     }
@@ -121,5 +123,5 @@ public sealed class ChallengeActivitiesController(
     }
 
     private static ChallengeActivityResponse ToResponse(ChallengeActivitySubmission value) =>
-        new(value.Id, value.ChallengeId, value.ActivityDate, value.Quantity, value.SubmittedAtUtc);
+        new(value.Id, value.ChallengeId, value.EmployeeId, value.ActivityDate, value.Quantity, value.SubmittedAtUtc);
 }
