@@ -100,6 +100,7 @@ builder.Services.AddScoped<IEmployeeStatusProjectionStore>(sp => sp.GetRequiredS
 builder.Services.AddScoped<IEmployeeStatusProjectionReader>(sp => sp.GetRequiredService<EmployeeStatusProjectionStore>());
 builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddScoped<IHabitActivitySubmissionStore, HabitActivitySubmissionStore>();
+builder.Services.AddScoped<IChallengeActivitySubmissionStore, ChallengeActivitySubmissionStore>();
 builder.Services.AddScoped<IEventTrackingOutboxStore, EventTrackingOutboxStore>();
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
