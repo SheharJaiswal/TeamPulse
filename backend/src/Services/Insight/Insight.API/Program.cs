@@ -43,6 +43,7 @@ builder.Services.AddDbContextFactory<InsightActivityDbContext>(options =>
 builder.Services.AddSingleton(dynamoOptions);
 builder.Services.AddSingleton(consumerOptions);
 builder.Services.AddSingleton(activityConsumerOptions);
+builder.Services.AddSingleton<InsightActivityConsumerStatus>();
 builder.Services.AddHostedService<InsightActivityRabbitMqConsumer>();
 builder.Services.AddSingleton<InsightRabbitMqConsumerStatus>();
 builder.Services.AddHostedService<InsightRabbitMqConsumer>();
@@ -113,7 +114,8 @@ builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddCheck<InsightDynamoDbHealthCheck>("insight-dynamodb", tags: new[] { "ready" })
     .AddCheck<InsightActivityDatabaseHealthCheck>("insight-activity-database", tags: new[] { "ready" })
-    .AddCheck<InsightConsumerHealthCheck>("insight-consumer", tags: new[] { "consumer" });
+    .AddCheck<InsightConsumerHealthCheck>("insight-consumer", tags: new[] { "consumer" })
+    .AddCheck<InsightActivityConsumerHealthCheck>("insight-activity-consumer", tags: new[] { "activity-consumer" });
 
 var app = builder.Build();
 
@@ -152,6 +154,10 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapHealthChecks("/health/consumer", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("consumer")
+});
+app.MapHealthChecks("/health/activity-consumer", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("activity-consumer")
 });
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
