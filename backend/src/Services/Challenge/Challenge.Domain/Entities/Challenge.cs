@@ -21,7 +21,7 @@ public sealed class Challenge
         var instructions = string.IsNullOrWhiteSpace(goalInstructions) ? "Complete the challenge activity and record your progress." : goalInstructions.Trim();
         var unit = string.IsNullOrWhiteSpace(goalUnit) ? "completion" : goalUnit.Trim();
         if (instructions.Length > 500) throw new ArgumentException("Goal instructions cannot exceed 500 characters.", nameof(goalInstructions));
-        if (goalTarget <= 0 || goalTarget > 1000000m) throw new ArgumentOutOfRangeException(nameof(goalTarget), "Goal target must be greater than zero and no more than 1,000,000.");
+        if (goalTarget <= 0 || goalTarget > 1000000m || decimal.Round(goalTarget, 2) != goalTarget) throw new ArgumentOutOfRangeException(nameof(goalTarget), "Goal target must be greater than zero, no more than 1,000,000, and have at most two decimal places.");
         if (unit.Length > 30) throw new ArgumentException("Goal unit cannot exceed 30 characters.", nameof(goalUnit));
         var deadline = registrationDeadline ?? startDate;
         if (deadline > startDate) throw new ArgumentException("Registration deadline cannot be after challenge start date.", nameof(registrationDeadline));
