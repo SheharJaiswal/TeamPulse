@@ -181,7 +181,7 @@ public sealed class ChallengesController(
         if (request.Description?.Length > 1000)
             return BadRequest(new { message = "Description cannot exceed 1,000 characters." });
         if (string.IsNullOrWhiteSpace(request.GoalInstructions) || request.GoalInstructions.Trim().Length > 500 ||
-            !request.GoalTarget.HasValue || request.GoalTarget.Value <= 0 || request.GoalTarget.Value > 1000000m ||
+            !request.GoalTarget.HasValue || request.GoalTarget.Value <= 0 || request.GoalTarget.Value > 1000000m || decimal.Round(request.GoalTarget.Value, 2) != request.GoalTarget.Value ||
             string.IsNullOrWhiteSpace(request.GoalUnit) || request.GoalUnit.Trim().Length > 30)
             return BadRequest(new { message = "Provide goal instructions (1–500 characters), a target greater than zero and no more than 1,000,000, and a unit (1–30 characters)." });
         if (!DateOnly.TryParseExact(request.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startDate) ||
