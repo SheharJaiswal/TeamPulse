@@ -38,6 +38,9 @@ interface Registration {
   registrationDeadline: string;
   registrationClosedAtUtc: string | null;
   teamsFinalizedAtUtc: string | null;
+  goalInstructions: string;
+  goalTarget: number;
+  goalUnit: string;
   invitedCount: number;
   joinedCount: number;
   declinedCount: number;
