@@ -4,7 +4,7 @@
 - Each challenge has exactly one individual cumulative goal: action instructions, target quantity greater than zero, and a short unit label.
 - HR must supply all goal fields when creating a challenge. Instructions are 1–500 characters, unit is 1–30 characters, and target is positive and at most 1,000,000.
 - The goal is immutable after challenge creation for this increment.
-- Challenge owns and returns goal metadata. Existing challenges receive a safe legacy goal during migration: instructions "Complete the challenge activity and record your progress.", target 1, unit "completion"; HR should use newly created challenges for explicit goals.
+- Challenge owns and returns goal metadata. Invitation email includes the action instructions, target and unit. Existing challenges receive a safe legacy goal during migration: instructions "Complete the challenge activity and record your progress.", target 1, unit "completion"; HR should use newly created challenges for explicit goals.
 
 ## Activity submission
 - Event Tracking owns append-only challenge activity submissions, distinct from habit activity submissions.
