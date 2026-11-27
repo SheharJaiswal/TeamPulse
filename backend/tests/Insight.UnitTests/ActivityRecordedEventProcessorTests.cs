@@ -1,3 +1,4 @@
+using Xunit;
 using System.Text.Json;
 using Insight.Application;
 using Insight.Application.Abstractions;
