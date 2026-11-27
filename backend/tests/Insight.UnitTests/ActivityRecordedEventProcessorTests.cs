@@ -3,6 +3,7 @@ using System.Text.Json;
 using Insight.Application;
 using Insight.Application.Abstractions;
 using Insight.Application.Contracts;
+using Insight.Infrastructure.Messaging;
 
 namespace Insight.UnitTests;
 
@@ -54,6 +55,18 @@ public sealed class ActivityRecordedEventProcessorTests
 
         Assert.Equal(ProjectionProcessingOutcome.UnsupportedSchemaVersion, result);
         Assert.Null(store.Category);
+    }
+
+    [Fact]
+    public void ActivityConsumerStatusTracksConnectionLifecycle()
+    {
+        var status = new InsightActivityConsumerStatus();
+
+        Assert.False(status.IsConnected);
+        status.MarkConnected();
+        Assert.True(status.IsConnected);
+        status.MarkDisconnected();
+        Assert.False(status.IsConnected);
     }
 
     private sealed class RecordingActivityStore : IActivitySummaryStore
