@@ -120,8 +120,8 @@ export const actions: Actions = {
     const activityDate = String(form.get('activityDate') ?? '');
     const quantity = Number(form.get('quantity'));
     if (!isGuid(challengeId) || !isGuid(idempotencyKey) || !isCalendarDate(activityDate) ||
-      !Number.isFinite(quantity) || quantity <= 0 || quantity > 1000 || Math.round(quantity * 100) !== quantity * 100) {
-      return fail(400, { message: 'Enter a valid activity date and quantity (greater than zero, up to 1,000, max two decimals).' });
+      !Number.isFinite(quantity) || quantity <= 0 || quantity > 1000000 || Math.round(quantity * 100) !== quantity * 100) {
+      return fail(400, { message: 'Enter a valid activity date and quantity (greater than zero, up to 1,000,000, max two decimals).' });
     }
     let response: Response;
     try {
