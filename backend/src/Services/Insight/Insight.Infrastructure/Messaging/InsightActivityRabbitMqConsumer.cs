@@ -135,7 +135,7 @@ public sealed class InsightActivityRabbitMqConsumer(
             }
         };
 
-        await channel.BasicConsumeAsync(options.QueueName, autoAck: false, consumer, stoppingToken);
+        await channel.BasicConsumeAsync(options.QueueName, autoAck: false, consumer: consumer, cancellationToken: stoppingToken);
         while (!stoppingToken.IsCancellationRequested && connection.IsOpen && channel.IsOpen &&
                deadLetterChannel.IsOpen && !sessionFailed.Task.IsCompleted)
         {
