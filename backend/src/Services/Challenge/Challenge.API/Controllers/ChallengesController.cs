@@ -432,7 +432,8 @@ public sealed class ChallengesController(
     public sealed record SetChallengeResponseRequest(string Status);
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
     public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);
-    public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);\n    public sealed record RenameChallengeTeamRequest(string Name);
+    public sealed record AssignChallengeTeamMembersRequest(System.Collections.Generic.List<Guid> EmployeeIds);
+    public sealed record RenameChallengeTeamRequest(string Name);
     public sealed record TeamMemberResponse(Guid EmployeeId, string DisplayName, string Email);
     public sealed record ChallengeTeamResponse(Guid Id, string Name, int MemberCount, System.Collections.Generic.List<TeamMemberResponse> Members);
     public sealed record RegistrationParticipantResponse(Guid EmployeeId, string DisplayName, string Email, DateTime RespondedAtUtc, Guid? TeamId, string? TeamName);
