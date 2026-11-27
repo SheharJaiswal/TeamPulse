@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isCalendarDate, isGuid, toLocalDateInputValue } from '../src/lib/validation.js';
+import { isCalendarDate, isGuid, parseUtcTimestamp, toLocalDateInputValue } from '../src/lib/validation.js';
 
 test('accepts a valid versioned GUID', () => {
   assert.equal(isGuid('8f14e45f-ea5e-4f2b-9c3a-123456789abc'), true);
@@ -28,4 +28,13 @@ test('rejects impossible dates and invalid date formats', () => {
 test('formats the browser-local calendar date for date inputs', () => {
   const localMidnight = new Date(2026, 10, 22, 0, 15, 0);
   assert.equal(toLocalDateInputValue(localMidnight), '2026-11-22');
+});
+
+
+test('interprets timezone-less API timestamps as UTC', () => {
+  assert.equal(parseUtcTimestamp('2026-11-27T20:14:00').toISOString(), '2026-11-27T20:14:00.000Z');
+});
+
+test('preserves an explicit timestamp offset', () => {
+  assert.equal(parseUtcTimestamp('2026-11-27T20:14:00+05:30').toISOString(), '2026-11-27T14:44:00.000Z');
 });
