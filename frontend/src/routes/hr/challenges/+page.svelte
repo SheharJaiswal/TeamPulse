@@ -50,10 +50,13 @@
       {#if message}<div class="alert" role="alert">{message}</div>{/if}
       {#if form && 'success' in form && form.success}<div class="alert success" role="status">Challenge created successfully.</div>{/if}
       <section class="create-section challenge-create">
-        <div class="create-copy"><p class="eyebrow">START SOMETHING TOGETHER</p><h2>Create a challenge</h2><p class="muted">Set a name, explain the goal, and choose the challenge dates.</p><div class="create-tip"><span>✦</span> Example: a 7-day walking challenge.</div></div>
+        <div class="create-copy"><p class="eyebrow">START SOMETHING TOGETHER</p><h2>Create a challenge</h2><p class="muted">Set the action, measurable target, and challenge dates.</p><div class="create-tip"><span>✦</span> Example: walk 5,000 steps daily for 7 days (35,000 steps total).</div></div>
         <form class="create-form" method="POST" action="?/create" use:enhance={handleEnhance} aria-busy={isSubmitting}>
           <div class="form-field full"><label for="challenge-name">Challenge name</label><input id="challenge-name" name="name" maxlength="120" placeholder="e.g. 7-Day Walking Challenge" required /></div>
           <div class="form-field full"><label for="challenge-description">Description <span>Optional</span></label><textarea id="challenge-description" name="description" maxlength="1000" rows="4" placeholder="Describe the challenge goal and how to take part."></textarea></div>
+          <div class="form-field full"><label for="challenge-action">Action to take</label><textarea id="challenge-action" name="goalInstructions" maxlength="500" rows="3" placeholder="e.g. Walk every day and record your steps." required></textarea><small>Tell employees exactly what they should do to make progress.</small></div>
+          <div class="form-field"><label for="challenge-target">Goal target</label><input id="challenge-target" name="goalTarget" type="number" min="0.01" max="1000000" step="0.01" placeholder="e.g. 35000" required /></div>
+          <div class="form-field"><label for="challenge-unit">Unit</label><input id="challenge-unit" name="goalUnit" maxlength="30" placeholder="e.g. steps" required /></div>
           <div class="form-field"><label for="challenge-start">Start date</label><input id="challenge-start" name="startDate" type="date" value={toLocalDateInputValue()} required /></div>
           <div class="form-field"><label for="challenge-end">End date</label><input id="challenge-end" name="endDate" type="date" value={toLocalDateInputValue()} required /></div>
           <div class="form-field"><label for="challenge-registration-deadline">Registration deadline</label><input id="challenge-registration-deadline" name="registrationDeadline" type="date" value={toLocalDateInputValue()} required /><small>Employees must Join or Decline by this date. HR closes registration before forming teams.</small></div>
