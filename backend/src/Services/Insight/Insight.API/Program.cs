@@ -18,6 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 var consumerOptions = builder.Configuration.GetSection(InsightRabbitMqConsumerOptions.SectionName)
     .Get<InsightRabbitMqConsumerOptions>() ?? new InsightRabbitMqConsumerOptions();
 consumerOptions.Validate();
+var activityConsumerOptions = builder.Configuration.GetSection(InsightActivityConsumerOptions.SectionName)
+    .Get<InsightActivityConsumerOptions>() ?? new InsightActivityConsumerOptions();
+activityConsumerOptions.Validate();
 
 var dynamoOptions = builder.Configuration.GetSection(InsightDynamoDbOptions.SectionName)
     .Get<InsightDynamoDbOptions>() ?? new InsightDynamoDbOptions();
@@ -39,6 +42,8 @@ builder.Services.AddDbContextFactory<InsightActivityDbContext>(options =>
     options.UseMySql(activityConnectionString, ServerVersion.AutoDetect(activityConnectionString)));
 builder.Services.AddSingleton(dynamoOptions);
 builder.Services.AddSingleton(consumerOptions);
+builder.Services.AddSingleton(activityConsumerOptions);
+builder.Services.AddHostedService<InsightActivityRabbitMqConsumer>();
 builder.Services.AddSingleton<InsightRabbitMqConsumerStatus>();
 builder.Services.AddHostedService<InsightRabbitMqConsumer>();
 builder.Services.AddSingleton<IAmazonDynamoDB>(_ =>
