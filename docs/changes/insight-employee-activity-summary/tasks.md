@@ -15,7 +15,7 @@
 - [x] Add queue/DLQ bindings and topology contract tests.
 - [x] Add event processor unit tests.
 - [x] Update README/local configuration.
-- [ ] Add/verify MySQL transaction and concurrency integration tests.
+- [x] Add MySQL Testcontainers coverage for inbox deduplication and concurrent aggregate increments (CI verification pending).
 - [ ] Add/verify API authorization and RabbitMQ acknowledgement/DLQ integration tests.
 - [ ] Run Release build and complete backend/Insight/topology CI; fix any failures.
 
