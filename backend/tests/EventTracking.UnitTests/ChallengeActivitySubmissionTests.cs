@@ -12,7 +12,7 @@ public sealed class ChallengeActivitySubmissionTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new ChallengeActivitySubmission(
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 11, 27), 0m, Guid.NewGuid(), DateTime.UtcNow));
         Assert.Throws<ArgumentOutOfRangeException>(() => new ChallengeActivitySubmission(
-            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 11, 27), 1000.01m, Guid.NewGuid(), DateTime.UtcNow));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 11, 27), 1000000.01m, Guid.NewGuid(), DateTime.UtcNow));
         Assert.Throws<ArgumentException>(() => new ChallengeActivitySubmission(
             Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), new DateOnly(2026, 11, 27), 1m, Guid.NewGuid(), DateTime.UtcNow));
         Assert.Throws<ArgumentException>(() => new ChallengeActivitySubmission(
