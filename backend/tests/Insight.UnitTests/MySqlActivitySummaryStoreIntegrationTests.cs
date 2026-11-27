@@ -40,7 +40,7 @@ public sealed class MySqlActivitySummaryStoreIntegrationTests
         Assert.Equal(ProjectionProcessingOutcome.Duplicate, duplicate);
 
         var events = Enumerable.Range(0, 20)
-            .Select(_ => CreateEvent(Guid.NewGuid(), employeeId, date))
+            .Select(_ => CreateEvent(Guid.NewGuid(), employeeId, date, challenge: true))
             .ToArray();
         await Task.WhenAll(events.Select(e => store.ProcessAsync(e, ActivityCategory.Challenge,
             DateTime.UtcNow, CancellationToken.None)));
@@ -51,9 +51,13 @@ public sealed class MySqlActivitySummaryStoreIntegrationTests
         Assert.Equal(20, row.ChallengeActivityCount);
     }
 
-    private static ActivityRecordedEnvelope CreateEvent(Guid eventId, Guid employeeId, DateOnly date) =>
-        new(eventId, "HabitActivityRecorded", 1, DateTime.UtcNow, Guid.NewGuid(),
-            new ActivityRecordedPayload(employeeId, Guid.NewGuid(), Guid.NewGuid(), null, date, 1));
+    private static ActivityRecordedEnvelope CreateEvent(
+        Guid eventId, Guid employeeId, DateOnly date, bool challenge = false) =>
+        new(eventId, challenge ? "ChallengeActivityRecorded" : "HabitActivityRecorded",
+            1, DateTime.UtcNow, Guid.NewGuid(),
+            new ActivityRecordedPayload(employeeId, Guid.NewGuid(),
+                challenge ? null : Guid.NewGuid(),
+                challenge ? Guid.NewGuid() : null, date, 1));
 
     private sealed class TestDbContextFactory(DbContextOptions<InsightActivityDbContext> options)
         : IDbContextFactory<InsightActivityDbContext>
