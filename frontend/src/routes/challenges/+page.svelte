@@ -7,7 +7,7 @@
   export let data: PageData;
   export let form: ActionData;
   let isJoining = false;
-  let localTodayDate = localTodayDate;
+  let localTodayDate = data.todayDate;
 
   onMount(() => {
     // Date-only challenge values stay calendar dates; activity input defaults
