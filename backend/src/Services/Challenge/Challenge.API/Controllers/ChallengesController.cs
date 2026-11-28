@@ -91,6 +91,45 @@ public sealed class ChallengesController(
         return Ok(participations);
     }
 
+    [HttpGet("{challengeId:guid}/activity-team")]
+    [Authorize(Roles = "Employee,HrAdmin")]
+    public async Task<IActionResult> GetActivityTeam(Guid challengeId, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(out var organizationId, out var employeeId)) return Unauthorized();
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!await IsActiveEmployee(db, employeeId, cancellationToken)) return Forbid();
+
+        var challenge = await db.Challenges.AsNoTracking().SingleOrDefaultAsync(
+            x => x.Id == challengeId && x.OrganizationId == organizationId, cancellationToken);
+        if (challenge is null) return NotFound();
+        var participation = await db.ChallengeParticipations.AsNoTracking().SingleOrDefaultAsync(
+            x => x.ChallengeId == challengeId && x.EmployeeId == employeeId, cancellationToken);
+        if (participation is null || participation.ResponseStatus != "Joined") return Forbid();
+
+        var teamIds = await db.ChallengeTeamMembers.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId && x.EmployeeId == employeeId)
+            .Select(x => x.TeamId).ToListAsync(cancellationToken);
+        var memberIds = teamIds.Count == 0
+            ? new System.Collections.Generic.List<Guid> { employeeId }
+            : await db.ChallengeTeamMembers.AsNoTracking()
+                .Where(x => x.ChallengeId == challengeId && teamIds.Contains(x.TeamId))
+                .Select(x => x.EmployeeId).Distinct().ToListAsync(cancellationToken);
+        var joinedIds = await db.ChallengeParticipations.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId && x.ResponseStatus == "Joined" && memberIds.Contains(x.EmployeeId))
+            .Select(x => x.EmployeeId).ToListAsync(cancellationToken);
+        if (!joinedIds.Contains(employeeId)) joinedIds.Add(employeeId);
+
+        var members = await db.ChallengeInvitations.AsNoTracking()
+            .Where(x => x.ChallengeId == challengeId && joinedIds.Contains(x.EmployeeId))
+            .OrderBy(x => x.DisplayName)
+            .Select(x => new ActivityTeamMemberResponse(x.EmployeeId, x.DisplayName))
+            .ToListAsync(cancellationToken);
+        if (members.All(x => x.EmployeeId != employeeId))
+            members.Add(new ActivityTeamMemberResponse(employeeId, User.FindFirstValue("name") ?? "You"));
+
+        return Ok(new ActivityTeamResponse(challenge.Id, challenge.Name, members));
+    }
+
     [HttpGet("{challengeId:guid}/activity-goal")]
     [Authorize(Roles = "Employee,HrAdmin")]
     public async Task<IActionResult> GetActivityGoal(Guid challengeId, CancellationToken cancellationToken)
@@ -467,6 +506,8 @@ public sealed class ChallengesController(
         DateOnly RegistrationDeadline, string ResponseStatus, DateTime? JoinedAtUtc, string? TeamName,
         string GoalInstructions, decimal GoalTarget, string GoalUnit);
     public sealed record SetChallengeResponseRequest(string Status);
+    public sealed record ActivityTeamMemberResponse(Guid EmployeeId, string DisplayName);
+    public sealed record ActivityTeamResponse(Guid ChallengeId, string ChallengeName, System.Collections.Generic.List<ActivityTeamMemberResponse> Members);
     public sealed record ChallengeActivityGoalResponse(Guid ChallengeId, string GoalInstructions, decimal GoalTarget, string GoalUnit, DateOnly StartDate, DateOnly EndDate, System.Collections.Generic.List<Guid>? TeamMemberEmployeeIds = null);
     public sealed record ChallengeResponseResult(Guid ChallengeId, string Status, DateTime RespondedAtUtc, bool AlreadyResponded);
     public sealed record CreateChallengeTeamRequest(string Name, System.Collections.Generic.List<Guid>? EmployeeIds = null);

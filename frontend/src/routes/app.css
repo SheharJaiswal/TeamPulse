@@ -283,3 +283,11 @@ textarea:focus-visible {
   .insight-daily-metrics { grid-column: 1 / -1; gap: 13px; }
   .insight-daily-total { grid-column: 2; grid-row: 1; }
 }
+
+.insight-empty { margin: 0; padding: 18px; border: 1px dashed #dce6df; border-radius: 10px; color: #87958c; font-size: 12px; line-height: 1.6; }
+.team-activity-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; }
+.team-activity-table { width: 100%; border-collapse: collapse; text-align: left; }
+.team-activity-table th { padding: 12px 15px; background: #f8faf8; color: #829188; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.team-activity-table td { padding: 13px 15px; border-top: 1px solid #edf2ee; color: #617267; font-size: 11px; }
+.team-activity-self { color: #176b55; font-weight: 700; }
+.team-activity-quantity { color: #2b4d3d !important; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
