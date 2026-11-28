@@ -20,6 +20,10 @@ export function eventTrackingApiUrl(): string {
   return normalizeBaseUrl(env.EVENT_TRACKING_API_BASE_URL, 'http://localhost:5103');
 }
 
+export function insightApiUrl(): string {
+  return normalizeBaseUrl(env.INSIGHT_API_BASE_URL, 'http://localhost:5105');
+}
+
 export async function responseMessage(response: Response, fallback: string): Promise<string> {
   try {
     const body: { message?: string; title?: string } = await response.json();
