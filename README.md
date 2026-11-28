@@ -139,7 +139,8 @@ RabbitMQ being healthy does not automatically turn on message publishing or cons
 | Habit | `HabitConsumer__Enabled=true` |
 | Challenge | `ChallengeConsumer__Enabled=true` |
 | Event Tracking | `EventTrackingConsumer__Enabled=true`; `EventTrackingOutbox__Enabled=true`; `EventTrackingPublisher__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
-| Insight | `InsightConsumer__Enabled=true`; `InsightConsumer__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
+| Insight lifecycle | `InsightConsumer__Enabled=true`; `InsightConsumer__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
+| Insight activity summary | `InsightActivityConsumer__Enabled=true`; `InsightActivityConsumer__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
 | Notification | `NotificationConsumer__Enabled=true`; `NotificationConsumer__Uri=amqp://teampulse:local_rabbitmq_password@localhost:5672/` |
 
 For example, in the PowerShell terminal used to run Identity:
