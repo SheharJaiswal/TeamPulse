@@ -21,7 +21,7 @@ export function eventTrackingApiUrl(): string {
 }
 
 export function insightApiUrl(): string {
-  return normalizeBaseUrl(env.INSIGHT_API_BASE_URL, 'http://localhost:5105');
+  return normalizeBaseUrl(env.INSIGHT_API_BASE_URL, 'http://localhost:5106');
 }
 
 export async function responseMessage(response: Response, fallback: string): Promise<string> {
