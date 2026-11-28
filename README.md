@@ -14,7 +14,7 @@ The approved specifications are the source of truth. Before implementing any fea
 | Habit | Employee-owned personal habits and schedules | Habit DB |
 | Challenge | HR programmes, tasks, eligibility, participation and authoritative challenge state | Challenge DB |
 | Event Tracking | Activity submissions, challenge task completions and activity audit | Event Tracking DB |
-| Insight | Aggregated team/organization metrics and read models | DynamoDB |
+| Insight | Employee-private daily activity summaries and lifecycle read models | MySQL (activity summary), DynamoDB (lifecycle projection) |
 | Notification | Preferences, notification records and delivery history | Notification DB |
 
 Do not create a separate Activity Tracking service. Lambda is compute, not a seventh microservice or independent business-data owner.
@@ -62,7 +62,7 @@ CREATE USER IF NOT EXISTS 'teampulse_app'@'%' IDENTIFIED BY 'local_teampulse_pas
 GRANT ALL PRIVILEGES ON teampulse_identity.* TO 'teampulse_app'@'%';
 ```
 
-From the repository root, execute the checked-in database setup scripts. They create the Habit, Challenge, Event Tracking and Notification databases and grant the application user access:
+From the repository root, execute the checked-in database setup scripts. They create the Habit, Challenge, Event Tracking, Notification and Insight databases and grant the application user access:
 
 PowerShell:
 ```powershell
@@ -70,6 +70,7 @@ Get-Content .\\infra\\mysql\\init\\01-habit-database.sql | mysql -u root -p
 Get-Content .\\infra\\mysql\\init\\02-challenge-database.sql | mysql -u root -p
 Get-Content .\\infra\\mysql\\init\\03-event-tracking-database.sql | mysql -u root -p
 Get-Content .\\infra\\mysql\\init\\04-notification-database.sql | mysql -u root -p
+Get-Content .\\infra\\mysql\\init\\05-insight-database.sql | mysql -u root -p
 ```
 
 Bash:
@@ -78,6 +79,7 @@ mysql -u root -p < infra/mysql/init/01-habit-database.sql
 mysql -u root -p < infra/mysql/init/02-challenge-database.sql
 mysql -u root -p < infra/mysql/init/03-event-tracking-database.sql
 mysql -u root -p < infra/mysql/init/04-notification-database.sql
+mysql -u root -p < infra/mysql/init/05-insight-database.sql
 ```
 
 The local connection strings in each API's Development configuration use `localhost:3306`, database-specific names, and the local-only `teampulse_app` credentials. If you choose different MySQL credentials, override the corresponding `ConnectionStrings__<Name>` environment variable rather than editing committed configuration.
