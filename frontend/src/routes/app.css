@@ -291,3 +291,17 @@ textarea:focus-visible {
 .team-activity-table td { padding: 13px 15px; border-top: 1px solid #edf2ee; color: #617267; font-size: 11px; }
 .team-activity-self { color: #176b55; font-weight: 700; }
 .team-activity-quantity { color: #2b4d3d !important; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Insights challenge progress */
+.challenge-progress-list{display:grid;gap:1rem}
+.challenge-progress-card{padding:1.1rem;border:1px solid var(--border-color,#e5e7eb);border-radius:1rem;background:var(--surface-subtle,#fafafa)}
+.challenge-progress-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+.challenge-progress-heading h3{margin:0 0 .35rem;font-size:1rem;font-weight:650}
+.challenge-progress-heading p{margin:0;color:var(--text-muted,#6b7280);font-size:.875rem}
+.challenge-progress-heading>strong{font-size:1.25rem;font-variant-numeric:tabular-nums}
+.challenge-progress-track{height:.65rem;overflow:hidden;border-radius:999px;background:var(--border-color,#e5e7eb)}
+.challenge-progress-fill{height:100%;border-radius:inherit;background:var(--color-primary,#5c8d7a);transition:width .2s ease}
+.challenge-progress-members{display:grid;gap:.45rem;margin-top:.9rem}
+.challenge-progress-member{display:flex;justify-content:space-between;gap:1rem;color:var(--text-muted,#6b7280);font-size:.825rem}
+.challenge-progress-member span:last-child{font-variant-numeric:tabular-nums}
+@media(max-width:640px){.challenge-progress-card{padding:.9rem}.challenge-progress-heading{gap:.5rem}}
