@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDailyActivity } from '../src/lib/insight-summary.js';
+import { buildDailyActivity, getLocalSevenDayActivityRange } from '../src/lib/insight-summary.js';
 
 test('buildDailyActivity fills missing dates with zero counts and keeps dates inclusive', () => {
   const days = buildDailyActivity([
@@ -28,4 +28,12 @@ test('buildDailyActivity handles month and leap-day boundaries', () => {
     '2028-03-01'
   ]);
   assert.equal(days.every((day) => day.totalActivityCount === 0), true);
+});
+
+test('getLocalSevenDayActivityRange uses inclusive browser-local dates across year boundaries', () => {
+  const now = new Date(2027, 0, 3, 0, 15, 0);
+  assert.deepEqual(getLocalSevenDayActivityRange(now), {
+    fromDate: '2026-12-28',
+    toDate: '2027-01-03'
+  });
 });
