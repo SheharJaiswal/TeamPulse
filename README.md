@@ -14,7 +14,7 @@ The approved specifications are the source of truth. Before implementing any fea
 | Habit | Employee-owned personal habits and schedules | Habit DB |
 | Challenge | HR programmes, tasks, eligibility, participation and authoritative challenge state | Challenge DB |
 | Event Tracking | Activity submissions, challenge task completions and activity audit | Event Tracking DB |
-| Insight | Employee-private daily activity summaries and lifecycle read models | MySQL (activity summary), DynamoDB (lifecycle projection) |
+| Insight | Employee-private daily activity summaries and lifecycle read models | MySQL (activity summary and lifecycle projection) |
 | Notification | Preferences, notification records and delivery history | Notification DB |
 
 Do not create a separate Activity Tracking service. Lambda is compute, not a seventh microservice or independent business-data owner.
@@ -25,7 +25,7 @@ The accepted MVP product defaults are recorded in [ADR-0002](docs/decisions/0002
 
 ## Technology
 
-.NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and SvelteKit. Docker Compose is reserved for optional local infrastructure dependencies (for example RabbitMQ); application services and MySQL run natively on the developer machine. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL and DynamoDB. .NET 8 is the initial compatibility baseline.
+.NET 8 / ASP.NET Core, EF Core 8 / Pomelo MySQL provider, MySQL 8.4, JWT Bearer and SvelteKit. Docker Compose is reserved for optional local infrastructure dependencies (for example RabbitMQ); application services and MySQL run natively on the developer machine. Target AWS: API Gateway, EventBridge, Lambda, ECS, RDS for MySQL. .NET 8 is the initial compatibility baseline.
 
 ## AWS infrastructure
 
@@ -157,7 +157,7 @@ For Habit, Challenge, Event Tracking, Insight or Notification, set that service'
 
 Only enable the consumers and outbox dispatchers you are actively testing. For a full local lifecycle-event flow, start RabbitMQ first, then enable the Identity publisher and the relevant downstream consumers. For activity-event publishing, enable the Event Tracking outbox and its publisher configuration as well. A service that is not enabled will not consume messages merely because its queue exists.
 
-Do not start the full Compose stack for normal development. MySQL is expected to run as a native local service. DynamoDB Local and Mailpit are separate optional dependencies and are not started by the RabbitMQ command above.
+Do not start the full Compose stack for normal development. MySQL is expected to run as a native local service. Mailpit is an optional dependency and is not started by the RabbitMQ command above.
 
 ### 3. Configure the shared JWT signing key
 
@@ -199,7 +199,7 @@ Open a separate terminal for each API. Set `ASPNETCORE_ENVIRONMENT=Development` 
 | Notification API | http://localhost:5105 | `dotnet run --project backend/src/Services/Notification/Notification.API --urls http://localhost:5105` |
 | Insight API | http://localhost:5106 | `dotnet run --project backend/src/Services/Insight/Insight.API --urls http://localhost:5106` |
 
-The first five APIs use the local MySQL databases listed above. Their checked-in EF Core migrations are applied by their hosts where configured. The Insight service uses DynamoDB for its read model; configure its DynamoDB endpoint/credentials and table before exercising Insight functionality. Cloud AWS resources are not provisioned by this local setup.
+The first five APIs use the local MySQL databases listed above. Their checked-in EF Core migrations are applied by their hosts where configured. The Insight service stores its activity summary and employee-lifecycle projection in MySQL. Its EF Core migrations are applied on startup. Cloud AWS resources are not provisioned by this local setup.
 
 Swagger is enabled in Development for APIs that expose Swagger. Health endpoints are service-specific; Identity, Habit and Challenge expose `/health/live` and `/health/ready`.
 
@@ -265,7 +265,7 @@ Open http://localhost:5173. See [frontend/README.md](frontend/README.md) for sha
 
 ## Insight activity summary (development)
 
-Insight keeps the existing employee-lifecycle projection in DynamoDB. The new employee-private activity summary is stored separately in MySQL database `teampulse_insight`.
+Insight stores the employee-lifecycle projection and employee-private activity summary in MySQL database `teampulse_insight`.
 
 - On a fresh MySQL volume, `infra/mysql/init/05-insight-database.sql` creates the Insight database and grants the app user access. For an existing volume, create the database/grant manually or rerun that SQL as a privileged MySQL user.
 - Insight API applies its EF Core migration on startup.

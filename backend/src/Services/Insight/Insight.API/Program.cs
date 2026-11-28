@@ -1,7 +1,4 @@
 using System.Text;
-using Amazon;
-using Amazon.DynamoDBv2;
-using Amazon.Runtime;
 using Insight.API.HealthChecks;
 using Insight.Application;
 using Insight.Application.Abstractions;
@@ -22,13 +19,6 @@ var activityConsumerOptions = builder.Configuration.GetSection(InsightActivityCo
     .Get<InsightActivityConsumerOptions>() ?? new InsightActivityConsumerOptions();
 activityConsumerOptions.Validate();
 
-var dynamoOptions = builder.Configuration.GetSection(InsightDynamoDbOptions.SectionName)
-    .Get<InsightDynamoDbOptions>() ?? new InsightDynamoDbOptions();
-dynamoOptions.Validate();
-
-if (dynamoOptions.InitializeLocalTable && !builder.Environment.IsDevelopment())
-    throw new InvalidOperationException("Insight DynamoDB table initialization is permitted only in Development.");
-
 var activityConnectionString = builder.Configuration.GetConnectionString("InsightActivityDatabase")
     ?? throw new InvalidOperationException("InsightActivityDatabase connection string is missing.");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TeamPulse.Identity";
@@ -40,31 +30,15 @@ if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
 
 builder.Services.AddDbContextFactory<InsightActivityDbContext>(options =>
     options.UseMySql(activityConnectionString, ServerVersion.AutoDetect(activityConnectionString)));
-builder.Services.AddSingleton(dynamoOptions);
 builder.Services.AddSingleton(consumerOptions);
 builder.Services.AddSingleton(activityConsumerOptions);
 builder.Services.AddSingleton<InsightActivityConsumerStatus>();
 builder.Services.AddHostedService<InsightActivityRabbitMqConsumer>();
 builder.Services.AddSingleton<InsightRabbitMqConsumerStatus>();
 builder.Services.AddHostedService<InsightRabbitMqConsumer>();
-builder.Services.AddSingleton<IAmazonDynamoDB>(_ =>
-{
-    var config = new AmazonDynamoDBConfig
-    {
-        RegionEndpoint = RegionEndpoint.GetBySystemName(dynamoOptions.Region)
-    };
-    if (!string.IsNullOrWhiteSpace(dynamoOptions.ServiceUrl))
-    {
-        config.ServiceURL = dynamoOptions.ServiceUrl;
-        return new AmazonDynamoDBClient(new BasicAWSCredentials("local", "local"), config);
-    }
-
-    return new AmazonDynamoDBClient(config);
-});
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<IEmployeeStatusProjectionStore, DynamoDbEmployeeStatusProjectionStore>();
-builder.Services.AddSingleton<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
-builder.Services.AddSingleton<InsightDynamoDbTableInitializer>();
+builder.Services.AddScoped<IEmployeeStatusProjectionStore, MySqlEmployeeStatusProjectionStore>();
+builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddScoped<IActivitySummaryStore, MySqlActivitySummaryStore>();
 builder.Services.AddScoped<ActivityRecordedEventProcessor>();
 
@@ -112,18 +86,12 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddCheck<InsightDynamoDbHealthCheck>("insight-dynamodb", tags: new[] { "ready" })
     .AddCheck<InsightActivityDatabaseHealthCheck>("insight-activity-database", tags: new[] { "ready" })
     .AddCheck<InsightConsumerHealthCheck>("insight-consumer", tags: new[] { "consumer" })
     .AddCheck<InsightActivityConsumerHealthCheck>("insight-activity-consumer", tags: new[] { "activity-consumer" });
 
 var app = builder.Build();
 
-if (dynamoOptions.InitializeLocalTable)
-{
-    await app.Services.GetRequiredService<InsightDynamoDbTableInitializer>()
-        .InitializeAsync(app.Lifetime.ApplicationStopping);
-}
 await using (var db = await app.Services.GetRequiredService<IDbContextFactory<InsightActivityDbContext>>()
     .CreateDbContextAsync())
 {

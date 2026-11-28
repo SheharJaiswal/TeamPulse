@@ -73,10 +73,6 @@ jobs:
 
       - name: Pull pinned MySQL 8.4 test image
         run: docker pull mysql:8.4
-
-      - name: Pull pinned DynamoDB Local test image
-        run: docker pull amazon/dynamodb-local:2.5.2
-
       - name: Pull RabbitMQ queue-migration Testcontainers image
         run: docker pull rabbitmq:4.0-alpine
 

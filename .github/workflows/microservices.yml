@@ -52,11 +52,6 @@ jobs:
         run: |
           docker pull mysql:8.4
           docker pull rabbitmq:4.0-alpine
-
-      - name: Pull pinned DynamoDB Local test image
-        if: matrix.service == 'Insight'
-        run: docker pull amazon/dynamodb-local:2.5.2
-
       - name: Restore service solution
         run: dotnet restore "backend/src/Services/${{ matrix.service }}/${{ matrix.service }}.sln"
 
