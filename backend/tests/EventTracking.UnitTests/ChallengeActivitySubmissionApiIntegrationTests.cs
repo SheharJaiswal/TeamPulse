@@ -159,6 +159,52 @@ public sealed class ChallengeActivitySubmissionApiIntegrationTests : IAsyncLifet
     }
 
     [Fact]
+    public async Task EmployeeCanLogActivityForFutureDateInsideUpcomingChallengeWindow()
+    {
+        var fixedNow = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var challengeStart = new DateOnly(2026, 1, 5);
+        var challengeEnd = new DateOnly(2026, 1, 12);
+        var activityDate = new DateOnly(2026, 1, 7);
+        var challengeId = Guid.NewGuid();
+        var goalHandler = new StubChallengeApiHandler(JsonSerializer.Serialize(new
+        {
+            challengeId,
+            goalInstructions = "Walk and record your steps.",
+            goalTarget = 10000m,
+            goalUnit = "steps",
+            startDate = challengeStart.ToString("yyyy-MM-dd"),
+            endDate = challengeEnd.ToString("yyyy-MM-dd")
+        }));
+        using var factory = new EventTrackingApiFactory(database.GetConnectionString(),
+            challengeApiHandlerFactory: () => goalHandler,
+            timeProvider: new FixedTimeProvider(fixedNow));
+        using var client = factory.CreateClient();
+        var employeeId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(employeeId));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EventTrackingDbContext>>();
+            await using var db = await dbFactory.CreateDbContextAsync();
+            db.EmployeeStatusProjections.Add(new EmployeeStatusProjection(employeeId, true, 1, fixedNow.UtcDateTime));
+            await db.SaveChangesAsync();
+        }
+
+        using var response = await client.PostAsJsonAsync("/api/challenge-activities", new
+        {
+            challengeId,
+            activityDate = activityDate.ToString("yyyy-MM-dd"),
+            quantity = 1200m,
+            idempotencyKey = Guid.NewGuid(),
+            timeZoneOffsetMinutes = 0
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        using var responseDocument = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(activityDate.ToString("yyyy-MM-dd"), responseDocument.RootElement.GetProperty("activityDate").GetString());
+    }
+
+    [Fact]
     public async Task EmployeeCanSubmitActivityOnLocalChallengeStartDateWhileUtcDateIsPreviousDay()
     {
         var utcNow = new DateTimeOffset(2026, 11, 27, 20, 14, 0, TimeSpan.Zero);

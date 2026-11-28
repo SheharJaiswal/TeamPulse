@@ -1,23 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { getLocalSevenDayActivityRange } from '$lib/insight-summary.js';
   import type { PageData } from './$types';
 
   export let data: PageData;
-
-  onMount(() => {
-    const { fromDate, toDate } = getLocalSevenDayActivityRange();
-
-    // Activity dates are entered in the employee's browser calendar.
-    // Refresh the server load with that same local 7-day range.
-    if (data.fromDate !== fromDate || data.toDate !== toDate) {
-      void goto(`/insights?fromDate=${fromDate}&toDate=${toDate}`, {
-        replaceState: true,
-        invalidateAll: true
-      });
-    }
-  });
 
   $: totalHabits = data.days.reduce((sum, day) => sum + day.habitActivityCount, 0);
   $: totalChallenges = data.days.reduce((sum, day) => sum + day.challengeActivityCount, 0);
@@ -36,7 +20,7 @@
 
 <svelte:head>
   <title>My activity summary · TeamPulse</title>
-  <meta name="description" content="A private daily summary of your habit and challenge activity." />
+  <meta name="description" content="A private summary of your habit and challenge activity for a selected date range." />
 </svelte:head>
 
 <div class="app-shell">
@@ -76,19 +60,27 @@
     </header>
     <section class="page-content">
       <div class="welcome-row">
-        <div><p class="eyebrow">YOUR DAILY MOMENTUM</p><h1>Activity summary</h1><p class="muted">A private view of your recorded habit and challenge activity for the last 7 days.</p></div>
+        <div><p class="eyebrow">YOUR DAILY MOMENTUM</p><h1>Activity summary</h1><p class="muted">A private view of your recorded habit and challenge activity for the selected date range.</p></div>
         <span class="count-pill">{dateLabel(data.fromDate)} – {dateLabel(data.toDate)}</span>
       </div>
 
-      <div class="stats-grid insight-stats">
-        <article class="stat-card"><div class="stat-icon mint">✓</div><span class="stat-label">Total activity</span><strong class="stat-value">{totalActivities}</strong><span class="stat-caption">Recorded entries over 7 days</span></article>
-        <article class="stat-card"><div class="stat-icon lavender">◷</div><span class="stat-label">Habit activity</span><strong class="stat-value">{totalHabits}</strong><span class="stat-caption">Habit submissions</span></article>
-        <article class="stat-card"><div class="stat-icon peach">✳</div><span class="stat-label">Challenge activity</span><strong class="stat-value">{totalChallenges}</strong><span class="stat-caption">Challenge submissions</span></article>
+            <form class="insight-date-filter" method="GET" action="/insights">
+        <label>From <input type="date" name="fromDate" value={data.fromDate} max={data.toDate} required /></label>
+        <label>To <input type="date" name="toDate" value={data.toDate} min={data.fromDate} required /></label>
+        <button type="submit">Show summary</button>
+        <a href="/insights">Last 7 days</a>
+        <span class="filter-hint">Select any date range up to 30 days, including future dates.</span>
+      </form>
+
+<div class="stats-grid insight-stats">
+        <article class="stat-card"><div class="stat-icon mint">✓</div><span class="stat-label">Total activity</span><strong class="stat-value">{totalActivities}</strong><span class="stat-caption">Recorded entries in selected range</span></article>
+        <article class="stat-card"><div class="stat-icon lavender">◷</div><span class="stat-label">Habit activity</span><strong class="stat-value">{totalHabits}</strong><span class="stat-caption">Habit submissions in range</span></article>
+        <article class="stat-card"><div class="stat-icon peach">✳</div><span class="stat-label">Challenge activity</span><strong class="stat-value">{totalChallenges}</strong><span class="stat-caption">Challenge submissions in range</span></article>
       </div>
 
       <section class="insight-panel">
-        <div class="section-heading"><div><h2>Your week at a glance</h2><p class="muted">Each bar represents recorded activity submissions for that day.</p></div><span class="count-pill">7 days</span></div>
-        <div class="activity-chart" role="img" aria-label="Daily activity count for the last seven days">
+        <div class="section-heading"><div><h2>Activity at a glance</h2><p class="muted">Each bar represents recorded activity submissions for a day in the selected range.</p></div><span class="count-pill">{data.days.length} days</span></div>
+        <div class="activity-chart" role="img" aria-label={`Daily activity count from ${data.fromDate} through ${data.toDate}` }>
           {#each data.days as day (day.activityDate)}
             <div class="activity-chart-day">
               <div class="activity-chart-value">{day.totalActivityCount}</div>

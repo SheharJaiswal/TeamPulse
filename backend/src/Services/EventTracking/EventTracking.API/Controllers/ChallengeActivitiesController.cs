@@ -47,14 +47,10 @@ public sealed class ChallengeActivitiesController(
         { return StatusCode(503, new { message = "Challenge service timed out. Please retry." }); }
 
         if (goal is null) return NotFound(new { message = "Challenge was not found or is not available to you." });
-        // Date-only challenge windows follow the submitting employee's local calendar.
-        // Date.getTimezoneOffset() is UTC minus local time, so subtract it from UTC.
-        var employeeLocalNow = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(-request.TimeZoneOffsetMinutes);
-        var today = DateOnly.FromDateTime(employeeLocalNow);
-        if (today < goal.StartDate || today > goal.EndDate)
-            return Conflict(new { message = "Challenge activity can only be submitted during the challenge dates." });
-        if (request.ActivityDate < goal.StartDate || request.ActivityDate > goal.EndDate || request.ActivityDate > today)
-            return BadRequest(new { message = "Activity date must be within the challenge dates and cannot be in the future." });
+        // MVP/demo mode allows logging activity for any selected date inside the
+        // challenge window, including dates ahead of today.
+        if (request.ActivityDate < goal.StartDate || request.ActivityDate > goal.EndDate)
+            return BadRequest(new { message = "Activity date must be within the challenge dates." });
 
         var teamEmployeeIds = goal.TeamMemberEmployeeIds is { Count: > 0 } ? goal.TeamMemberEmployeeIds : new[] { employeeId };
         var current = await submissions.GetForEmployeesAsync(teamEmployeeIds, request.ChallengeId, cancellationToken);
