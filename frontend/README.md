@@ -8,7 +8,8 @@ SvelteKit employee workspace for the TeamPulse MVP.
 - Load the authenticated employee profile and personal habits.
 - Create, edit and archive daily or weekly habits.
 - Record self-reported habit activity and view a private activity history.
-- Store activity submissions in Event Tracking; Habit remains the source of truth for habit definitions.
+- View a private 7-day activity summary with daily habit and challenge submission counts.
+- Store activity submissions in Event Tracking; Habit remains the source of truth for habit definitions. Insight stores only the employee/date count projection.
 
 The browser never receives or stores the JWT. SvelteKit server load functions and form actions call the backend APIs with the HTTP-only cookie. This keeps API calls same-origin from the browser and avoids exposing backend service URLs or requiring browser CORS access.
 
@@ -59,6 +60,21 @@ $env:Jwt__SigningKey = "<the-same-local-base64-signing-key-for-all-apis>"
 dotnet run --project backend/src/Services/EventTracking/EventTracking.API --urls http://localhost:5103
 ```
 
+Start Insight in another terminal. It needs the Insight MySQL database created from `infra/mysql/init/05-insight-database.sql`, DynamoDB Local for the existing lifecycle projection, and RabbitMQ if you want activity events to flow into the summary. Start the local dependencies from the repository root:
+
+```powershell
+docker compose up -d dynamodb-local rabbitmq
+```
+
+Then run the API:
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:Jwt__SigningKey = "<the-same-local-base64-signing-key-for-all-apis>"
+dotnet run --project backend/src/Services/Insight/Insight.API --urls http://localhost:5105
+```
+
+The API applies its Insight MySQL migration on startup. RabbitMQ definitions include the dedicated Insight activity queue; recorded activity appears after Event Tracking publishes the event and the Insight consumer processes it.
+
 The JWT key must be identical across Identity and token-validating APIs. Generate it once (for example, with `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`) and reuse that value in each terminal. Do not commit the key.
 
 ### Start the frontend
@@ -88,6 +104,7 @@ The local API URLs are configured in `.env.example`:
 - Identity: http://localhost:5101
 - Habit: http://localhost:5102
 - Event Tracking: http://localhost:5103\n- Challenge: http://localhost:5104
+- Insight: http://localhost:5105
 
 The Identity registration endpoint is Development-only and is not exposed as public self-registration in the employee UI. Production onboarding remains HR-controlled.
 
