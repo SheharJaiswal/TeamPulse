@@ -28,11 +28,14 @@ interface Challenge {
   goalUnit: string;
 }
 interface ActivityEntry { id: string; challengeId: string; employeeId: string; activityDate: string; quantity: number; submittedAtUtc: string; }
+interface ChallengeTeamMember { employeeId: string; displayName: string; }
+interface ChallengeTeam { challengeId: string; challengeName: string; members: ChallengeTeamMember[]; }
 interface ActivityProgress { challengeId: string; totalQuantity: number; entries: ActivityEntry[]; }
 interface MyChallengeWithProgress extends Challenge {
   progress: ActivityProgress | null;
   progressAvailable: boolean;
   activityKey: string;
+  teamMembers: ChallengeTeamMember[];
 }
 
 function requireSession(cookies: Cookies): string {
@@ -88,20 +91,23 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
   const myChallenges = await Promise.all(joinedChallenges.map(async challenge => {
     const activityKey = globalThis.crypto.randomUUID();
     if (challenge.responseStatus !== 'Joined') {
-      return { ...challenge, progress: null, progressAvailable: true, activityKey } as MyChallengeWithProgress;
+      return { ...challenge, progress: null, progressAvailable: true, activityKey, teamMembers: [] } as MyChallengeWithProgress;
     }
-    let progressResponse: Response;
-    try {
-      progressResponse = await fetch(`${eventTrackingApiUrl()}/api/challenge-activities/mine?challengeId=${challenge.id}`, { headers });
-    } catch {
-      return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
+    const [progressResult, teamResult] = await Promise.allSettled([
+      fetch(eventTrackingApiUrl() + '/api/challenge-activities/mine?challengeId=' + challenge.id, { headers }),
+      fetch(challengeApiUrl() + '/api/challenges/' + challenge.id + '/activity-team', { headers })
+    ]);
+    let teamMembers: ChallengeTeamMember[] = [];
+    if (teamResult.status === 'fulfilled' && teamResult.value.ok) {
+      const team = (await teamResult.value.json()) as ChallengeTeam;
+      teamMembers = Array.isArray(team.members) ? team.members : [];
     }
-    // Progress is an optional downstream read. A 401 from Event Tracking can
-    // reflect its service-local authorization/projection state, not an expired
-    // Identity session (which was verified above). Keep the user signed in and
-    // render progress as temporarily unavailable instead.
-    if (!progressResponse.ok) return { ...challenge, progress: null, progressAvailable: false, activityKey } as MyChallengeWithProgress;
-    return { ...challenge, progress: (await progressResponse.json()) as ActivityProgress, progressAvailable: true, activityKey } as MyChallengeWithProgress;
+    if (progressResult.status === 'rejected' || !progressResult.value.ok) {
+      return { ...challenge, progress: null, progressAvailable: false, activityKey, teamMembers } as MyChallengeWithProgress;
+    }
+    // A downstream Event Tracking 401 is not treated as an expired Identity session.
+    const progress = (await progressResult.value.json()) as ActivityProgress;
+    return { ...challenge, progress, progressAvailable: true, activityKey, teamMembers } as MyChallengeWithProgress;
   }));
   return {
     employee,
