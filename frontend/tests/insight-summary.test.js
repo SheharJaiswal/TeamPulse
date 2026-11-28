@@ -18,3 +18,14 @@ test('buildDailyActivity fills missing dates with zero counts and keeps dates in
 test('buildDailyActivity returns an empty list for an inverted range', () => {
   assert.deepEqual(buildDailyActivity([], '2026-11-29', '2026-11-28'), []);
 });
+
+test('buildDailyActivity handles month and leap-day boundaries', () => {
+  const days = buildDailyActivity([], '2028-02-28', '2028-03-01');
+
+  assert.deepEqual(days.map((day) => day.activityDate), [
+    '2028-02-28',
+    '2028-02-29',
+    '2028-03-01'
+  ]);
+  assert.equal(days.every((day) => day.totalActivityCount === 0), true);
+});
