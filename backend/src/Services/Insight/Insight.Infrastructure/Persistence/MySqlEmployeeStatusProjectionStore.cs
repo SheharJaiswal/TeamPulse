@@ -25,8 +25,7 @@ public sealed class MySqlEmployeeStatusProjectionStore(IDbContextFactory<Insight
                     return ProjectionProcessingOutcome.Duplicate;
 
                 var projection = await db.EmployeeStatusProjections
-                    .FromSqlInterpolated($"SELECT * FROM InsightEmployeeStatusProjection WHERE EmployeeId = {lifecycleEvent.EmployeeId} FOR UPDATE")
-                    .SingleOrDefaultAsync(cancellationToken);
+                    .SingleOrDefaultAsync(x => x.EmployeeId == lifecycleEvent.EmployeeId, cancellationToken);
                 var outcome = ProjectionProcessingOutcome.Stale;
                 if (projection is null)
                 {
