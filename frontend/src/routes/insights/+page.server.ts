@@ -149,7 +149,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
         redirect(303, '/login');
       }
       if (results.some(result => 'unavailable' in result)) teamActivityAvailable = false;
-      teamActivities = results.flatMap(result => 'items' in result ? result.items : []);
+      teamActivities = results.flatMap(result => 'items' in result && Array.isArray(result.items) ? result.items as TeamActivityItem[] : []);
       teamActivities.sort((a, b) => b.activityDate.localeCompare(a.activityDate) ||
         b.submittedAtUtc.localeCompare(a.submittedAtUtc));
     }
