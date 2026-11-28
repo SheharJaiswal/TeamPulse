@@ -3,6 +3,7 @@ import type { Cookies } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { identityApiUrl, insightApiUrl } from '$lib/server/api';
 import { buildDailyActivity } from '$lib/insight-summary.js';
+import { isCalendarDate } from '$lib/validation.js';
 
 interface Employee {
   employeeId: string;
@@ -29,12 +30,28 @@ function utcDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-export const load: PageServerLoad = async ({ cookies, fetch }) => {
+export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
   const token = requireSession(cookies);
+  const requestedFrom = url.searchParams.get('fromDate');
+  const requestedTo = url.searchParams.get('toDate');
+  if ((requestedFrom === null) !== (requestedTo === null)) {
+    error(400, 'Both fromDate and toDate must be provided.');
+  }
+
   const today = new Date();
-  const toDate = utcDate(today);
-  const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 6));
-  const fromDate = utcDate(from);
+  const defaultToDate = utcDate(today);
+  const defaultFrom = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 6));
+  const fromDate = requestedFrom ?? utcDate(defaultFrom);
+  const toDate = requestedTo ?? defaultToDate;
+  if (!isCalendarDate(fromDate) || !isCalendarDate(toDate)) {
+    error(400, 'Choose valid calendar dates for the activity summary.');
+  }
+  const fromDay = Date.parse(`${fromDate}T00:00:00.000Z`);
+  const toDay = Date.parse(`${toDate}T00:00:00.000Z`);
+  const dayDifference = (toDay - fromDay) / 86_400_000;
+  if (dayDifference < 0 || dayDifference >= 30) {
+    error(400, 'The activity summary date range must be ordered and no longer than 30 days.');
+  }
   const headers = { authorization: `Bearer ${token}` };
   let summaryResponse: Response;
   let employeeResponse: Response;
