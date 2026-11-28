@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Net;
-using Amazon.Runtime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -428,10 +426,6 @@ public sealed class InsightRabbitMqConsumer(
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
             if (current is TimeoutException or IOException or SocketException or HttpRequestException) return true;
-            if (current is AmazonServiceException awsException &&
-                awsException.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
-                    HttpStatusCode.InternalServerError or HttpStatusCode.BadGateway or
-                    HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout) return true;
         }
         return false;
     }
