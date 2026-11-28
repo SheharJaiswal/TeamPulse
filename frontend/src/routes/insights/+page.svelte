@@ -1,17 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { toLocalDateInputValue } from '$lib/validation.js';
+  import { getLocalSevenDayActivityRange } from '$lib/insight-summary.js';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
   onMount(() => {
-    const localToday = new Date();
-    const localFrom = new Date(localToday);
-    localFrom.setDate(localFrom.getDate() - 6);
-    const fromDate = toLocalDateInputValue(localFrom);
-    const toDate = toLocalDateInputValue(localToday);
+    const { fromDate, toDate } = getLocalSevenDayActivityRange();
 
     // Activity dates are entered in the employee's browser calendar.
     // Refresh the server load with that same local 7-day range.
