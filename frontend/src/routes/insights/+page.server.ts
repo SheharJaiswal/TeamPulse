@@ -15,6 +15,9 @@ interface MyChallenge {
   name: string;
   responseStatus: string;
   goalUnit: string;
+  goalTarget: number;
+  startDate: string;
+  endDate: string;
 }
 interface ActivityTeam {
   challengeId: string;
@@ -30,6 +33,15 @@ interface ChallengeActivityEntry {
 }
 interface ChallengeActivityProgress {
   entries: ChallengeActivityEntry[];
+}
+interface ChallengeProgressItem {
+  challengeId: string;
+  challengeName: string;
+  goalUnit: string;
+  goalTarget: number;
+  totalQuantity: number;
+  progressPercent: number;
+  memberProgress: { employeeId: string; displayName: string; quantity: number; progressPercent: number }[];
 }
 interface TeamActivityItem extends ChallengeActivityEntry {
   challengeId: string;
@@ -105,6 +117,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
 
   let teamActivityAvailable = true;
   let teamActivities: TeamActivityItem[] = [];
+  let challengeProgress: ChallengeProgressItem[] = [];
   try {
     const challengesResponse = await fetch(`${challengeApiUrl()}/api/challenges/my`, { headers });
     if (!challengesResponse.ok) {
@@ -123,7 +136,19 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
         const team = (await teamResponse.json()) as ActivityTeam;
         const progress = (await progressResponse.json()) as ChallengeActivityProgress;
         const names = new Map(team.members.map(member => [member.employeeId.toLowerCase(), member.displayName]));
+        const memberTotals = new Map<string, number>();
+        for (const entry of progress.entries) {
+          const key = entry.employeeId.toLowerCase();
+          memberTotals.set(key, (memberTotals.get(key) ?? 0) + entry.quantity);
+        }
+        const totalQuantity = progress.totalQuantity ?? progress.entries.reduce((sum, entry) => sum + entry.quantity, 0);
+        const target = Math.max(0, challenge.goalTarget);
+        const memberProgress = team.members.map(member => {
+          const quantity = memberTotals.get(member.employeeId.toLowerCase()) ?? 0;
+          return { employeeId: member.employeeId, displayName: member.employeeId.toLowerCase() === employee.employeeId.toLowerCase() ? 'You' : member.displayName, quantity, progressPercent: target > 0 ? Math.min(100, quantity / target * 100) : 0 };
+        }).sort((a, b) => b.quantity - a.quantity || a.displayName.localeCompare(b.displayName));
         return {
+          progress: { challengeId: challenge.id, challengeName: challenge.name, goalUnit: challenge.goalUnit, goalTarget: target, totalQuantity, progressPercent: target > 0 ? Math.min(100, totalQuantity / target * 100) : 0, memberProgress },
           items: progress.entries
             .filter(entry => entry.activityDate >= fromDate && entry.activityDate <= toDate)
             .map(entry => ({
@@ -138,6 +163,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
         };
       }));
       if (results.some(result => 'unavailable' in result)) teamActivityAvailable = false;
+      challengeProgress = results.flatMap(result => 'progress' in result ? [result.progress as ChallengeProgressItem] : []);
       teamActivities = results.flatMap(result => 'items' in result && Array.isArray(result.items) ? result.items as TeamActivityItem[] : []);
       teamActivities.sort((a, b) => b.activityDate.localeCompare(a.activityDate) ||
         b.submittedAtUtc.localeCompare(a.submittedAtUtc));
@@ -152,6 +178,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
     toDate,
     days: buildDailyActivity(rawDays, fromDate, toDate),
     teamActivityAvailable,
-    teamActivities
+    teamActivities,
+    challengeProgress
   };
 };
