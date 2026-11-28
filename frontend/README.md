@@ -103,7 +103,8 @@ The local API URLs are configured in `.env.example`:
 
 - Identity: http://localhost:5101
 - Habit: http://localhost:5102
-- Event Tracking: http://localhost:5103\n- Challenge: http://localhost:5104
+- Event Tracking: http://localhost:5103
+- Challenge: http://localhost:5104
 - Insight: http://localhost:5105
 
 The Identity registration endpoint is Development-only and is not exposed as public self-registration in the employee UI. Production onboarding remains HR-controlled.
