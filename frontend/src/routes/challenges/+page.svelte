@@ -148,7 +148,7 @@
                         <input type="hidden" name="challengeId" value={challenge.id} />
                         <input type="hidden" name="idempotencyKey" value={challenge.activityKey} />
                         <input type="hidden" name="timeZoneOffsetMinutes" value={localTimezoneOffsetMinutes} />
-                        <label>Activity date<input type="date" name="activityDate" value={localTodayDate} min={challenge.startDate} max={localTodayDate < challenge.endDate ? localTodayDate : challenge.endDate} required /></label>
+                        <label>Activity date<input type="date" name="activityDate" value={activityDateDefault(challenge.startDate, challenge.endDate)} min={challenge.startDate} max={challenge.endDate} required /></label>
                         <label>Amount ({challenge.goalUnit})<input type="number" name="quantity" min="0.01" max="1000000" step="0.01" placeholder="e.g. 5000" required /></label>
                         <button class="primary-button" type="submit" disabled={isJoining}>{isJoining ? 'Saving…' : 'Log activity'}</button>
                       </form>
