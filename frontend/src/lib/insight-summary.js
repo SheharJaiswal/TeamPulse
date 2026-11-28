@@ -1,3 +1,5 @@
+import { toLocalDateInputValue } from './validation.js';
+
 /**
  * Fill a date interval with zero-value days so charts don't skip dates without activity.
  * Dates are calendar values in UTC, matching the Insight API's DateOnly range.
@@ -26,4 +28,19 @@ export function buildDailyActivity(records, fromDate, toDate) {
   }
 
   return days;
+}
+
+/**
+ * Returns the employee's browser-local calendar range for the most recent
+ * seven days, inclusive. Keep this separate from UTC instants: activity dates
+ * are date-only values submitted from local date inputs.
+ * @param {Date} [now]
+ */
+export function getLocalSevenDayActivityRange(now = new Date()) {
+  const localFrom = new Date(now);
+  localFrom.setDate(localFrom.getDate() - 6);
+  return {
+    fromDate: toLocalDateInputValue(localFrom),
+    toDate: toLocalDateInputValue(now)
+  };
 }
