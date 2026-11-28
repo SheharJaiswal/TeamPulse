@@ -1,7 +1,27 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { toLocalDateInputValue } from '$lib/validation.js';
   import type { PageData } from './$types';
 
   export let data: PageData;
+
+  onMount(() => {
+    const localToday = new Date();
+    const localFrom = new Date(localToday);
+    localFrom.setDate(localFrom.getDate() - 6);
+    const fromDate = toLocalDateInputValue(localFrom);
+    const toDate = toLocalDateInputValue(localToday);
+
+    // Activity dates are entered in the employee's browser calendar.
+    // Refresh the server load with that same local 7-day range.
+    if (data.fromDate !== fromDate || data.toDate !== toDate) {
+      void goto(`/insights?fromDate=${fromDate}&toDate=${toDate}`, {
+        replaceState: true,
+        invalidateAll: true
+      });
+    }
+  });
 
   $: totalHabits = data.days.reduce((sum, day) => sum + day.habitActivityCount, 0);
   $: totalChallenges = data.days.reduce((sum, day) => sum + day.challengeActivityCount, 0);
