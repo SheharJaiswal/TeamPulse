@@ -106,7 +106,35 @@
         </div>
       </section>
 
-      <p class="insight-privacy-note">This summary is private to your employee account. It shows only your own activity submissions.</p>
+      <section class="insight-panel">
+        <div class="section-heading">
+          <div><h2>Challenge team activity</h2><p class="muted">Activity recorded by you and joined teammates in your challenge teams for the selected date range.</p></div>
+          <span class="count-pill">{data.teamActivities.length} entries</span>
+        </div>
+        {#if !data.teamActivityAvailable}
+          <p class="insight-empty">Team activity is temporarily unavailable. Your personal summary is still available.</p>
+        {:else if data.teamActivities.length === 0}
+          <p class="insight-empty">No challenge activity was recorded by your teams in this date range.</p>
+        {:else}
+          <div class="team-activity-table-wrap">
+            <table class="team-activity-table">
+              <thead><tr><th>Date</th><th>Employee</th><th>Challenge</th><th>Quantity</th></tr></thead>
+              <tbody>
+                {#each data.teamActivities as entry (entry.id)}
+                  <tr>
+                    <td>{dateLabel(entry.activityDate, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                    <td><span class:team-activity-self={entry.employeeName === 'You'}>{entry.employeeName}</span></td>
+                    <td>{entry.challengeName}</td>
+                    <td class="team-activity-quantity">{entry.quantity.toLocaleString()} {entry.goalUnit}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      </section>
+
+      <p class="insight-privacy-note">Your personal summary is private. Team activity is limited to teammates in challenges you have joined.</p>
     </section>
   </main>
 </div>
