@@ -427,7 +427,7 @@ public sealed class InsightRabbitMqConsumer(
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
             if (current is TimeoutException or IOException or SocketException or HttpRequestException) return true;
-            if (current is MySqlException mysqlException && mysqlException.Number is 1042 or 1205 or 1213 or 2006 or 2013) return true;
+            if (current is MySqlException mysqlException && (mysqlException.Number is 1042 or 1205 or 1213 or 2006 or 2013)) return true;
         }
         return false;
     }
