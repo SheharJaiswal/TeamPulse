@@ -32,6 +32,7 @@ interface ChallengeActivityEntry {
   submittedAtUtc: string;
 }
 interface ChallengeActivityProgress {
+  totalQuantity: number;
   entries: ChallengeActivityEntry[];
 }
 interface ChallengeProgressItem {
