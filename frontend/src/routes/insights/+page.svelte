@@ -79,6 +79,40 @@
       </div>
 
       <section class="insight-panel">
+        <div class="section-heading">
+          <div><h2>Challenge progress</h2><p class="muted">Progress toward each joined challenge goal, based on all activity recorded during that challenge.</p></div>
+          <span class="count-pill">{data.challengeProgress.length} challenges</span>
+        </div>
+        {#if !data.teamActivityAvailable}
+          <p class="insight-empty">Challenge progress is temporarily unavailable. Your personal summary is still available.</p>
+        {:else if data.challengeProgress.length === 0}
+          <p class="insight-empty">Join a challenge to see your team's progress here.</p>
+        {:else}
+          <div class="challenge-progress-list">
+            {#each data.challengeProgress as challenge (challenge.challengeId)}
+              <article class="challenge-progress-card">
+                <div class="challenge-progress-heading">
+                  <div><h3>{challenge.challengeName}</h3><p>{challenge.totalQuantity.toLocaleString()} / {challenge.goalTarget.toLocaleString()} {challenge.goalUnit}</p></div>
+                  <strong>{Math.round(challenge.progressPercent)}%</strong>
+                </div>
+                <div class="challenge-progress-track" role="progressbar" aria-label={`${challenge.challengeName} progress`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(challenge.progressPercent)}>
+                  <div class="challenge-progress-fill" style={`width: ${challenge.progressPercent}%`}></div>
+                </div>
+                <div class="challenge-progress-members">
+                  {#each challenge.memberProgress as member (member.employeeId)}
+                    <div class="challenge-progress-member">
+                      <span>{member.displayName}</span>
+                      <span>{member.quantity.toLocaleString()} {challenge.goalUnit}</span>
+                    </div>
+                  {/each}
+                </div>
+              </article>
+            {/each}
+          </div>
+        {/if}
+      </section>
+
+      <section class="insight-panel">
         <div class="section-heading"><div><h2>Activity at a glance</h2><p class="muted">Each bar represents recorded activity submissions for a day in the selected range.</p></div><span class="count-pill">{data.days.length} days</span></div>
         <div class="activity-chart" role="img" aria-label={`Daily activity count from ${data.fromDate} through ${data.toDate}` }>
           {#each data.days as day (day.activityDate)}
