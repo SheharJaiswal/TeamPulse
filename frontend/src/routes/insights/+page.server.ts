@@ -14,6 +14,7 @@ interface MyChallenge {
   id: string;
   name: string;
   responseStatus: string;
+  goalUnit: string;
 }
 interface ActivityTeam {
   challengeId: string;
@@ -34,6 +35,7 @@ interface TeamActivityItem extends ChallengeActivityEntry {
   challengeId: string;
   challengeName: string;
   employeeName: string;
+  goalUnit: string;
 }
 interface ActivitySummaryDay {
   activityDate: string;
@@ -135,6 +137,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
               ...entry,
               challengeId: challenge.id,
               challengeName: challenge.name,
+              goalUnit: challenge.goalUnit,
               employeeName: entry.employeeId.toLowerCase() === employee.employeeId.toLowerCase()
                 ? 'You'
                 : names.get(entry.employeeId.toLowerCase()) ?? 'Teammate'
