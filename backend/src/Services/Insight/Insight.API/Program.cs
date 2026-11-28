@@ -38,7 +38,7 @@ builder.Services.AddSingleton<InsightRabbitMqConsumerStatus>();
 builder.Services.AddHostedService<InsightRabbitMqConsumer>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IEmployeeStatusProjectionStore, MySqlEmployeeStatusProjectionStore>();
-builder.Services.AddSingleton<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
+builder.Services.AddScoped<IEmployeeStatusProjectionProcessor, EmployeeStatusProjectionProcessor>();
 builder.Services.AddScoped<IActivitySummaryStore, MySqlActivitySummaryStore>();
 builder.Services.AddScoped<ActivityRecordedEventProcessor>();
 
