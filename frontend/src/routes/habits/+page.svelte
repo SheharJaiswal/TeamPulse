@@ -60,6 +60,7 @@
       <span class="nav-icon">✓</span>
       Activity history
     </a>
+    <a class="nav-link" href="/insights"><span class="nav-icon">▥</span> Activity summary</a>
     <a class="nav-link" href="/challenges"><span class="nav-icon">✳</span> Challenges</a>
     {#if data.employee.role === 'HrAdmin'}
       <a class="nav-link" href="/hr/challenges"><span class="nav-icon">＋</span> Manage challenges</a>
@@ -71,6 +72,7 @@
     <nav class="mobile-workspace-nav" aria-label="Workspace">
       <a class="mobile-workspace-link active" href="/habits" aria-current="page">My habits</a>
       <a class="mobile-workspace-link" href="/activities">Activity history</a>
+      <a class="mobile-workspace-link" href="/insights">Activity summary</a>
       <a class="mobile-workspace-link" href="/challenges">Challenges</a>
       {#if data.employee.role === 'HrAdmin'}
         <a class="mobile-workspace-link" href="/hr/challenges">Manage</a>

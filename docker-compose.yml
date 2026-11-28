@@ -15,6 +15,7 @@ services:
       - ./infra/mysql/init/02-challenge-database.sql:/docker-entrypoint-initdb.d/02-challenge-database.sql:ro
       - ./infra/mysql/init/03-event-tracking-database.sql:/docker-entrypoint-initdb.d/03-event-tracking-database.sql:ro
       - ./infra/mysql/init/04-notification-database.sql:/docker-entrypoint-initdb.d/04-notification-database.sql:ro
+      - ./infra/mysql/init/05-insight-database.sql:/docker-entrypoint-initdb.d/05-insight-database.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-plocal_mysql_root_password"]
       interval: 5s
