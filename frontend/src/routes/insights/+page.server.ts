@@ -107,10 +107,6 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
   let teamActivities: TeamActivityItem[] = [];
   try {
     const challengesResponse = await fetch(`${challengeApiUrl()}/api/challenges/my`, { headers });
-    if (challengesResponse.status === 401) {
-      expireSession(cookies);
-      redirect(303, '/login');
-    }
     if (!challengesResponse.ok) {
       teamActivityAvailable = false;
     } else {
@@ -121,9 +117,6 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
           fetch(`${challengeApiUrl()}/api/challenges/${challenge.id}/activity-team`, { headers }),
           fetch(`${eventTrackingApiUrl()}/api/challenge-activities/mine?challengeId=${challenge.id}`, { headers })
         ]);
-        if (teamResponse.status === 401 || progressResponse.status === 401) {
-          return { unauthorized: true as const };
-        }
         if (!teamResponse.ok || !progressResponse.ok) {
           return { unavailable: true as const };
         }
@@ -144,10 +137,6 @@ export const load: PageServerLoad = async ({ cookies, fetch, url }) => {
             }))
         };
       }));
-      if (results.some(result => 'unauthorized' in result)) {
-        expireSession(cookies);
-        redirect(303, '/login');
-      }
       if (results.some(result => 'unavailable' in result)) teamActivityAvailable = false;
       teamActivities = results.flatMap(result => 'items' in result && Array.isArray(result.items) ? result.items as TeamActivityItem[] : []);
       teamActivities.sort((a, b) => b.activityDate.localeCompare(a.activityDate) ||
